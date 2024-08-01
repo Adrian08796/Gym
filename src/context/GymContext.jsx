@@ -115,10 +115,12 @@ export function GymProvider({ children }) {
 
   const addWorkoutPlan = async (plan) => {
     try {
+      console.log('Sending plan:', plan); // Log the plan being sent
       const response = await axios.post(`${API_URL}/workoutplans`, plan);
       setWorkoutPlans(prevPlans => [...prevPlans, response.data]);
     } catch (error) {
-      console.error('Error adding workout plan:', error);
+      console.error('Error adding workout plan:', error.response ? error.response.data : error.message);
+      throw error; // Re-throw the error so it can be caught in the component
     }
   };
 

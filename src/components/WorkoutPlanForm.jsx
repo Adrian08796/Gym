@@ -7,18 +7,23 @@ function WorkoutPlanForm() {
   const [selectedExercises, setSelectedExercises] = useState([]);
   const { exercises, addWorkoutPlan } = useGymContext();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const workoutPlan = {
-      name: planName,
-      exercises: selectedExercises,
-    };
-    addWorkoutPlan(workoutPlan);
-    // Reset form
-    setPlanName('');
-    setSelectedExercises([]);
+    try {
+      const workoutPlan = {
+        name: planName,
+        exercises: selectedExercises,
+      };
+      console.log('Submitting plan:', workoutPlan); // Log the plan being submitted
+      await addWorkoutPlan(workoutPlan);
+      // Reset form
+      setPlanName('');
+      setSelectedExercises([]);
+    } catch (error) {
+      console.error('Error submitting workout plan:', error);
+      // Here you could set an error state and display it to the user
+    }
   };
-
   const handleExerciseToggle = (exerciseId) => {
     setSelectedExercises(prevSelected =>
       prevSelected.includes(exerciseId)
