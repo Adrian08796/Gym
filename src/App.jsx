@@ -1,31 +1,49 @@
 // src/App.jsx
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import WorkoutTracker from './pages/WorkoutTracker';
 import ExerciseLibrary from './pages/ExerciseLibrary';
 import WorkoutPlans from './pages/WorkoutPlans';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import Login from './components/Login';
+import Register from './components/Register';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
+
+const PrivateRoute = ({ children }) => {
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/login" />;
+};
+
+function AppContent() {
+  return (
+    <Router>
+      <div className="App flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-grow container mx-auto px-4 py-8">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+            <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
+            <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
+            <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </Router>
+  );
+}
 
 function App() {
   return (
-    <GymProvider>
-      <Router>
-        <div className="App flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-grow container mx-auto px-4 py-8">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/tracker" element={<WorkoutTracker />} />
-              <Route path="/exercises" element={<ExerciseLibrary />} />
-              <Route path="/plans" element={<WorkoutPlans />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </Router>
-    </GymProvider>
+    <AuthProvider>
+      <GymProvider>
+        <AppContent />
+      </GymProvider>
+    </AuthProvider>
   );
 }
 
