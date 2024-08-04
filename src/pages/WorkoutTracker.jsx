@@ -1,86 +1,99 @@
-// src/pages/WorkoutTracker.jsx
-import { useState, useEffect } from 'react';
-import WorkoutForm from '../components/WorkoutForm';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 
 function WorkoutTracker() {
-  const { workouts, addWorkout, updateWorkout, deleteWorkout, exercises } = useGymContext();
-  const [editingWorkout, setEditingWorkout] = useState(null);
   const [currentPlan, setCurrentPlan] = useState(null);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [sets, setSets] = useState([]);
+  const { addWorkout } = useGymContext();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedPlan = localStorage.getItem('currentPlan');
     if (storedPlan) {
-      setCurrentPlan(JSON.parse(storedPlan));
-      localStorage.removeItem('currentPlan');
+      const parsedPlan = JSON.parse(storedPlan);
+      setCurrentPlan(parsedPlan);
+      setSets(parsedPlan.exercises.map(() => []));
     }
   }, []);
 
-  const handleSaveWorkout = (workout) => {
-    if (editingWorkout) {
-      updateWorkout(editingWorkout._id, workout);
-      setEditingWorkout(null);
+  const handleSetComplete = (weight, reps) => {
+    setSets(prevSets => {
+      const newSets = [...prevSets];
+      newSets[currentExerciseIndex] = [...newSets[currentExerciseIndex], { weight, reps }];
+      return newSets;
+    });
+  };
+
+  const handleNextExercise = () => {
+    if (currentExerciseIndex < currentPlan.exercises.length - 1) {
+      setCurrentExerciseIndex(prevIndex => prevIndex + 1);
     } else {
-      addWorkout(workout);
+      // Workout complete, save it
+      const completedWorkout = {
+        plan: currentPlan._id,
+        exercises: currentPlan.exercises.map((exercise, index) => ({
+          exercise: exercise._id,
+          sets: sets[index]
+        }))
+      };
+      addWorkout(completedWorkout);
+      alert('Workout completed and saved!');
+      navigate('/'); // Navigate back to home or wherever you want
     }
   };
 
-  const handleEditWorkout = (workout) => {
-    setEditingWorkout(workout);
-  };
+  if (!currentPlan) {
+    return <div>Loading workout plan...</div>;
+  }
 
-  const handleDeleteWorkout = (id) => {
-    deleteWorkout(id);
-  };
+  const currentExercise = currentPlan.exercises[currentExerciseIndex];
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-4">Workout Tracker</h1>
-      {currentPlan && (
-        <div className="mb-4 p-4 bg-blue-100 rounded">
-          <h2 className="text-xl font-semibold mb-2">Current Plan: {currentPlan.name}</h2>
-          <ul className="list-disc list-inside">
-            {currentPlan.exercises.map((exerciseId) => (
-              <li key={exerciseId}>
-                {exercises.find(e => e._id === exerciseId)?.name}
-              </li>
-            ))}
-          </ul>
+    <div className="container mx-auto mt-8">
+      <h2 className="text-2xl font-bold mb-4">Workout Tracker</h2>
+      <h3 className="text-xl mb-4">{currentPlan.name}</h3>
+      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
+        <p className="mb-4">Sets completed: {sets[currentExerciseIndex].length}</p>
+        <div className="mb-4">
+          <input
+            type="number"
+            placeholder="Weight"
+            id="weight"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
+          />
+          <input
+            type="number"
+            placeholder="Reps"
+            id="reps"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
         </div>
-      )}
-      <WorkoutForm onSave={handleSaveWorkout} initialWorkout={editingWorkout} />
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">Logged Workouts</h2>
-        {workouts.length === 0 ? (
-          <p>No workouts logged yet.</p>
-        ) : (
-          <ul className="space-y-4">
-            {workouts.map((workout) => (
-              <li key={workout._id} className="bg-white shadow rounded-lg p-4">
-                <h3 className="text-lg font-semibold">{workout.exercise}</h3>
-                <p>Sets: {workout.sets}, Reps: {workout.reps}, Weight: {workout.weight}kg</p>
-                <p className="text-sm text-gray-500">
-                  {new Date(workout.date).toLocaleString()}
-                </p>
-                <div className="mt-2">
-                  <button
-                    onClick={() => handleEditWorkout(workout)}
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteWorkout(workout._id)}
-                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <button
+          onClick={() => {
+            const weight = document.getElementById('weight').value;
+            const reps = document.getElementById('reps').value;
+            if (weight && reps) {
+              handleSetComplete(Number(weight), Number(reps));
+              document.getElementById('weight').value = '';
+              document.getElementById('reps').value = '';
+            } else {
+              alert('Please enter both weight and reps');
+            }
+          }}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+        >
+          Complete Set
+        </button>
       </div>
+      <button
+        onClick={handleNextExercise}
+        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+      >
+        {currentExerciseIndex < currentPlan.exercises.length - 1 ? 'Next Exercise' : 'Finish Workout'}
+      </button>
     </div>
   );
 }

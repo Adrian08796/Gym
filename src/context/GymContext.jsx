@@ -32,13 +32,14 @@ export function GymProvider({ children }) {
   };
 
   const addWorkout = async (workout) => {
-    try {
-      const response = await axios.post(`${API_URL}/workouts`, workout);
-      setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
-    } catch (error) {
-      console.error('Error adding workout:', error);
-    }
-  };
+  try {
+    const response = await axios.post(`${API_URL}/workouts`, workout);
+    setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
+  } catch (error) {
+    console.error('Error adding workout:', error);
+    throw error;
+  }
+};
 
   const updateWorkout = async (id, updatedWorkout) => {
     try {
