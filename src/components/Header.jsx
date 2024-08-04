@@ -1,4 +1,3 @@
-// src/components/Header.jsx
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,6 +20,7 @@ function Header() {
               <li><Link to="/tracker">Workout Tracker</Link></li>
               <li><Link to="/exercises">Exercise Library</Link></li>
               <li><Link to="/plans">Workout Plans</Link></li>
+              <li><Link to="/workout-summary">Workout History</Link></li>
               <li>
                 <button 
                   onClick={handleLogout}

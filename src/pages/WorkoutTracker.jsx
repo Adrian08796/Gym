@@ -26,26 +26,27 @@ function WorkoutTracker() {
     });
   };
 
-  const handleNextExercise = () => {
+  const handleNextExercise = async () => {
     if (currentExerciseIndex < currentPlan.exercises.length - 1) {
       setCurrentExerciseIndex(prevIndex => prevIndex + 1);
     } else {
       // Workout complete, save it
       const completedWorkout = {
-        plan: currentPlan,
+        plan: currentPlan._id,
         exercises: currentPlan.exercises.map((exercise, index) => ({
-          ...exercise,
+          exercise: exercise._id,
           sets: sets[index]
-        })),
-        date: new Date().toISOString()
+        }))
       };
-      addWorkout(completedWorkout);
-      
-      // Save to local storage for summary
-      localStorage.setItem('completedWorkout', JSON.stringify(completedWorkout));
-      
-      // Navigate to summary page
-      navigate('/workout-summary');
+      console.log('Completed workout data:', completedWorkout);
+      try {
+        await addWorkout(completedWorkout);
+        alert('Workout completed and saved!');
+        navigate('/');
+      } catch (error) {
+        console.error('Error saving workout:', error);
+        alert('Failed to save workout. Please try again.');
+      }
     }
   };
 
