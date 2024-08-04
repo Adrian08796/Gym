@@ -116,20 +116,17 @@ export function GymProvider({ children }) {
 
   const addWorkoutPlan = async (plan) => {
     try {
-      console.log('Sending plan:', plan);
-      // Assuming the backend expects exercise IDs, not full objects
+      // Send only exercise IDs to the backend
       const planToSend = {
-        ...plan,
+        name: plan.name,
         exercises: plan.exercises.map(exercise => exercise._id)
       };
       const response = await axios.post(`${API_URL}/workoutplans`, planToSend);
       
-      // Ensure the response data has the full exercise objects
+      // Use the full exercise objects from the original plan
       const newPlan = {
         ...response.data,
-        exercises: response.data.exercises.map(exerciseId => 
-          exercises.find(e => e._id === exerciseId) || { _id: exerciseId, name: 'Unknown Exercise' }
-        )
+        exercises: plan.exercises
       };
       
       setWorkoutPlans(prevPlans => [...prevPlans, newPlan]);
