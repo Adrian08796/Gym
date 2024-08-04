@@ -108,6 +108,7 @@ export function GymProvider({ children }) {
     try {
       const response = await axios.get(`${API_URL}/workoutplans`);
       setWorkoutPlans(response.data);
+      console.log(response.data);
     } catch (error) {
       console.error('Error fetching workout plans:', error);
     }
@@ -115,12 +116,26 @@ export function GymProvider({ children }) {
 
   const addWorkoutPlan = async (plan) => {
     try {
-      console.log('Sending plan:', plan); // Log the plan being sent
-      const response = await axios.post(`${API_URL}/workoutplans`, plan);
-      setWorkoutPlans(prevPlans => [...prevPlans, response.data]);
+      console.log('Sending plan:', plan);
+      // Assuming the backend expects exercise IDs, not full objects
+      const planToSend = {
+        ...plan,
+        exercises: plan.exercises.map(exercise => exercise._id)
+      };
+      const response = await axios.post(`${API_URL}/workoutplans`, planToSend);
+      
+      // Ensure the response data has the full exercise objects
+      const newPlan = {
+        ...response.data,
+        exercises: response.data.exercises.map(exerciseId => 
+          exercises.find(e => e._id === exerciseId) || { _id: exerciseId, name: 'Unknown Exercise' }
+        )
+      };
+      
+      setWorkoutPlans(prevPlans => [...prevPlans, newPlan]);
     } catch (error) {
       console.error('Error adding workout plan:', error.response ? error.response.data : error.message);
-      throw error; // Re-throw the error so it can be caught in the component
+      throw error;
     }
   };
 

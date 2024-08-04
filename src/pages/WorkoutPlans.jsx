@@ -29,9 +29,9 @@ function WorkoutPlans() {
           <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">
             <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
             <ul className="list-disc list-inside mb-4">
-              {plan.exercises.map((exerciseId) => (
-                <li key={exerciseId}>
-                  {exercises.find(e => e._id === exerciseId)?.name}
+              {plan.exercises.map((exercise) => (
+                <li key={exercise._id}>
+                  {exercise.name}
                 </li>
               ))}
             </ul>

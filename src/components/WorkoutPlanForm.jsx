@@ -7,13 +7,25 @@ function WorkoutPlanForm() {
   const [selectedExercises, setSelectedExercises] = useState([]);
   const { exercises, addWorkoutPlan } = useGymContext();
 
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   try {
+  //     const workoutPlan = {
+  //       name: planName,
+  //       exercises: selectedExercises,
+  //     };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const workoutPlan = {
         name: planName,
-        exercises: selectedExercises,
+        exercises: selectedExercises.map(exerciseId => 
+          exercises.find(exercise => exercise._id === exerciseId)
+        ),
       };
+   
+  
       console.log('Submitting plan:', workoutPlan); // Log the plan being submitted
       await addWorkoutPlan(workoutPlan);
       // Reset form
@@ -30,7 +42,7 @@ function WorkoutPlanForm() {
         ? prevSelected.filter(id => id !== exerciseId)
         : [...prevSelected, exerciseId]
     );
-  };
+  };   
 
   return (
     <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
