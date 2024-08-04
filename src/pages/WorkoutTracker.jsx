@@ -32,17 +32,23 @@ function WorkoutTracker() {
     } else {
       // Workout complete, save it
       const completedWorkout = {
-        plan: currentPlan._id,
+        plan: currentPlan,
         exercises: currentPlan.exercises.map((exercise, index) => ({
-          exercise: exercise._id,
+          ...exercise,
           sets: sets[index]
-        }))
+        })),
+        date: new Date().toISOString()
       };
       addWorkout(completedWorkout);
-      alert('Workout completed and saved!');
-      navigate('/'); // Navigate back to home or wherever you want
+      
+      // Save to local storage for summary
+      localStorage.setItem('completedWorkout', JSON.stringify(completedWorkout));
+      
+      // Navigate to summary page
+      navigate('/workout-summary');
     }
   };
+
 
   if (!currentPlan) {
     return <div>Loading workout plan...</div>;
@@ -90,10 +96,31 @@ function WorkoutTracker() {
       </div>
       <button
         onClick={handleNextExercise}
-        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
       >
         {currentExerciseIndex < currentPlan.exercises.length - 1 ? 'Next Exercise' : 'Finish Workout'}
       </button>
+
+      {/* Set Log */}
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold mb-4">Set Log</h3>
+        {currentPlan.exercises.map((exercise, index) => (
+          <div key={exercise._id} className="mb-4">
+            <h4 className="text-lg font-medium">{exercise.name}</h4>
+            {sets[index] && sets[index].length > 0 ? (
+              <ul className="list-disc pl-5">
+                {sets[index].map((set, setIndex) => (
+                  <li key={setIndex}>
+                    Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No sets completed yet</p>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
