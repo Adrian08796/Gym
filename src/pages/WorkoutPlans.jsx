@@ -1,17 +1,28 @@
 // src/pages/WorkoutPlans.jsx
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
 
 function WorkoutPlans() {
-  const { workoutPlans, exercises, deleteWorkoutPlan } = useGymContext();
+  const { workoutPlans, exercises, deleteWorkoutPlan, addWorkoutPlan } = useGymContext();
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
 
   const handleStartWorkout = (plan) => {
     localStorage.setItem('currentPlan', JSON.stringify(plan));
     navigate('/tracker');
+  };
+
+  const handleAddWorkoutPlan = async (plan) => {
+    try {
+      await addWorkoutPlan(plan);
+      setShowForm(false); // Hide the form after successfully adding a plan
+    } catch (error) {
+      console.error('Error adding workout plan:', error);
+      // Optionally, you can show an error message to the user here
+    }
   };
 
   return (
@@ -23,7 +34,7 @@ function WorkoutPlans() {
       >
         {showForm ? 'Hide Form' : 'Create New Plan'}
       </button>
-      {showForm && <WorkoutPlanForm />}
+      {showForm && <WorkoutPlanForm onSubmit={handleAddWorkoutPlan} />}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {workoutPlans.map((plan) => (
           <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">

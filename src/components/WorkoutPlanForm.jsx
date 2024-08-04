@@ -1,11 +1,12 @@
 // src/components/WorkoutPlanForm.jsx
+
 import { useState } from 'react';
 import { useGymContext } from '../context/GymContext';
 
-function WorkoutPlanForm() {
+function WorkoutPlanForm({ onSubmit }) {
   const [planName, setPlanName] = useState('');
   const [selectedExercises, setSelectedExercises] = useState([]);
-  const { exercises, addWorkoutPlan } = useGymContext();
+  const { exercises } = useGymContext();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,7 +17,7 @@ function WorkoutPlanForm() {
           exercises.find(exercise => exercise._id === exerciseId)
         ),
       };
-      await addWorkoutPlan(workoutPlan);
+      await onSubmit(workoutPlan);
       // Reset form
       setPlanName('');
       setSelectedExercises([]);
