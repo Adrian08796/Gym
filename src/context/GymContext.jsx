@@ -179,10 +179,21 @@ export function GymProvider({ children }) {
 
   const deleteWorkoutPlan = async (id) => {
     try {
-      await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
+      const response = await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
+      console.log('Server response:', response.data);
       setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
+      
+      // Update workout history to reflect deleted plan
+      setWorkoutHistory(prevHistory => 
+        prevHistory.map(workout => 
+          workout.plan && workout.plan._id === id 
+            ? { ...workout, plan: null } 
+            : workout
+        )
+      );
     } catch (error) {
-      console.error('Error deleting workout plan:', error);
+      console.error('Error deleting workout plan:', error.response?.data || error.message);
+      throw error;
     }
   };
 

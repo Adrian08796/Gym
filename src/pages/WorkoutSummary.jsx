@@ -19,7 +19,7 @@ function WorkoutSummary() {
   }
 
   if (workoutHistory.length === 0) {
-    return <div className="container mx-auto mt-8">Loading workout history...</div>;
+    return <div className="container mx-auto mt-8">No workout history available.</div>;
   }
 
   return (
@@ -27,12 +27,16 @@ function WorkoutSummary() {
       <h2 className="text-2xl font-bold mb-4">Workout History</h2>
       {workoutHistory.map((workout) => (
         <div key={workout._id} className="mb-8 p-4 border rounded shadow">
-          <h3 className="text-xl mb-4">{workout.plan?.name || 'Unnamed Plan'}</h3>
+          <h3 className="text-xl mb-4">
+            {workout.plan ? workout.plan.name : 'Deleted Plan'}
+          </h3>
           <p className="mb-4">Completed on: {new Date(workout.date).toLocaleString()}</p>
 
-          {workout.exercises.map((exercise) => (
-            <div key={exercise._id} className="mb-4">
-              <h4 className="text-lg font-medium">{exercise.exercise?.name || 'Unnamed Exercise'}</h4>
+          {workout.exercises.map((exercise, index) => (
+            <div key={index} className="mb-4">
+              <h4 className="text-lg font-medium">
+                {exercise.exercise ? exercise.exercise.name : 'Deleted Exercise'}
+              </h4>
               {exercise.sets && exercise.sets.length > 0 ? (
                 <ul className="list-disc pl-5">
                   {exercise.sets.map((set, setIndex) => (
