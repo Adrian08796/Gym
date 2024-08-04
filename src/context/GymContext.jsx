@@ -1,3 +1,5 @@
+// context/GymContext.jsx
+
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
@@ -187,7 +189,7 @@ export function GymProvider({ children }) {
       setWorkoutHistory(prevHistory => 
         prevHistory.map(workout => 
           workout.plan && workout.plan._id === id 
-            ? { ...workout, plan: null } 
+            ? { ...workout, plan: null, planDeleted: true } 
             : workout
         )
       );

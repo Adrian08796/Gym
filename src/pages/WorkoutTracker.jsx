@@ -1,3 +1,5 @@
+// pages/WorkoutTracker.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
@@ -33,6 +35,7 @@ function WorkoutTracker() {
       // Workout complete, save it
       const completedWorkout = {
         plan: currentPlan._id,
+        planName: currentPlan.name,
         exercises: currentPlan.exercises.map((exercise, index) => ({
           exercise: exercise._id,
           sets: sets[index]
@@ -49,7 +52,6 @@ function WorkoutTracker() {
       }
     }
   };
-
 
   if (!currentPlan) {
     return <div>Loading workout plan...</div>;

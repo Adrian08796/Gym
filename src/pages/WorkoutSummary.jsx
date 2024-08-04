@@ -1,3 +1,5 @@
+// pages/WorkoutSummary.jsx
+
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
@@ -28,7 +30,7 @@ function WorkoutSummary() {
       {workoutHistory.map((workout) => (
         <div key={workout._id} className="mb-8 p-4 border rounded shadow">
           <h3 className="text-xl mb-4">
-            {workout.plan ? workout.plan.name : 'Deleted Plan'}
+            {workout.planName} {workout.planDeleted && <span className="text-red-500">(Deleted)</span>}
           </h3>
           <p className="mb-4">Completed on: {new Date(workout.date).toLocaleString()}</p>
 
