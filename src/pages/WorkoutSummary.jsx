@@ -1,4 +1,3 @@
-// pages/WorkoutSummary.jsx
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
@@ -10,10 +9,10 @@ function WorkoutSummary() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && workoutHistory.length === 0) {
+    if (user) {
       fetchWorkoutHistory();
     }
-  }, [user, workoutHistory.length, fetchWorkoutHistory]);
+  }, [user, fetchWorkoutHistory]);
 
   if (!user) {
     return <div className="container mx-auto mt-8">Please log in to view your workout history.</div>;
@@ -22,17 +21,18 @@ function WorkoutSummary() {
   if (workoutHistory.length === 0) {
     return <div className="container mx-auto mt-8">Loading workout history...</div>;
   }
+
   return (
     <div className="container mx-auto mt-8">
       <h2 className="text-2xl font-bold mb-4">Workout History</h2>
       {workoutHistory.map((workout) => (
         <div key={workout._id} className="mb-8 p-4 border rounded shadow">
-          <h3 className="text-xl mb-4">{workout.plan.name}</h3>
+          <h3 className="text-xl mb-4">{workout.plan?.name || 'Unnamed Plan'}</h3>
           <p className="mb-4">Completed on: {new Date(workout.date).toLocaleString()}</p>
 
           {workout.exercises.map((exercise) => (
             <div key={exercise._id} className="mb-4">
-              <h4 className="text-lg font-medium">{exercise.exercise.name}</h4>
+              <h4 className="text-lg font-medium">{exercise.exercise?.name || 'Unnamed Exercise'}</h4>
               {exercise.sets && exercise.sets.length > 0 ? (
                 <ul className="list-disc pl-5">
                   {exercise.sets.map((set, setIndex) => (
