@@ -33,6 +33,16 @@ export function AuthProvider({ children }) {
     checkLoggedIn();
   }, []);
 
+  const register = async (username, email, password) => {
+    try {
+      await axios.post('http://localhost:4500/api/auth/register', { username, email, password });
+      return true;
+    } catch (error) {
+      console.error('Registration error:', error.response?.data || error.message);
+      throw error;
+    }
+  };
+
   const login = async (username, password) => {
     try {
       const response = await axios.post('http://localhost:4500/api/auth/login', { username, password });
@@ -52,6 +62,7 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    register,
     login,
     logout,
     loading
