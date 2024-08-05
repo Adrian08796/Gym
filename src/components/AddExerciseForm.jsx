@@ -1,4 +1,5 @@
 // src/components/AddExerciseForm.jsx
+
 import { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 
@@ -6,13 +7,17 @@ function AddExerciseForm({ onSave, initialExercise }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
-  const { addExercise } = useGymContext();
+  const { addExercise, updateExercise } = useGymContext();
 
   useEffect(() => {
     if (initialExercise) {
       setName(initialExercise.name);
       setDescription(initialExercise.description);
       setTarget(initialExercise.target);
+    } else {
+      setName('');
+      setDescription('');
+      setTarget('');
     }
   }, [initialExercise]);
 
@@ -20,6 +25,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
     e.preventDefault();
     const exercise = { name, description, target };
     if (initialExercise) {
+      updateExercise(initialExercise._id, exercise);
       onSave(exercise);
     } else {
       addExercise(exercise);
@@ -31,7 +37,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className=" bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
       <h2 className="text-2xl font-bold mb-4">
         {initialExercise ? 'Edit Exercise' : 'Add New Exercise'}
       </h2>

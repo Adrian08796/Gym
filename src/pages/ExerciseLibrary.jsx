@@ -1,11 +1,10 @@
-// src/pages/ExerciseLibrary.jsx
 import { useState } from 'react';
 import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
 import { useGymContext } from '../context/GymContext';
 
 function ExerciseLibrary() {
-  const { exercises, updateExercise, deleteExercise } = useGymContext();
+  const { exercises, addExercise, updateExercise, deleteExercise } = useGymContext();
   const [editingExercise, setEditingExercise] = useState(null);
 
   const handleEdit = (exercise) => {
@@ -16,10 +15,12 @@ function ExerciseLibrary() {
     deleteExercise(id);
   };
 
-  const handleSave = (updatedExercise) => {
+  const handleSave = (exerciseData) => {
     if (editingExercise) {
-      updateExercise(editingExercise._id, updatedExercise);
+      updateExercise(editingExercise._id, exerciseData);
       setEditingExercise(null);
+    } else {
+      addExercise(exerciseData);
     }
   };
 

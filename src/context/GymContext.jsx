@@ -113,7 +113,8 @@ export function GymProvider({ children }) {
       const formattedExercises = response.data.map(exercise => ({
         ...exercise,
         name: toTitleCase(exercise.name),
-        description: toTitleCase(exercise.description)
+        description: toTitleCase(exercise.description),
+        target: toTitleCase(exercise.target)  // Add this line
       }));
       setExercises(formattedExercises);
     } catch (error) {
@@ -126,7 +127,8 @@ export function GymProvider({ children }) {
       const exerciseWithTitleCase = {
         ...exercise,
         name: toTitleCase(exercise.name),
-        description: toTitleCase(exercise.description)
+        description: toTitleCase(exercise.description),
+        target: toTitleCase(exercise.target)  // Add this line
       };
       const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
       setExercises(prevExercises => [...prevExercises, response.data]);
@@ -140,7 +142,8 @@ export function GymProvider({ children }) {
       const exerciseWithTitleCase = {
         ...updatedExercise,
         name: toTitleCase(updatedExercise.name),
-        description: toTitleCase(updatedExercise.description)
+        description: toTitleCase(updatedExercise.description),
+        target: toTitleCase(updatedExercise.target)  // Add this line
       };
       const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
       setExercises(prevExercises =>
