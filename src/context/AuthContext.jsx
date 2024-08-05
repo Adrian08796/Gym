@@ -1,3 +1,5 @@
+// src/context/AuthContext.jsx
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -12,41 +14,31 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    if (token) {
-      axios.get('http://localhost:4500/api/auth/user', {
-        headers: { 'x-auth-token': token }
-      })
-      .then(response => {
-        setUser(response.data);
-        setLoading(false);
-      })
-      .catch(() => {
-        localStorage.removeItem('token');
-        setLoading(false);
-      });
-    } else {
+    const checkLoggedIn = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await axios.get('http://localhost:4500/api/auth/user', {
+            headers: { 'x-auth-token': token }
+          });
+          setUser(response.data);
+        } catch (error) {
+          console.error('Error fetching user:', error);
+          localStorage.removeItem('token');
+        }
+      }
       setLoading(false);
-    }
-  }, []);
+    };
 
-  const register = async (username, email, password) => {
-    try {
-      await axios.post('http://localhost:4500/api/auth/register', { username, email, password });
-      return true;
-    } catch (error) {
-      console.error('Registration error:', error.response?.data || error.message);
-      throw error;
-    }
-  };
+    checkLoggedIn();
+  }, []);
 
   const login = async (username, password) => {
     try {
       const response = await axios.post('http://localhost:4500/api/auth/login', { username, password });
       localStorage.setItem('token', response.data.token);
       setUser(response.data.user);
-      return true;
+      return response.data.user;
     } catch (error) {
       console.error('Login error:', error.response?.data || error.message);
       throw error;
@@ -60,14 +52,14 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
-    register,
     login,
-    logout
+    logout,
+    loading
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
