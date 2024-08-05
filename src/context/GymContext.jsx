@@ -26,6 +26,15 @@ export function GymProvider({ children }) {
     };
   };
 
+  const toTitleCase = (str) => {
+    return str.replace(
+      /\w\S*/g,
+      function(txt) {
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+      }
+    );
+  };
+
   const fetchWorkoutHistory = useCallback(async () => {
     if (user) {
       try {
@@ -101,7 +110,12 @@ export function GymProvider({ children }) {
   const fetchExercises = async () => {
     try {
       const response = await axios.get(`${API_URL}/exercises`, getAuthConfig());
-      setExercises(response.data);
+      const formattedExercises = response.data.map(exercise => ({
+        ...exercise,
+        name: toTitleCase(exercise.name),
+        description: toTitleCase(exercise.description)
+      }));
+      setExercises(formattedExercises);
     } catch (error) {
       console.error('Error fetching exercises:', error);
     }
@@ -109,7 +123,12 @@ export function GymProvider({ children }) {
 
   const addExercise = async (exercise) => {
     try {
-      const response = await axios.post(`${API_URL}/exercises`, exercise, getAuthConfig());
+      const exerciseWithTitleCase = {
+        ...exercise,
+        name: toTitleCase(exercise.name),
+        description: toTitleCase(exercise.description)
+      };
+      const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
       setExercises(prevExercises => [...prevExercises, response.data]);
     } catch (error) {
       console.error('Error adding exercise:', error);
@@ -118,7 +137,12 @@ export function GymProvider({ children }) {
 
   const updateExercise = async (id, updatedExercise) => {
     try {
-      const response = await axios.put(`${API_URL}/exercises/${id}`, updatedExercise, getAuthConfig());
+      const exerciseWithTitleCase = {
+        ...updatedExercise,
+        name: toTitleCase(updatedExercise.name),
+        description: toTitleCase(updatedExercise.description)
+      };
+      const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
       setExercises(prevExercises =>
         prevExercises.map(exercise =>
           exercise._id === id ? response.data : exercise
