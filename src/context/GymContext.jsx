@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+import { useNotification } from './NotificationContext';
 
 const GymContext = createContext();
 
@@ -16,6 +17,7 @@ export function GymProvider({ children }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [workoutHistory, setWorkoutHistory] = useState([]);
   const { user } = useAuth();
+  const { addNotification } = useNotification();
 
   const API_URL = 'http://localhost:4500/api';
 
@@ -42,9 +44,10 @@ export function GymProvider({ children }) {
         setWorkoutHistory(response.data);
       } catch (error) {
         console.error('Error fetching workout history:', error);
+        addNotification('Failed to fetch workout history', 'error');
       }
     }
-  }, [user]);
+  }, [user, addNotification]);
 
   useEffect(() => {
     if (user) {
@@ -58,10 +61,11 @@ export function GymProvider({ children }) {
   // Workouts
   const fetchWorkouts = async () => {
     try {
-      const response = await axios.get(`${API_URL}/workouts`, getAuthConfig());
+      const response = await axios.get(`${API_URL}/workouts/user`, getAuthConfig());
       setWorkouts(response.data);
     } catch (error) {
       console.error('Error fetching workouts:', error);
+      addNotification('Failed to fetch workouts', 'error');
     }
   };
 
@@ -72,8 +76,10 @@ export function GymProvider({ children }) {
       console.log('Server response:', response.data);
       setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
       setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
+      addNotification('Workout added successfully', 'success');
     } catch (error) {
       console.error('Error adding workout:', error.response?.data || error.message);
+      addNotification('Failed to add workout', 'error');
       throw error;
     }
   };
@@ -91,8 +97,10 @@ export function GymProvider({ children }) {
           workout._id === id ? response.data : workout
         )
       );
+      addNotification('Workout updated successfully', 'success');
     } catch (error) {
       console.error('Error updating workout:', error);
+      addNotification('Failed to update workout', 'error');
     }
   };
 
@@ -101,8 +109,10 @@ export function GymProvider({ children }) {
       await axios.delete(`${API_URL}/workouts/${id}`, getAuthConfig());
       setWorkouts(prevWorkouts => prevWorkouts.filter(workout => workout._id !== id));
       setWorkoutHistory(prevHistory => prevHistory.filter(workout => workout._id !== id));
+      addNotification('Workout deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting workout:', error);
+      addNotification('Failed to delete workout', 'error');
     }
   };
 
@@ -114,11 +124,12 @@ export function GymProvider({ children }) {
         ...exercise,
         name: toTitleCase(exercise.name),
         description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target)  // Add this line
+        target: toTitleCase(exercise.target)
       }));
       setExercises(formattedExercises);
     } catch (error) {
       console.error('Error fetching exercises:', error);
+      addNotification('Failed to fetch exercises', 'error');
     }
   };
 
@@ -128,12 +139,14 @@ export function GymProvider({ children }) {
         ...exercise,
         name: toTitleCase(exercise.name),
         description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target)  // Add this line
+        target: toTitleCase(exercise.target)
       };
       const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
       setExercises(prevExercises => [...prevExercises, response.data]);
+      return response.data; // Return the newly added exercise
     } catch (error) {
       console.error('Error adding exercise:', error);
+      throw error;
     }
   };
 
@@ -143,7 +156,7 @@ export function GymProvider({ children }) {
         ...updatedExercise,
         name: toTitleCase(updatedExercise.name),
         description: toTitleCase(updatedExercise.description),
-        target: toTitleCase(updatedExercise.target)  // Add this line
+        target: toTitleCase(updatedExercise.target)
       };
       const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
       setExercises(prevExercises =>
@@ -151,8 +164,10 @@ export function GymProvider({ children }) {
           exercise._id === id ? response.data : exercise
         )
       );
+      return response.data; // Return the updated exercise
     } catch (error) {
       console.error('Error updating exercise:', error);
+      throw error;
     }
   };
 
@@ -160,8 +175,10 @@ export function GymProvider({ children }) {
     try {
       await axios.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
       setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
+      addNotification('Exercise deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting exercise:', error);
+      addNotification('Failed to delete exercise', 'error');
     }
   };
 
@@ -172,6 +189,7 @@ export function GymProvider({ children }) {
       setWorkoutPlans(response.data);
     } catch (error) {
       console.error('Error fetching workout plans:', error);
+      addNotification('Failed to fetch workout plans', 'error');
     }
   };
 
@@ -187,8 +205,10 @@ export function GymProvider({ children }) {
         exercises: plan.exercises
       };
       setWorkoutPlans(prevPlans => [...prevPlans, newPlan]);
+      addNotification('Workout plan added successfully', 'success');
     } catch (error) {
       console.error('Error adding workout plan:', error.response ? error.response.data : error.message);
+      addNotification('Failed to add workout plan', 'error');
       throw error;
     }
   };
@@ -201,8 +221,10 @@ export function GymProvider({ children }) {
           plan._id === id ? response.data : plan
         )
       );
+      addNotification('Workout plan updated successfully', 'success');
     } catch (error) {
       console.error('Error updating workout plan:', error);
+      addNotification('Failed to update workout plan', 'error');
     }
   };
 
@@ -220,8 +242,10 @@ export function GymProvider({ children }) {
             : workout
         )
       );
+      addNotification('Workout plan deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting workout plan:', error.response?.data || error.message);
+      addNotification('Failed to delete workout plan', 'error');
       throw error;
     }
   };

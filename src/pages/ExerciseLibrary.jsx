@@ -1,10 +1,12 @@
+// src/pages/ExerciseLibrary.jsx
+
 import { useState } from 'react';
 import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
 import { useGymContext } from '../context/GymContext';
 
 function ExerciseLibrary() {
-  const { exercises, addExercise, updateExercise, deleteExercise } = useGymContext();
+  const { exercises, updateExercise, deleteExercise } = useGymContext();
   const [editingExercise, setEditingExercise] = useState(null);
 
   const handleEdit = (exercise) => {
@@ -15,13 +17,10 @@ function ExerciseLibrary() {
     deleteExercise(id);
   };
 
-  const handleSave = (exerciseData) => {
-    if (editingExercise) {
-      updateExercise(editingExercise._id, exerciseData);
-      setEditingExercise(null);
-    } else {
-      addExercise(exerciseData);
-    }
+  const handleSave = (savedExercise) => {
+    // The AddExerciseForm component now handles both adding and updating
+    // So we just need to reset the editing state here
+    setEditingExercise(null);
   };
 
   return (

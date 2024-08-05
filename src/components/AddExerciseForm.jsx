@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
+import { useNotification } from '../context/NotificationContext';
 
 function AddExerciseForm({ onSave, initialExercise }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { addExercise, updateExercise } = useGymContext();
+  const { addNotification } = useNotification();
 
   useEffect(() => {
     if (initialExercise) {
@@ -21,21 +24,32 @@ function AddExerciseForm({ onSave, initialExercise }) {
     }
   }, [initialExercise]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const exercise = { name, description, target };
-    if (initialExercise) {
-      updateExercise(initialExercise._id, exercise);
-      onSave(exercise);
-    } else {
-      addExercise(exercise);
+    try {
+      let savedExercise;
+      if (initialExercise) {
+        savedExercise = await updateExercise(initialExercise._id, exercise);
+        addNotification('Exercise updated successfully', 'success');
+      } else {
+        savedExercise = await addExercise(exercise);
+        addNotification('Exercise added successfully', 'success');
+      }
+      // Reset form
+      setName('');
+      setDescription('');
+      setTarget('');
+      // Call onSave with the saved exercise from the server
+      onSave(savedExercise);
+    } catch (error) {
+      addNotification('Failed to save exercise', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
-    // Reset form
-    setName('');
-    setDescription('');
-    setTarget('');
   };
-
   return (
     <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
       <h2 className="text-2xl font-bold mb-4">

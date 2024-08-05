@@ -42,16 +42,15 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (username, password) => {
-    try {
-      const response = await axios.post('http://localhost:4500/api/auth/login', { username, password });
-      localStorage.setItem('token', response.data.token);
-      setUser(response.data.user);
-      return true;
-    } catch (error) {
-      console.error('Login error:', error.response?.data || error.message);
-      throw error;
-    }
-  };
+  try {
+    const response = await axios.post('http://localhost:4500/api/auth/login', { username, password });
+    localStorage.setItem('token', response.data.token);
+    setUser(response.data.user);
+  } catch (error) {
+    console.error('Login error:', error.response?.data || error.message);
+    throw error;
+  }
+};
 
   const logout = () => {
     localStorage.removeItem('token');

@@ -3,13 +3,15 @@ import Home from './pages/Home';
 import WorkoutTracker from './pages/WorkoutTracker';
 import ExerciseLibrary from './pages/ExerciseLibrary';
 import WorkoutPlans from './pages/WorkoutPlans';
-import WorkoutSummary from './pages/WorkoutSummary'; // Import the new WorkoutSummary component
+import WorkoutSummary from './pages/WorkoutSummary';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Login from './components/Login';
 import Register from './components/Register';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
+import { NotificationProvider } from './context/NotificationContext';
+import NotificationToast from './components/NotificationToast';
 
 const PrivateRoute = ({ children }) => {
   const { user } = useAuth();
@@ -29,10 +31,11 @@ function AppContent() {
             <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
             <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
             <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
-            <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} /> {/* Add this new route */}
+            <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
           </Routes>
         </main>
         <Footer />
+        <NotificationToast />
       </div>
     </Router>
   );
@@ -41,9 +44,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <GymProvider>
-        <AppContent />
-      </GymProvider>
+      <NotificationProvider>
+        <GymProvider>
+          <AppContent />
+        </GymProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }
