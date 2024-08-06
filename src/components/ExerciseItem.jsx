@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-function ExerciseItem({ exercise, onEdit, onDelete }) {
+function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan }) {
   return (
     <div className="bg-white shadow-md rounded-lg overflow-hidden">
       <img 
@@ -26,6 +26,12 @@ function ExerciseItem({ exercise, onEdit, onDelete }) {
             className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           >
             Delete
+          </button>
+          <button 
+            onClick={() => onAddToPlan(exercise)} 
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Add to Plan
           </button>
         </div>
       </div>
