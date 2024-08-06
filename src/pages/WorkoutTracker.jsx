@@ -1,15 +1,16 @@
-// pages/WorkoutTracker.jsx
+// src/pages/WorkoutTracker.jsx
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
+import { useNotification } from '../context/NotificationContext';
 
 function WorkoutTracker() {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [sets, setSets] = useState([]);
-  const [notification, setNotification] = useState(null);
   const { addWorkout } = useGymContext();
+  const { addNotification } = useNotification();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,18 +44,13 @@ function WorkoutTracker() {
     localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
   }, [currentPlan, sets, currentExerciseIndex]);
 
-  const showNotification = (message, type = 'success') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
-  };
-
   const handleSetComplete = (weight, reps) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
       newSets[currentExerciseIndex] = [...(newSets[currentExerciseIndex] || []), { weight, reps }];
       return newSets;
     });
-    showNotification('Set completed!');
+    addNotification('Set completed!', 'success');
   };
 
   const isExerciseComplete = (index) => {
@@ -70,7 +66,9 @@ function WorkoutTracker() {
     
     if (incompletedExercises.length > 0) {
       const confirmFinish = window.confirm(`You have ${incompletedExercises.length} exercise(s) with less than 3 sets. Are you sure you want to finish the workout?`);
-      if (!confirmFinish) return;
+      if (!confirmFinish) {
+        return;
+      }
     }
 
     const completedWorkout = {
@@ -81,18 +79,18 @@ function WorkoutTracker() {
         sets: sets[index] || []
       }))
     };
-    console.log('Completed workout data:', completedWorkout);
+    
     try {
       await addWorkout(completedWorkout);
-      showNotification('Workout completed and saved!');
+      addNotification('Workout completed and saved!', 'success');
       // Clear localStorage
       localStorage.removeItem('currentPlan');
       localStorage.removeItem('currentSets');
       localStorage.removeItem('currentExerciseIndex');
-      setTimeout(() => navigate('/'), 2000);
+      navigate('/');
     } catch (error) {
       console.error('Error saving workout:', error);
-      showNotification('Failed to save workout. Please try again.', 'error');
+      addNotification('Failed to save workout. Please try again.', 'error');
     }
   };
 
@@ -125,13 +123,6 @@ function WorkoutTracker() {
 
   return (
     <div className="container mx-auto mt-8 relative">
-      {notification && (
-        <div className={`fixed top-5 right-5 p-4 rounded-md text-white ${
-          notification.type === 'error' ? 'bg-red-500' : 'bg-green-500'
-        }`}>
-          {notification.message}
-        </div>
-      )}
       <h2 className="text-2xl font-bold mb-4">Workout Tracker</h2>
       <h3 className="text-xl mb-4">{currentPlan.name}</h3>
       
@@ -178,7 +169,7 @@ function WorkoutTracker() {
               document.getElementById('weight').value = '';
               document.getElementById('reps').value = '';
             } else {
-              showNotification('Please enter both weight and reps', 'error');
+              addNotification('Please enter both weight and reps', 'error');
             }
           }}
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
