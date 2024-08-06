@@ -1,24 +1,20 @@
-// src/pages/WorkoutTracker.jsx
+// pages/WorkoutTracker.jsx
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
-import { useNotification } from '../context/NotificationContext';
 
 function WorkoutTracker() {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [sets, setSets] = useState([]);
-  const [startTime, setStartTime] = useState(null);
   const { addWorkout } = useGymContext();
-  const { addNotification } = useNotification();
   const navigate = useNavigate();
 
   useEffect(() => {
     const storedPlan = localStorage.getItem('currentPlan');
     const storedSets = localStorage.getItem('currentSets');
     const storedIndex = localStorage.getItem('currentExerciseIndex');
-    const storedStartTime = localStorage.getItem('workoutStartTime');
 
     if (storedPlan) {
       const parsedPlan = JSON.parse(storedPlan);
@@ -30,16 +26,8 @@ function WorkoutTracker() {
         setSets(parsedPlan.exercises.map(() => []));
       }
       
-      if (storedIndex !== null) {
-        setCurrentExerciseIndex(parseInt(storedIndex, 10));
-      }
-
-      if (storedStartTime) {
-        setStartTime(new Date(storedStartTime));
-      } else {
-        const newStartTime = new Date();
-        setStartTime(newStartTime);
-        localStorage.setItem('workoutStartTime', newStartTime.toISOString());
+      if (storedIndex) {
+        setCurrentExerciseIndex(parseInt(storedIndex));
       }
     }
   }, []);
@@ -57,79 +45,44 @@ function WorkoutTracker() {
   const handleSetComplete = (weight, reps) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
-      newSets[currentExerciseIndex] = [
-        ...(newSets[currentExerciseIndex] || []),
-        { weight, reps, completedAt: new Date().toISOString() }
-      ];
+      newSets[currentExerciseIndex] = [...(newSets[currentExerciseIndex] || []), { weight, reps }];
       return newSets;
     });
-    addNotification('Set completed!', 'success');
   };
 
-  const isExerciseComplete = (index) => {
-    return sets[index] && sets[index].length >= 3;
-  };
-
-  const handleExerciseChange = (newIndex) => {
-    setCurrentExerciseIndex(newIndex);
-  };
-
-  const handleFinishWorkout = async () => {
-    const endTime = new Date();
-    const completedWorkout = {
-      plan: currentPlan._id,
-      planName: currentPlan.name,
-      exercises: currentPlan.exercises.map((exercise, index) => ({
-        exercise: exercise._id,
-        sets: sets[index] || [],
-        completedAt: sets[index] && sets[index].length > 0 
-          ? sets[index][sets[index].length - 1].completedAt 
-          : endTime.toISOString()
-      })),
-      startTime: startTime.toISOString(),
-      endTime: endTime.toISOString()
-    };
-    
-    console.log('Completed workout:', JSON.stringify(completedWorkout, null, 2));
-    
-    try {
-      await addWorkout(completedWorkout);
-      addNotification('Workout completed and saved!', 'success');
-      localStorage.removeItem('currentPlan');
-      localStorage.removeItem('currentSets');
-      localStorage.removeItem('currentExerciseIndex');
-      localStorage.removeItem('workoutStartTime');
-      navigate('/');
-    } catch (error) {
-      console.error('Error saving workout:', error);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-        console.error('Response headers:', error.response.headers);
-      }
-      addNotification('Failed to save workout. Please try again.', 'error');
+  const handlePreviousExercise = () => {
+    if (currentExerciseIndex > 0) {
+      setCurrentExerciseIndex(prevIndex => prevIndex - 1);
     }
   };
 
-  const renderCarouselIndicator = () => {
-    if (!currentPlan) return null;
-
-    return (
-      <div className="flex justify-center items-center space-x-2 my-4">
-        {currentPlan.exercises.map((_, index) => (
-          <div
-            key={index}
-            className={`h-3 w-3 rounded-full cursor-pointer ${
-              index === currentExerciseIndex ? 'bg-blue-500' : 'bg-gray-300'
-            } ${
-              isExerciseComplete(index) ? 'bg-green-500' : ''
-            }`}
-            title={`Exercise ${index + 1}: ${currentPlan.exercises[index].name}`}
-            onClick={() => handleExerciseChange(index)}
-          ></div>
-        ))}
-      </div>
-    );
+  const handleNextExercise = async () => {
+    if (currentExerciseIndex < currentPlan.exercises.length - 1) {
+      setCurrentExerciseIndex(prevIndex => prevIndex + 1);
+    } else {
+      // Workout complete, save it
+      const completedWorkout = {
+        plan: currentPlan._id,
+        planName: currentPlan.name,
+        exercises: currentPlan.exercises.map((exercise, index) => ({
+          exercise: exercise._id,
+          sets: sets[index] || []
+        }))
+      };
+      console.log('Completed workout data:', completedWorkout);
+      try {
+        await addWorkout(completedWorkout);
+        alert('Workout completed and saved!');
+        // Clear localStorage
+        localStorage.removeItem('currentPlan');
+        localStorage.removeItem('currentSets');
+        localStorage.removeItem('currentExerciseIndex');
+        navigate('/');
+      } catch (error) {
+        console.error('Error saving workout:', error);
+        alert('Failed to save workout. Please try again.');
+      }
+    }
   };
 
   if (!currentPlan) {
@@ -139,15 +92,11 @@ function WorkoutTracker() {
   const currentExercise = currentPlan.exercises[currentExerciseIndex];
 
   return (
-    <div className="container mx-auto mt-8 relative">
+    <div className="container mx-auto mt-8">
       <h2 className="text-2xl font-bold mb-4">Workout Tracker</h2>
       <h3 className="text-xl mb-4">{currentPlan.name}</h3>
-      
-      {renderCarouselIndicator()}
-      
       <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
         <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
-        <p className="text-sm text-gray-600 mb-2">Exercise {currentExerciseIndex + 1} of {currentPlan.exercises.length}</p>
         <div className="flex mb-4">
           <img 
             src={currentExercise.imageUrl} 
@@ -157,10 +106,7 @@ function WorkoutTracker() {
           <div>
             <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
             <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
-            <p className="mb-2">
-              <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / 3
-              {isExerciseComplete(currentExerciseIndex) && ' (Complete)'}
-            </p>
+            <p className="mb-2"><strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length}</p>
           </div>
         </div>
         <div className="mb-4">
@@ -186,7 +132,7 @@ function WorkoutTracker() {
               document.getElementById('weight').value = '';
               document.getElementById('reps').value = '';
             } else {
-              addNotification('Please enter both weight and reps', 'error');
+              alert('Please enter both weight and reps');
             }
           }}
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
@@ -196,26 +142,18 @@ function WorkoutTracker() {
       </div>
       <div className="flex justify-between">
         <button
-          onClick={() => handleExerciseChange(Math.max(0, currentExerciseIndex - 1))}
-          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+          onClick={handlePreviousExercise}
+          disabled={currentExerciseIndex === 0}
+          className={`bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4 ${currentExerciseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Previous Exercise
         </button>
-        {currentExerciseIndex < currentPlan.exercises.length - 1 ? (
-          <button
-            onClick={() => handleExerciseChange(currentExerciseIndex + 1)}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-          >
-            Next Exercise
-          </button>
-        ) : (
-          <button
-            onClick={handleFinishWorkout}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-          >
-            Finish Workout
-          </button>
-        )}
+        <button
+          onClick={handleNextExercise}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+        >
+          {currentExerciseIndex < currentPlan.exercises.length - 1 ? 'Next Exercise' : 'Finish Workout'}
+        </button>
       </div>
 
       {/* Set Log */}

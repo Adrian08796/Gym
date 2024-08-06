@@ -12,11 +12,9 @@ export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
 
   const addNotification = (message, type = 'info', duration = 5000) => {
-    const id = Date.now() + Math.random(); // Ensure unique id
+    const id = Date.now() + Math.random(); // This should create a unique ID
     setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      removeNotification(id);
-    }, duration);
+    setTimeout(() => removeNotification(id), duration);
   };
 
   const removeNotification = (id) => {

@@ -12,7 +12,9 @@ function NotificationToast() {
         <div
           key={notification.id}
           className={`mb-2 p-4 rounded shadow-md ${
-            notification.type === 'error' ? 'bg-red-500' : 'bg-green-500'
+            notification.type === 'error' ? 'bg-red-500' : 
+            notification.type === 'success' ? 'bg-green-500' : 
+            notification.type === 'info' ? 'bg-blue-500' : 'bg-yellow-500'
           } text-white`}
         >
           {notification.message}
