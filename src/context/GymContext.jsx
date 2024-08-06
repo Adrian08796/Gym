@@ -117,59 +117,59 @@ export function GymProvider({ children }) {
   };
 
   // Exercises
-  const fetchExercises = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/exercises`, getAuthConfig());
-      const formattedExercises = response.data.map(exercise => ({
-        ...exercise,
-        name: toTitleCase(exercise.name),
-        description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target)
-      }));
-      setExercises(formattedExercises);
-    } catch (error) {
-      console.error('Error fetching exercises:', error);
-      addNotification('Failed to fetch exercises', 'error');
-    }
-  };
+const fetchExercises = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/exercises`, getAuthConfig());
+    const formattedExercises = response.data.map(exercise => ({
+      ...exercise,
+      name: toTitleCase(exercise.name),
+      description: toTitleCase(exercise.description),
+      target: toTitleCase(exercise.target)
+    }));
+    setExercises(formattedExercises);
+  } catch (error) {
+    console.error('Error fetching exercises:', error);
+    addNotification('Failed to fetch exercises', 'error');
+  }
+};
 
-  const addExercise = async (exercise) => {
-    try {
-      const exerciseWithTitleCase = {
-        ...exercise,
-        name: toTitleCase(exercise.name),
-        description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target)
-      };
-      const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
-      setExercises(prevExercises => [...prevExercises, response.data]);
-      return response.data; // Return the newly added exercise
-    } catch (error) {
-      console.error('Error adding exercise:', error);
-      throw error;
-    }
-  };
+const addExercise = async (exercise) => {
+  try {
+    const exerciseWithTitleCase = {
+      ...exercise,
+      name: toTitleCase(exercise.name),
+      description: toTitleCase(exercise.description),
+      target: toTitleCase(exercise.target)
+    };
+    const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
+    setExercises(prevExercises => [...prevExercises, response.data]);
+    return response.data; // Return the newly added exercise
+  } catch (error) {
+    console.error('Error adding exercise:', error);
+    throw error;
+  }
+};
 
-  const updateExercise = async (id, updatedExercise) => {
-    try {
-      const exerciseWithTitleCase = {
-        ...updatedExercise,
-        name: toTitleCase(updatedExercise.name),
-        description: toTitleCase(updatedExercise.description),
-        target: toTitleCase(updatedExercise.target)
-      };
-      const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
-      setExercises(prevExercises =>
-        prevExercises.map(exercise =>
-          exercise._id === id ? response.data : exercise
-        )
-      );
-      return response.data; // Return the updated exercise
-    } catch (error) {
-      console.error('Error updating exercise:', error);
-      throw error;
-    }
-  };
+const updateExercise = async (id, updatedExercise) => {
+  try {
+    const exerciseWithTitleCase = {
+      ...updatedExercise,
+      name: toTitleCase(updatedExercise.name),
+      description: toTitleCase(updatedExercise.description),
+      target: toTitleCase(updatedExercise.target)
+    };
+    const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
+    setExercises(prevExercises =>
+      prevExercises.map(exercise =>
+        exercise._id === id ? response.data : exercise
+      )
+    );
+    return response.data; // Return the updated exercise
+  } catch (error) {
+    console.error('Error updating exercise:', error);
+    throw error;
+  }
+};
 
   const deleteExercise = async (id) => {
     try {

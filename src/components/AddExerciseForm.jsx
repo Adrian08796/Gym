@@ -8,6 +8,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addExercise, updateExercise } = useGymContext();
   const { addNotification } = useNotification();
@@ -17,10 +18,12 @@ function AddExerciseForm({ onSave, initialExercise }) {
       setName(initialExercise.name);
       setDescription(initialExercise.description);
       setTarget(initialExercise.target);
+      setImageUrl(initialExercise.imageUrl);
     } else {
       setName('');
       setDescription('');
       setTarget('');
+      setImageUrl('');
     }
   }, [initialExercise]);
 
@@ -28,7 +31,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
-    const exercise = { name, description, target };
+    const exercise = { name, description, target, imageUrl };
     try {
       let savedExercise;
       if (initialExercise) {
@@ -42,6 +45,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
       setName('');
       setDescription('');
       setTarget('');
+      setImageUrl('');
       // Call onSave with the saved exercise from the server
       onSave(savedExercise);
     } catch (error) {
@@ -50,6 +54,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
       setIsSubmitting(false);
     }
   };
+
   return (
     <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
       <h2 className="text-2xl font-bold mb-4">
@@ -94,6 +99,19 @@ function AddExerciseForm({ onSave, initialExercise }) {
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imageUrl">
+          Image URL
+        </label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="imageUrl"
+          type="text"
+          placeholder="Image URL"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
         />
       </div>
       <div className="flex items-center justify-between">
