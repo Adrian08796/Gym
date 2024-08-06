@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { hostName } from './GymContext';
 
 const AuthContext = createContext();
 
@@ -18,7 +19,7 @@ export function AuthProvider({ children }) {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const response = await axios.get('http://localhost:4500/api/auth/user', {
+          const response = await axios.get(`${hostName}:4500/api/auth/user`, {
             headers: { 'x-auth-token': token }
           });
           setUser(response.data);
@@ -35,7 +36,7 @@ export function AuthProvider({ children }) {
 
   const register = async (username, email, password) => {
     try {
-      await axios.post('http://localhost:4500/api/auth/register', { username, email, password });
+      await axios.post(`${hostName}:4500/api/auth/register`, { username, email, password });
       return true;
     } catch (error) {
       console.error('Registration error:', error.response?.data || error.message);
@@ -45,7 +46,7 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password) => {
     try {
-      const response = await axios.post('http://localhost:4500/api/auth/login', { username, password });
+      const response = await axios.post(`${hostName}:4500/api/auth/login`, { username, password });
       localStorage.setItem('token', response.data.token);
       setUser(response.data.user);
       return response.data.user;

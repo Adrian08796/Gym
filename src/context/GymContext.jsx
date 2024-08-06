@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
+export const hostName = 'http://192.168.178.42';
 
 const GymContext = createContext();
 
@@ -18,8 +19,8 @@ export function GymProvider({ children }) {
   const [workoutHistory, setWorkoutHistory] = useState([]);
   const { user } = useAuth();
   const { addNotification } = useNotification();
-
-  const API_URL = 'http://localhost:4500/api';
+  
+  const API_URL = `${hostName}:4500/api`;
 
   const getAuthConfig = () => {
     const token = localStorage.getItem('token');
