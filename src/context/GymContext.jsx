@@ -105,13 +105,23 @@ export function GymProvider({ children }) {
   // Add a workout
   const addWorkout = async (workout) => {
     try {
+      console.log('Sending workout data:', JSON.stringify(workout, null, 2));
       const response = await axios.post(`${API_URL}/workouts`, workout, getAuthConfig());
+      console.log('Server response:', response.data);
       setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
       setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
       addNotification('Workout added successfully', 'success');
-      return response.data;
     } catch (error) {
       console.error('Error adding workout:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
       addNotification('Failed to add workout', 'error');
       throw error;
     }

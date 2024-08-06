@@ -9,6 +9,7 @@ function WorkoutTracker() {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [sets, setSets] = useState([]);
+  const [startTime, setStartTime] = useState(null);
   const { addWorkout } = useGymContext();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ function WorkoutTracker() {
     const storedPlan = localStorage.getItem('currentPlan');
     const storedSets = localStorage.getItem('currentSets');
     const storedIndex = localStorage.getItem('currentExerciseIndex');
+    const storedStartTime = localStorage.getItem('workoutStartTime');
 
     if (storedPlan) {
       const parsedPlan = JSON.parse(storedPlan);
@@ -30,6 +32,14 @@ function WorkoutTracker() {
       
       if (storedIndex !== null) {
         setCurrentExerciseIndex(parseInt(storedIndex, 10));
+      }
+
+      if (storedStartTime) {
+        setStartTime(new Date(storedStartTime));
+      } else {
+        const newStartTime = new Date();
+        setStartTime(newStartTime);
+        localStorage.setItem('workoutStartTime', newStartTime.toISOString());
       }
     }
   }, []);
@@ -47,7 +57,10 @@ function WorkoutTracker() {
   const handleSetComplete = (weight, reps) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
-      newSets[currentExerciseIndex] = [...(newSets[currentExerciseIndex] || []), { weight, reps }];
+      newSets[currentExerciseIndex] = [
+        ...(newSets[currentExerciseIndex] || []),
+        { weight, reps, completedAt: new Date().toISOString() }
+      ];
       return newSets;
     });
     addNotification('Set completed!', 'success');
@@ -62,34 +75,38 @@ function WorkoutTracker() {
   };
 
   const handleFinishWorkout = async () => {
-    const incompletedExercises = currentPlan.exercises.filter((_, index) => !isExerciseComplete(index));
-    
-    if (incompletedExercises.length > 0) {
-      const confirmFinish = window.confirm(`You have ${incompletedExercises.length} exercise(s) with less than 3 sets. Are you sure you want to finish the workout?`);
-      if (!confirmFinish) {
-        return;
-      }
-    }
-
+    const endTime = new Date();
     const completedWorkout = {
       plan: currentPlan._id,
       planName: currentPlan.name,
       exercises: currentPlan.exercises.map((exercise, index) => ({
         exercise: exercise._id,
-        sets: sets[index] || []
-      }))
+        sets: sets[index] || [],
+        completedAt: sets[index] && sets[index].length > 0 
+          ? sets[index][sets[index].length - 1].completedAt 
+          : endTime.toISOString()
+      })),
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString()
     };
+    
+    console.log('Completed workout:', JSON.stringify(completedWorkout, null, 2));
     
     try {
       await addWorkout(completedWorkout);
       addNotification('Workout completed and saved!', 'success');
-      // Clear localStorage
       localStorage.removeItem('currentPlan');
       localStorage.removeItem('currentSets');
       localStorage.removeItem('currentExerciseIndex');
+      localStorage.removeItem('workoutStartTime');
       navigate('/');
     } catch (error) {
       console.error('Error saving workout:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+      }
       addNotification('Failed to save workout. Please try again.', 'error');
     }
   };
