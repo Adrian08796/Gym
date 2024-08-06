@@ -8,6 +8,7 @@ function WorkoutTracker() {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [sets, setSets] = useState([]);
+  const [notification, setNotification] = useState(null);
   const { addWorkout } = useGymContext();
   const navigate = useNavigate();
 
@@ -42,12 +43,22 @@ function WorkoutTracker() {
     localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
   }, [currentPlan, sets, currentExerciseIndex]);
 
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
   const handleSetComplete = (weight, reps) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
       newSets[currentExerciseIndex] = [...(newSets[currentExerciseIndex] || []), { weight, reps }];
       return newSets;
     });
+    showNotification('Set completed!');
+  };
+
+  const isExerciseComplete = (index) => {
+    return sets[index] && sets[index].length >= 3;
   };
 
   const handleExerciseChange = (newIndex) => {
@@ -55,6 +66,13 @@ function WorkoutTracker() {
   };
 
   const handleFinishWorkout = async () => {
+    const incompletedExercises = currentPlan.exercises.filter((_, index) => !isExerciseComplete(index));
+    
+    if (incompletedExercises.length > 0) {
+      const confirmFinish = window.confirm(`You have ${incompletedExercises.length} exercise(s) with less than 3 sets. Are you sure you want to finish the workout?`);
+      if (!confirmFinish) return;
+    }
+
     const completedWorkout = {
       plan: currentPlan._id,
       planName: currentPlan.name,
@@ -66,15 +84,15 @@ function WorkoutTracker() {
     console.log('Completed workout data:', completedWorkout);
     try {
       await addWorkout(completedWorkout);
-      alert('Workout completed and saved!');
+      showNotification('Workout completed and saved!');
       // Clear localStorage
       localStorage.removeItem('currentPlan');
       localStorage.removeItem('currentSets');
       localStorage.removeItem('currentExerciseIndex');
-      navigate('/');
+      setTimeout(() => navigate('/'), 2000);
     } catch (error) {
       console.error('Error saving workout:', error);
-      alert('Failed to save workout. Please try again.');
+      showNotification('Failed to save workout. Please try again.', 'error');
     }
   };
 
@@ -89,7 +107,7 @@ function WorkoutTracker() {
             className={`h-3 w-3 rounded-full cursor-pointer ${
               index === currentExerciseIndex ? 'bg-blue-500' : 'bg-gray-300'
             } ${
-              index < currentExerciseIndex ? 'bg-green-500' : ''
+              isExerciseComplete(index) ? 'bg-green-500' : ''
             }`}
             title={`Exercise ${index + 1}: ${currentPlan.exercises[index].name}`}
             onClick={() => handleExerciseChange(index)}
@@ -106,7 +124,14 @@ function WorkoutTracker() {
   const currentExercise = currentPlan.exercises[currentExerciseIndex];
 
   return (
-    <div className="container mx-auto mt-8">
+    <div className="container mx-auto mt-8 relative">
+      {notification && (
+        <div className={`fixed top-5 right-5 p-4 rounded-md text-white ${
+          notification.type === 'error' ? 'bg-red-500' : 'bg-green-500'
+        }`}>
+          {notification.message}
+        </div>
+      )}
       <h2 className="text-2xl font-bold mb-4">Workout Tracker</h2>
       <h3 className="text-xl mb-4">{currentPlan.name}</h3>
       
@@ -124,7 +149,10 @@ function WorkoutTracker() {
           <div>
             <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
             <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
-            <p className="mb-2"><strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length}</p>
+            <p className="mb-2">
+              <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / 3
+              {isExerciseComplete(currentExerciseIndex) && ' (Complete)'}
+            </p>
           </div>
         </div>
         <div className="mb-4">
@@ -150,7 +178,7 @@ function WorkoutTracker() {
               document.getElementById('weight').value = '';
               document.getElementById('reps').value = '';
             } else {
-              alert('Please enter both weight and reps');
+              showNotification('Please enter both weight and reps', 'error');
             }
           }}
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
