@@ -26,8 +26,8 @@ function WorkoutTracker() {
         setSets(parsedPlan.exercises.map(() => []));
       }
       
-      if (storedIndex) {
-        setCurrentExerciseIndex(parseInt(storedIndex));
+      if (storedIndex !== null) {
+        setCurrentExerciseIndex(parseInt(storedIndex, 10));
       }
     }
   }, []);
@@ -50,39 +50,53 @@ function WorkoutTracker() {
     });
   };
 
-  const handlePreviousExercise = () => {
-    if (currentExerciseIndex > 0) {
-      setCurrentExerciseIndex(prevIndex => prevIndex - 1);
+  const handleExerciseChange = (newIndex) => {
+    setCurrentExerciseIndex(newIndex);
+  };
+
+  const handleFinishWorkout = async () => {
+    const completedWorkout = {
+      plan: currentPlan._id,
+      planName: currentPlan.name,
+      exercises: currentPlan.exercises.map((exercise, index) => ({
+        exercise: exercise._id,
+        sets: sets[index] || []
+      }))
+    };
+    console.log('Completed workout data:', completedWorkout);
+    try {
+      await addWorkout(completedWorkout);
+      alert('Workout completed and saved!');
+      // Clear localStorage
+      localStorage.removeItem('currentPlan');
+      localStorage.removeItem('currentSets');
+      localStorage.removeItem('currentExerciseIndex');
+      navigate('/');
+    } catch (error) {
+      console.error('Error saving workout:', error);
+      alert('Failed to save workout. Please try again.');
     }
   };
 
-  const handleNextExercise = async () => {
-    if (currentExerciseIndex < currentPlan.exercises.length - 1) {
-      setCurrentExerciseIndex(prevIndex => prevIndex + 1);
-    } else {
-      // Workout complete, save it
-      const completedWorkout = {
-        plan: currentPlan._id,
-        planName: currentPlan.name,
-        exercises: currentPlan.exercises.map((exercise, index) => ({
-          exercise: exercise._id,
-          sets: sets[index] || []
-        }))
-      };
-      console.log('Completed workout data:', completedWorkout);
-      try {
-        await addWorkout(completedWorkout);
-        alert('Workout completed and saved!');
-        // Clear localStorage
-        localStorage.removeItem('currentPlan');
-        localStorage.removeItem('currentSets');
-        localStorage.removeItem('currentExerciseIndex');
-        navigate('/');
-      } catch (error) {
-        console.error('Error saving workout:', error);
-        alert('Failed to save workout. Please try again.');
-      }
-    }
+  const renderCarouselIndicator = () => {
+    if (!currentPlan) return null;
+
+    return (
+      <div className="flex justify-center items-center space-x-2 my-4">
+        {currentPlan.exercises.map((_, index) => (
+          <div
+            key={index}
+            className={`h-3 w-3 rounded-full cursor-pointer ${
+              index === currentExerciseIndex ? 'bg-blue-500' : 'bg-gray-300'
+            } ${
+              index < currentExerciseIndex ? 'bg-green-500' : ''
+            }`}
+            title={`Exercise ${index + 1}: ${currentPlan.exercises[index].name}`}
+            onClick={() => handleExerciseChange(index)}
+          ></div>
+        ))}
+      </div>
+    );
   };
 
   if (!currentPlan) {
@@ -95,8 +109,12 @@ function WorkoutTracker() {
     <div className="container mx-auto mt-8">
       <h2 className="text-2xl font-bold mb-4">Workout Tracker</h2>
       <h3 className="text-xl mb-4">{currentPlan.name}</h3>
+      
+      {renderCarouselIndicator()}
+      
       <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
         <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
+        <p className="text-sm text-gray-600 mb-2">Exercise {currentExerciseIndex + 1} of {currentPlan.exercises.length}</p>
         <div className="flex mb-4">
           <img 
             src={currentExercise.imageUrl} 
@@ -142,18 +160,26 @@ function WorkoutTracker() {
       </div>
       <div className="flex justify-between">
         <button
-          onClick={handlePreviousExercise}
-          disabled={currentExerciseIndex === 0}
-          className={`bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4 ${currentExerciseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          onClick={() => handleExerciseChange(Math.max(0, currentExerciseIndex - 1))}
+          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
         >
           Previous Exercise
         </button>
-        <button
-          onClick={handleNextExercise}
-          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-        >
-          {currentExerciseIndex < currentPlan.exercises.length - 1 ? 'Next Exercise' : 'Finish Workout'}
-        </button>
+        {currentExerciseIndex < currentPlan.exercises.length - 1 ? (
+          <button
+            onClick={() => handleExerciseChange(currentExerciseIndex + 1)}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+          >
+            Next Exercise
+          </button>
+        ) : (
+          <button
+            onClick={handleFinishWorkout}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+          >
+            Finish Workout
+          </button>
+        )}
       </div>
 
       {/* Set Log */}
