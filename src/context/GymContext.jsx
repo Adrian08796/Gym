@@ -30,6 +30,7 @@ export function GymProvider({ children }) {
   }, []);
 
   const toTitleCase = (str) => {
+    if (typeof str !== 'string') return str;
     return str.replace(
       /\w\S*/g,
       function(txt) {
@@ -59,7 +60,9 @@ export function GymProvider({ children }) {
         ...exercise,
         name: toTitleCase(exercise.name),
         description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target)
+        target: Array.isArray(exercise.target) 
+          ? exercise.target.map(toTitleCase) 
+          : toTitleCase(exercise.target)
       }));
       setExercises(formattedExercises);
     } catch (error) {
@@ -67,6 +70,7 @@ export function GymProvider({ children }) {
       addNotification('Failed to fetch exercises', 'error');
     }
   }, [API_URL, getAuthConfig, addNotification]);
+  
 
   // Fetch workout plans
   const fetchWorkoutPlans = useCallback(async () => {

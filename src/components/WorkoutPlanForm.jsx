@@ -16,6 +16,12 @@ function WorkoutPlanForm({ onSubmit, initialPlan }) {
       setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id));
       setWorkoutType(initialPlan.type || '');
       setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
+    } else {
+      // Reset form when not editing
+      setPlanName('');
+      setSelectedExercises([]);
+      setWorkoutType('');
+      setScheduledDate('');
     }
   }, [initialPlan]);
 
@@ -26,9 +32,15 @@ function WorkoutPlanForm({ onSubmit, initialPlan }) {
         name: planName,
         exercises: selectedExercises,
         type: workoutType,
-        scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : new Date().toISOString()
+        scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null
       };
+      
+      if (initialPlan) {
+        workoutPlan._id = initialPlan._id;  // Include the ID when updating
+      }
+
       await onSubmit(workoutPlan);
+      
       // Reset form if it's not editing
       if (!initialPlan) {
         setPlanName('');

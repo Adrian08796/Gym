@@ -4,10 +4,14 @@ import { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 
+const muscleGroups = [
+  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'
+];
+
 function AddExerciseForm({ onSave, initialExercise }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [target, setTarget] = useState('');
+  const [target, setTarget] = useState([]);
   const [imageUrl, setImageUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addExercise, updateExercise } = useGymContext();
@@ -17,12 +21,14 @@ function AddExerciseForm({ onSave, initialExercise }) {
     if (initialExercise) {
       setName(initialExercise.name);
       setDescription(initialExercise.description);
-      setTarget(initialExercise.target);
+      setTarget(Array.isArray(initialExercise.target) 
+        ? initialExercise.target 
+        : initialExercise.target.split(', '));
       setImageUrl(initialExercise.imageUrl);
     } else {
       setName('');
       setDescription('');
-      setTarget('');
+      setTarget([]);
       setImageUrl('');
     }
   }, [initialExercise]);
@@ -31,7 +37,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
-    const exercise = { name, description, target, imageUrl };
+    const exercise = { name, description, target: target.join(', '), imageUrl };
     try {
       let savedExercise;
       if (initialExercise) {
@@ -44,7 +50,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
       // Reset form
       setName('');
       setDescription('');
-      setTarget('');
+      setTarget([]);
       setImageUrl('');
       // Call onSave with the saved exercise from the server
       onSave(savedExercise);
@@ -53,6 +59,14 @@ function AddExerciseForm({ onSave, initialExercise }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleTargetChange = (group) => {
+    setTarget(prev => 
+      prev.includes(group) 
+        ? prev.filter(item => item !== group)
+        : [...prev, group]
+    );
   };
 
   return (
@@ -88,18 +102,26 @@ function AddExerciseForm({ onSave, initialExercise }) {
         />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="target">
-          Target Muscle Group
+        <label className="block text-gray-700 text-sm font-bold mb-2">
+          Target Muscle Groups
         </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="target"
-          type="text"
-          placeholder="Target Muscle Group"
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          required
-        />
+        <div className="flex flex-wrap -mx-1">
+          {muscleGroups.map(group => (
+            <div key={group} className="px-1 mb-2">
+              <button
+                type="button"
+                onClick={() => handleTargetChange(group)}
+                className={`py-1 px-2 rounded ${
+                  target.includes(group)
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                {group}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imageUrl">

@@ -6,8 +6,9 @@ import { useGymContext } from '../context/GymContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
 
 function WorkoutPlans() {
-  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan } = useGymContext();
+  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan, updateWorkoutPlan } = useGymContext();
   const [showForm, setShowForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
   const navigate = useNavigate();
 
@@ -31,9 +32,25 @@ function WorkoutPlans() {
     try {
       await addWorkoutPlan(plan);
       setShowForm(false);
+      setEditingPlan(null);
     } catch (error) {
       console.error('Error adding workout plan:', error);
     }
+  };
+
+  const handleEditWorkoutPlan = async (plan) => {
+    try {
+      await updateWorkoutPlan(plan._id, plan);
+      setShowForm(false);
+      setEditingPlan(null);
+    } catch (error) {
+      console.error('Error updating workout plan:', error);
+    }
+  };
+
+  const handleEdit = (plan) => {
+    setEditingPlan(plan);
+    setShowForm(true);
   };
 
   return (
@@ -52,12 +69,20 @@ function WorkoutPlans() {
         </div>
       )}
       <button
-        onClick={() => setShowForm(!showForm)}
+        onClick={() => {
+          setShowForm(!showForm);
+          setEditingPlan(null);
+        }}
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
       >
         {showForm ? 'Hide Form' : 'Create New Plan'}
       </button>
-      {showForm && <WorkoutPlanForm onSubmit={handleAddWorkoutPlan} />}
+      {showForm && (
+        <WorkoutPlanForm
+          onSubmit={editingPlan ? handleEditWorkoutPlan : handleAddWorkoutPlan}
+          initialPlan={editingPlan}
+        />
+      )}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {workoutPlans.map((plan) => (
           <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">
@@ -83,6 +108,12 @@ function WorkoutPlans() {
                 className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
               >
                 Start Workout
+              </button>
+              <button
+                onClick={() => handleEdit(plan)}
+                className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mx-2"
+              >
+                Edit Plan
               </button>
               <button
                 onClick={() => deleteWorkoutPlan(plan._id)}
