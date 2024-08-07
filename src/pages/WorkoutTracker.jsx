@@ -120,9 +120,11 @@ function WorkoutTracker() {
           <div
             key={index}
             className={`h-3 w-3 rounded-full cursor-pointer ${
-              index === currentExerciseIndex ? 'bg-blue-500' : 'bg-gray-300'
-            } ${
-              isExerciseComplete(index) ? 'bg-green-500' : ''
+              index === currentExerciseIndex
+                ? 'bg-blue-500'  // Always blue when it's the current exercise
+                : isExerciseComplete(index)
+                  ? 'bg-green-500'
+                  : 'bg-gray-300'
             }`}
             title={`Exercise ${index + 1}: ${currentPlan.exercises[index].name}`}
             onClick={() => handleExerciseChange(index)}
