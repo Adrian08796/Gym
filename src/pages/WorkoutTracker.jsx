@@ -1,5 +1,6 @@
 // src/pages/WorkoutTracker.jsx
 
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
@@ -119,7 +120,7 @@ function WorkoutTracker() {
         {currentPlan.exercises.map((_, index) => (
           <div
             key={index}
-            className={`h-3 w-3 rounded-full cursor-pointer ${
+            className={`h-5 w-5 rounded-full cursor-pointer ${
               index === currentExerciseIndex
                 ? 'bg-blue-500'  // Always blue when it's the current exercise
                 : isExerciseComplete(index)
