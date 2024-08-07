@@ -13,7 +13,9 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan }) {
       <div className="p-4">
         <h3 className="font-bold text-xl mb-2">{exercise.name}</h3>
         <p className="text-gray-700 text-base mb-2">{exercise.description}</p>
-        <p className="text-gray-600 text-sm mb-4">Target: {exercise.target}</p>
+        <p className="text-gray-600 text-sm mb-4">
+          Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
+        </p>
         <div className="flex justify-between">
           <button 
             onClick={() => onEdit(exercise)} 

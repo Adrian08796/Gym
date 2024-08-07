@@ -21,9 +21,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
     if (initialExercise) {
       setName(initialExercise.name);
       setDescription(initialExercise.description);
-      setTarget(Array.isArray(initialExercise.target) 
-        ? initialExercise.target 
-        : initialExercise.target.split(', '));
+      setTarget(Array.isArray(initialExercise.target) ? initialExercise.target : [initialExercise.target]);
       setImageUrl(initialExercise.imageUrl);
     } else {
       setName('');
@@ -37,7 +35,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
-    const exercise = { name, description, target: target.join(', '), imageUrl };
+    const exercise = { name, description, target, imageUrl };
     try {
       let savedExercise;
       if (initialExercise) {
