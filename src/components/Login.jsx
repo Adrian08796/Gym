@@ -27,7 +27,9 @@ function Login() {
   return (
     <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
       <div className="mb-4">
-        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">Username</label>
+        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">
+          Username
+        </label>
         <input
           type="text"
           id="username"
@@ -39,7 +41,9 @@ function Login() {
         />
       </div>
       <div className="mb-6">
-        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">Password</label>
+        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">
+          Password
+        </label>
         <input
           type="password"
           id="password"

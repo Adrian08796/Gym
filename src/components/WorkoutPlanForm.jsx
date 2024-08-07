@@ -1,12 +1,19 @@
 // src/components/WorkoutPlanForm.jsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 
-function WorkoutPlanForm({ onSubmit }) {
+function WorkoutPlanForm({ onSubmit, initialPlan }) {
   const [planName, setPlanName] = useState('');
   const [selectedExercises, setSelectedExercises] = useState([]);
   const { exercises } = useGymContext();
+
+  useEffect(() => {
+    if (initialPlan) {
+      setPlanName(initialPlan.name);
+      setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id));
+    }
+  }, [initialPlan]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,9 +25,11 @@ function WorkoutPlanForm({ onSubmit }) {
         ),
       };
       await onSubmit(workoutPlan);
-      // Reset form
-      setPlanName('');
-      setSelectedExercises([]);
+      // Reset form if it's not editing
+      if (!initialPlan) {
+        setPlanName('');
+        setSelectedExercises([]);
+      }
     } catch (error) {
       console.error('Error submitting workout plan:', error);
     }
@@ -71,7 +80,7 @@ function WorkoutPlanForm({ onSubmit }) {
           type="submit"
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         >
-          Create Workout Plan
+          {initialPlan ? 'Update Workout Plan' : 'Create Workout Plan'}
         </button>
       </div>
     </form>

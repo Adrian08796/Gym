@@ -1,4 +1,4 @@
-// context/GymContext.jsx
+// src/context/GymContext.jsx
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
@@ -237,6 +237,10 @@ export function GymProvider({ children }) {
   // Update a workout plan
   const updateWorkoutPlan = async (id, updatedPlan) => {
     try {
+      if (!id) {
+        // If there's no id, it's a new plan
+        return addWorkoutPlan(updatedPlan);
+      }
       const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
       setWorkoutPlans(prevPlans =>
         prevPlans.map(plan =>
