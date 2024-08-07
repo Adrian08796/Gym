@@ -222,17 +222,30 @@ export function GymProvider({ children }) {
   // Add a workout plan
   const addWorkoutPlan = async (plan) => {
     try {
-      const response = await axios.post(`${API_URL}/workoutplans`, plan, getAuthConfig());
+      // Ensure the plan object doesn't include full exercise objects
+      const planToSend = {
+        ...plan,
+        exercises: plan.exercises.map(exercise => 
+          typeof exercise === 'string' ? exercise : exercise._id
+        )
+      };
+
+      const response = await axios.post(`${API_URL}/workoutplans`, planToSend, getAuthConfig());
       
-      // Instead of fetching the plan again, use the response data
-      const newPlan = response.data;
-      
-      // If the response doesn't include full exercise details, you might want to populate them here
+      // If the response doesn't include full exercise details, populate them here
       const fullPlan = {
-        ...newPlan,
-        exercises: await Promise.all(newPlan.exercises.map(async (exerciseId) => {
-          const exerciseResponse = await axios.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
-          return exerciseResponse.data;
+        ...response.data,
+        exercises: await Promise.all(response.data.exercises.map(async (exerciseId) => {
+          if (typeof exerciseId === 'string') {
+            try {
+              const exerciseResponse = await axios.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
+              return exerciseResponse.data;
+            } catch (error) {
+              console.error(`Error fetching exercise ${exerciseId}:`, error);
+              return null; // or some placeholder data
+            }
+          }
+          return exerciseId; // if it's already a full exercise object
         }))
       };
 

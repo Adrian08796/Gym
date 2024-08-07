@@ -9,27 +9,29 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useGymContext } from '../context/GymContext';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
+import WorkoutPlanModal from './WorkoutPlanModal';
 
 const localizer = momentLocalizer(moment);
-const DnDCalendar = withDragAndDrop(Calendar); // Create a Calendar with drag and drop
+const DnDCalendar = withDragAndDrop(Calendar);
 
-// Define color scheme for different workout types
 const workoutColors = {
   strength: '#FF6B6B',
   cardio: '#4ECDC4',
   flexibility: '#45B7D1',
-  default: '#FFA07A'
+  default: '#FFA07A',
+  completed: '#A9A9A9'
 };
 
 function WorkoutCalendar() {
-  const { workoutHistory, workoutPlans, updateWorkoutPlan, addWorkoutPlan } = useGymContext();
+  const { workoutHistory, workoutPlans, updateWorkoutPlan } = useGymContext();
   const [events, setEvents] = useState([]);
+  const [selectedPlan, setSelectedPlan] = useState(null);
   const navigate = useNavigate();
   const { addNotification } = useNotification();
 
   const getEventColor = useCallback((event) => {
-    if (event.resource === 'history') {
-      return workoutColors.default;
+    if (event.resource === 'history' || event.resource === 'completed') {
+      return workoutColors.completed;
     }
     const plan = workoutPlans.find(p => p._id === event.id);
     return plan && plan.type ? workoutColors[plan.type] : workoutColors.default;
@@ -38,14 +40,14 @@ function WorkoutCalendar() {
   useEffect(() => {
     const historyEvents = workoutHistory.map(workout => ({
       id: workout._id,
-      title: workout.planName || 'Completed Workout',
+      title: `${workout.planName} (Completed)`,
       start: new Date(workout.startTime),
       end: new Date(workout.endTime),
       allDay: false,
       resource: 'history'
     }));
 
-    const scheduledEvents = workoutPlans
+    const planEvents = workoutPlans
       .filter(plan => plan.scheduledDate)
       .map(plan => ({
         id: plan._id,
@@ -53,13 +55,22 @@ function WorkoutCalendar() {
         start: new Date(plan.scheduledDate),
         end: new Date(new Date(plan.scheduledDate).setHours(new Date(plan.scheduledDate).getHours() + 1)),
         allDay: false,
-        resource: 'scheduled'
+        resource: plan.completed ? 'completed' : 'scheduled'
       }));
 
-    setEvents([...historyEvents, ...scheduledEvents]);
+    setEvents([...historyEvents, ...planEvents]);
   }, [workoutHistory, workoutPlans]);
 
-  const handleSelectSlot = async ({ start }) => {
+  const handleSelectEvent = (event) => {
+    if (event.resource === 'history') {
+      navigate(`/workout-summary/${event.id}`);
+    } else {
+      const plan = workoutPlans.find(p => p._id === event.id);
+      setSelectedPlan(plan);
+    }
+  };
+
+  const handleSelectSlot = ({ start }) => {
     const planName = prompt('Enter workout plan name:');
     if (planName) {
       const workoutType = prompt('Enter workout type (strength, cardio, flexibility):');
@@ -69,43 +80,16 @@ function WorkoutCalendar() {
         scheduledDate: start,
         type: workoutType
       };
-      try {
-        const addedPlan = await addWorkoutPlan(newPlan);
-        setEvents(prev => [...prev, {
-          id: addedPlan._id,
-          title: addedPlan.name,
-          start: new Date(addedPlan.scheduledDate),
-          end: new Date(new Date(addedPlan.scheduledDate).setHours(new Date(addedPlan.scheduledDate).getHours() + 1)),
-          allDay: false,
-          resource: 'scheduled'
-        }]);
-      } catch (error) {
-        console.error('Error adding workout plan:', error);
-        addNotification('Failed to add workout plan', 'error');
-      }
-    }
-  };
-
-  const handleSelectEvent = (event) => {
-    if (event.resource === 'history') {
-      navigate(`/workout-summary/${event.id}`);
-    } else if (event.resource === 'scheduled') {
-      navigate(`/plans/${event.id}`);
+      updateWorkoutPlan(null, newPlan);
     }
   };
 
   const moveEvent = useCallback(
     ({ event, start, end }) => {
-      if (event.resource === 'history') {
+      if (event.resource === 'history' || event.resource === 'completed') {
         addNotification('Cannot reschedule completed workouts', 'error');
         return;
       }
-
-      setEvents(prev => {
-        const existing = prev.find(ev => ev.id === event.id) ?? {};
-        const filtered = prev.filter(ev => ev.id !== event.id);
-        return [...filtered, { ...existing, start, end }];
-      });
 
       const updatedPlan = workoutPlans.find(plan => plan._id === event.id);
       if (updatedPlan) {
@@ -119,21 +103,14 @@ function WorkoutCalendar() {
 
   const resizeEvent = useCallback(
     ({ event, start, end }) => {
-      if (event.resource === 'history') {
+      if (event.resource === 'history' || event.resource === 'completed') {
         addNotification('Cannot modify completed workouts', 'error');
         return;
       }
 
-      setEvents(prev => {
-        const existing = prev.find(ev => ev.id === event.id) ?? {};
-        const filtered = prev.filter(ev => ev.id !== event.id);
-        return [...filtered, { ...existing, start, end }];
-      });
-
       const updatedPlan = workoutPlans.find(plan => plan._id === event.id);
       if (updatedPlan) {
         updatedPlan.scheduledDate = start;
-        // You might want to store the duration separately in your backend
         updateWorkoutPlan(event.id, updatedPlan);
         addNotification('Workout duration updated successfully', 'success');
       }
@@ -141,14 +118,16 @@ function WorkoutCalendar() {
     [workoutPlans, updateWorkoutPlan, addNotification]
   );
 
-  const eventPropGetter = useCallback(
-    (event) => ({
+  const eventPropGetter = useCallback((event) => {
+    const backgroundColor = getEventColor(event);
+    return {
       style: {
-        backgroundColor: getEventColor(event)
+        backgroundColor,
+        opacity: event.resource === 'history' || event.resource === 'completed' ? 0.7 : 1,
+        cursor: event.resource === 'history' || event.resource === 'completed' ? 'not-allowed' : 'pointer'
       }
-    }),
-    [getEventColor]
-  );
+    };
+  }, [getEventColor]);
 
   return (
     <div className="h-screen p-4">
@@ -166,7 +145,14 @@ function WorkoutCalendar() {
         selectable
         resizable
         eventPropGetter={eventPropGetter}
+        draggableAccessor={(event) => event.resource !== 'history' && event.resource !== 'completed'}
       />
+      {selectedPlan && (
+        <WorkoutPlanModal
+          plan={selectedPlan}
+          onClose={() => setSelectedPlan(null)}
+        />
+      )}
     </div>
   );
 }

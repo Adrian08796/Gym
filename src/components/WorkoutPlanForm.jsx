@@ -6,12 +6,16 @@ import { useGymContext } from '../context/GymContext';
 function WorkoutPlanForm({ onSubmit, initialPlan }) {
   const [planName, setPlanName] = useState('');
   const [selectedExercises, setSelectedExercises] = useState([]);
+  const [workoutType, setWorkoutType] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
   const { exercises } = useGymContext();
 
   useEffect(() => {
     if (initialPlan) {
       setPlanName(initialPlan.name);
       setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id));
+      setWorkoutType(initialPlan.type || '');
+      setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
     }
   }, [initialPlan]);
 
@@ -20,15 +24,17 @@ function WorkoutPlanForm({ onSubmit, initialPlan }) {
     try {
       const workoutPlan = {
         name: planName,
-        exercises: selectedExercises.map(exerciseId => 
-          exercises.find(exercise => exercise._id === exerciseId)
-        ),
+        exercises: selectedExercises,
+        type: workoutType,
+        scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : new Date().toISOString()
       };
       await onSubmit(workoutPlan);
       // Reset form if it's not editing
       if (!initialPlan) {
         setPlanName('');
         setSelectedExercises([]);
+        setWorkoutType('');
+        setScheduledDate('');
       }
     } catch (error) {
       console.error('Error submitting workout plan:', error);
@@ -56,6 +62,35 @@ function WorkoutPlanForm({ onSubmit, initialPlan }) {
           onChange={(e) => setPlanName(e.target.value)}
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           required
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="workoutType" className="block text-gray-700 font-bold mb-2">
+          Workout Type
+        </label>
+        <select
+          id="workoutType"
+          value={workoutType}
+          onChange={(e) => setWorkoutType(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        >
+          <option value="">Select a type</option>
+          <option value="strength">Strength</option>
+          <option value="cardio">Cardio</option>
+          <option value="flexibility">Flexibility</option>
+        </select>
+      </div>
+      <div className="mb-4">
+        <label htmlFor="scheduledDate" className="block text-gray-700 font-bold mb-2">
+          Scheduled Date
+        </label>
+        <input
+          type="date"
+          id="scheduledDate"
+          value={scheduledDate}
+          onChange={(e) => setScheduledDate(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
         />
       </div>
       <div className="mb-4">

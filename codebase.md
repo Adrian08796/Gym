@@ -36,580 +36,6 @@ export default {
 }
 ```
 
-# recover3.jsx
-
-```jsx
-// pages/WorkoutTracker.jsx
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useGymContext } from '../context/GymContext';
-
-function WorkoutTracker() {
-  const [currentPlan, setCurrentPlan] = useState(null);
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [sets, setSets] = useState([]);
-  const { addWorkout } = useGymContext();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const storedPlan = localStorage.getItem('currentPlan');
-    const storedSets = localStorage.getItem('currentSets');
-    const storedIndex = localStorage.getItem('currentExerciseIndex');
-
-    if (storedPlan) {
-      const parsedPlan = JSON.parse(storedPlan);
-      setCurrentPlan(parsedPlan);
-      
-      if (storedSets) {
-        setSets(JSON.parse(storedSets));
-      } else {
-        setSets(parsedPlan.exercises.map(() => []));
-      }
-      
-      if (storedIndex) {
-        setCurrentExerciseIndex(parseInt(storedIndex));
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (currentPlan) {
-      localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
-    }
-    if (sets.length > 0) {
-      localStorage.setItem('currentSets', JSON.stringify(sets));
-    }
-    localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
-  }, [currentPlan, sets, currentExerciseIndex]);
-
-  const handleSetComplete = (weight, reps) => {
-    setSets(prevSets => {
-      const newSets = [...prevSets];
-      newSets[currentExerciseIndex] = [...(newSets[currentExerciseIndex] || []), { weight, reps }];
-      return newSets;
-    });
-  };
-
-  const handlePreviousExercise = () => {
-    if (currentExerciseIndex > 0) {
-      setCurrentExerciseIndex(prevIndex => prevIndex - 1);
-    }
-  };
-
-  const handleNextExercise = async () => {
-    if (currentExerciseIndex < currentPlan.exercises.length - 1) {
-      setCurrentExerciseIndex(prevIndex => prevIndex + 1);
-    } else {
-      // Workout complete, save it
-      const completedWorkout = {
-        plan: currentPlan._id,
-        planName: currentPlan.name,
-        exercises: currentPlan.exercises.map((exercise, index) => ({
-          exercise: exercise._id,
-          sets: sets[index] || []
-        }))
-      };
-      console.log('Completed workout data:', completedWorkout);
-      try {
-        await addWorkout(completedWorkout);
-        alert('Workout completed and saved!');
-        // Clear localStorage
-        localStorage.removeItem('currentPlan');
-        localStorage.removeItem('currentSets');
-        localStorage.removeItem('currentExerciseIndex');
-        navigate('/');
-      } catch (error) {
-        console.error('Error saving workout:', error);
-        alert('Failed to save workout. Please try again.');
-      }
-    }
-  };
-
-  if (!currentPlan) {
-    return <div>Loading workout plan...</div>;
-  }
-
-  const currentExercise = currentPlan.exercises[currentExerciseIndex];
-
-  return (
-    <div className="container mx-auto mt-8">
-      <h2 className="text-2xl font-bold mb-4">Workout Tracker</h2>
-      <h3 className="text-xl mb-4">{currentPlan.name}</h3>
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
-        <div className="flex mb-4">
-          <img 
-            src={currentExercise.imageUrl} 
-            alt={currentExercise.name} 
-            className="w-1/3 h-auto object-cover rounded-lg mr-4"
-          />
-          <div>
-            <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
-            <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
-            <p className="mb-2"><strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length}</p>
-          </div>
-        </div>
-        <div className="mb-4">
-          <input
-            type="number"
-            placeholder="Weight"
-            id="weight"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2 mb-2"
-          />
-          <input
-            type="number"
-            placeholder="Reps"
-            id="reps"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2"
-          />
-        </div>
-        <button
-          onClick={() => {
-            const weight = document.getElementById('weight').value;
-            const reps = document.getElementById('reps').value;
-            if (weight && reps) {
-              handleSetComplete(Number(weight), Number(reps));
-              document.getElementById('weight').value = '';
-              document.getElementById('reps').value = '';
-            } else {
-              alert('Please enter both weight and reps');
-            }
-          }}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-        >
-          Complete Set
-        </button>
-      </div>
-      <div className="flex justify-between">
-        <button
-          onClick={handlePreviousExercise}
-          disabled={currentExerciseIndex === 0}
-          className={`bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4 ${currentExerciseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          Previous Exercise
-        </button>
-        <button
-          onClick={handleNextExercise}
-          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-        >
-          {currentExerciseIndex < currentPlan.exercises.length - 1 ? 'Next Exercise' : 'Finish Workout'}
-        </button>
-      </div>
-
-      {/* Set Log */}
-      <div className="mt-8">
-        <h3 className="text-xl font-semibold mb-4">Set Log</h3>
-        {currentPlan.exercises.map((exercise, index) => (
-          <div key={exercise._id} className="mb-4">
-            <h4 className="text-lg font-medium">{exercise.name}</h4>
-            {sets[index] && sets[index].length > 0 ? (
-              <ul className="list-disc pl-5">
-                {sets[index].map((set, setIndex) => (
-                  <li key={setIndex}>
-                    Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No sets completed yet</p>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default WorkoutTracker;
-```
-
-# recover2.jsx
-
-```jsx
-// context/GymContext.jsx
-
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { useAuth } from './AuthContext';
-import { useNotification } from './NotificationContext';
-export const hostName = 'http://192.168.178.42';
-
-const GymContext = createContext();
-
-export function useGymContext() {
-  return useContext(GymContext);
-}
-
-export function GymProvider({ children }) {
-  const [workouts, setWorkouts] = useState([]);
-  const [exercises, setExercises] = useState([]);
-  const [workoutPlans, setWorkoutPlans] = useState([]);
-  const [workoutHistory, setWorkoutHistory] = useState([]);
-  const { user } = useAuth();
-  const { addNotification } = useNotification();
-  
-  const API_URL = `${hostName}:4500/api`;
-
-  const getAuthConfig = () => {
-    const token = localStorage.getItem('token');
-    return {
-      headers: { 'x-auth-token': token }
-    };
-  };
-
-  const toTitleCase = (str) => {
-    return str.replace(
-      /\w\S*/g,
-      function(txt) {
-        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-      }
-    );
-  };
-
-  const fetchWorkoutHistory = useCallback(async () => {
-    if (user) {
-      try {
-        const response = await axios.get(`${API_URL}/workouts/user`, getAuthConfig());
-        setWorkoutHistory(response.data);
-      } catch (error) {
-        console.error('Error fetching workout history:', error);
-        addNotification('Failed to fetch workout history', 'error');
-      }
-    }
-  }, [user, addNotification]);
-
-  useEffect(() => {
-    if (user) {
-      fetchWorkouts();
-      fetchExercises();
-      fetchWorkoutPlans();
-      fetchWorkoutHistory();
-    }
-  }, [user, fetchWorkoutHistory]);
-
-  // Workouts
-  const fetchWorkouts = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/workouts/user`, getAuthConfig());
-      setWorkouts(response.data);
-    } catch (error) {
-      console.error('Error fetching workouts:', error);
-      addNotification('Failed to fetch workouts', 'error');
-    }
-  };
-
-  const addWorkout = async (workout) => {
-    try {
-      console.log('Sending workout data:', workout);
-      const response = await axios.post(`${API_URL}/workouts`, workout, getAuthConfig());
-      console.log('Server response:', response.data);
-      setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
-      setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
-      addNotification('Workout added successfully', 'success');
-    } catch (error) {
-      console.error('Error adding workout:', error.response?.data || error.message);
-      addNotification('Failed to add workout', 'error');
-      throw error;
-    }
-  };
-
-  const updateWorkout = async (id, updatedWorkout) => {
-    try {
-      const response = await axios.put(`${API_URL}/workouts/${id}`, updatedWorkout, getAuthConfig());
-      setWorkouts(prevWorkouts =>
-        prevWorkouts.map(workout =>
-          workout._id === id ? response.data : workout
-        )
-      );
-      setWorkoutHistory(prevHistory =>
-        prevHistory.map(workout =>
-          workout._id === id ? response.data : workout
-        )
-      );
-      addNotification('Workout updated successfully', 'success');
-    } catch (error) {
-      console.error('Error updating workout:', error);
-      addNotification('Failed to update workout', 'error');
-    }
-  };
-
-  const deleteWorkout = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/workouts/${id}`, getAuthConfig());
-      setWorkouts(prevWorkouts => prevWorkouts.filter(workout => workout._id !== id));
-      setWorkoutHistory(prevHistory => prevHistory.filter(workout => workout._id !== id));
-      addNotification('Workout deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting workout:', error);
-      addNotification('Failed to delete workout', 'error');
-    }
-  };
-
-  // Exercises
-const fetchExercises = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/exercises`, getAuthConfig());
-    const formattedExercises = response.data.map(exercise => ({
-      ...exercise,
-      name: toTitleCase(exercise.name),
-      description: toTitleCase(exercise.description),
-      target: toTitleCase(exercise.target)
-    }));
-    setExercises(formattedExercises);
-  } catch (error) {
-    console.error('Error fetching exercises:', error);
-    addNotification('Failed to fetch exercises', 'error');
-  }
-};
-
-const addExercise = async (exercise) => {
-  try {
-    const exerciseWithTitleCase = {
-      ...exercise,
-      name: toTitleCase(exercise.name),
-      description: toTitleCase(exercise.description),
-      target: toTitleCase(exercise.target)
-    };
-    const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
-    setExercises(prevExercises => [...prevExercises, response.data]);
-    return response.data; // Return the newly added exercise
-  } catch (error) {
-    console.error('Error adding exercise:', error);
-    throw error;
-  }
-};
-
-const updateExercise = async (id, updatedExercise) => {
-  try {
-    const exerciseWithTitleCase = {
-      ...updatedExercise,
-      name: toTitleCase(updatedExercise.name),
-      description: toTitleCase(updatedExercise.description),
-      target: toTitleCase(updatedExercise.target)
-    };
-    const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
-    setExercises(prevExercises =>
-      prevExercises.map(exercise =>
-        exercise._id === id ? response.data : exercise
-      )
-    );
-    return response.data; // Return the updated exercise
-  } catch (error) {
-    console.error('Error updating exercise:', error);
-    throw error;
-  }
-};
-
-  const deleteExercise = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
-      setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
-      addNotification('Exercise deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting exercise:', error);
-      addNotification('Failed to delete exercise', 'error');
-    }
-  };
-
-   // Workout Plans
-  const fetchWorkoutPlans = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/workoutplans`, getAuthConfig());
-      // Ensure each exercise in the plan has all its details
-      const plansWithFullExerciseDetails = await Promise.all(response.data.map(async (plan) => {
-        const fullExercises = await Promise.all(plan.exercises.map(async (exercise) => {
-          if (!exercise.description || !exercise.imageUrl) {
-            const fullExercise = await axios.get(`${API_URL}/exercises/${exercise._id}`, getAuthConfig());
-            return fullExercise.data;
-          }
-          return exercise;
-        }));
-        return { ...plan, exercises: fullExercises };
-      }));
-      setWorkoutPlans(plansWithFullExerciseDetails);
-    } catch (error) {
-      console.error('Error fetching workout plans:', error);
-      addNotification('Failed to fetch workout plans', 'error');
-    }
-  };
-
-  const addWorkoutPlan = async (plan) => {
-    try {
-      const response = await axios.post(`${API_URL}/workoutplans`, plan, getAuthConfig());
-      // Fetch the full details of the newly added plan
-      const fullPlan = await axios.get(`${API_URL}/workoutplans/${response.data._id}`, getAuthConfig());
-      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan.data]);
-      addNotification('Workout plan added successfully', 'success');
-    } catch (error) {
-      console.error('Error adding workout plan:', error.response ? error.response.data : error.message);
-      addNotification('Failed to add workout plan', 'error');
-      throw error;
-    }
-  };
-
-  const updateWorkoutPlan = async (id, updatedPlan) => {
-    try {
-      const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
-      setWorkoutPlans(prevPlans =>
-        prevPlans.map(plan =>
-          plan._id === id ? response.data : plan
-        )
-      );
-      addNotification('Workout plan updated successfully', 'success');
-    } catch (error) {
-      console.error('Error updating workout plan:', error);
-      addNotification('Failed to update workout plan', 'error');
-    }
-  };
-
-  const deleteWorkoutPlan = async (id) => {
-    try {
-      const response = await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
-      console.log('Server response:', response.data);
-      setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
-      
-      // Update workout history to reflect deleted plan
-      setWorkoutHistory(prevHistory => 
-        prevHistory.map(workout => 
-          workout.plan && workout.plan._id === id 
-            ? { ...workout, plan: null, planDeleted: true } 
-            : workout
-        )
-      );
-      addNotification('Workout plan deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting workout plan:', error.response?.data || error.message);
-      addNotification('Failed to delete workout plan', 'error');
-      throw error;
-    }
-  };
-
-  return (
-    <GymContext.Provider value={{
-      workouts,
-      exercises,
-      workoutPlans,
-      workoutHistory,
-      addWorkout,
-      updateWorkout,
-      deleteWorkout,
-      addExercise,
-      updateExercise,
-      deleteExercise,
-      addWorkoutPlan,
-      updateWorkoutPlan,
-      deleteWorkoutPlan,
-      fetchWorkoutHistory
-    }}>
-      {children}
-    </GymContext.Provider>
-  );
-}
-
-export default GymProvider;
-```
-
-# recover1.jsx
-
-```jsx
-// src/pages/WorkoutPlans.jsx
-
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useGymContext } from '../context/GymContext';
-import WorkoutPlanForm from '../components/WorkoutPlanForm';
-
-function WorkoutPlans() {
-  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan } = useGymContext();
-  const [showForm, setShowForm] = useState(false);
-  const [ongoingWorkout, setOngoingWorkout] = useState(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const storedPlan = localStorage.getItem('currentPlan');
-    if (storedPlan) {
-      setOngoingWorkout(JSON.parse(storedPlan));
-    }
-  }, []);
-
-  const handleStartWorkout = (plan) => {
-    localStorage.setItem('currentPlan', JSON.stringify(plan));
-    navigate('/tracker');
-  };
-
-  const handleResumeWorkout = () => {
-    navigate('/tracker');
-  };
-
-  const handleAddWorkoutPlan = async (plan) => {
-    try {
-      await addWorkoutPlan(plan);
-      setShowForm(false);
-    } catch (error) {
-      console.error('Error adding workout plan:', error);
-    }
-  };
-
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-4">Workout Plans</h1>
-      {ongoingWorkout && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-          <p className="font-bold">Ongoing Workout</p>
-          <p>You have an unfinished workout: {ongoingWorkout.name}</p>
-          <button
-            onClick={handleResumeWorkout}
-            className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Resume Workout
-          </button>
-        </div>
-      )}
-      <button
-        onClick={() => setShowForm(!showForm)}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
-      >
-        {showForm ? 'Hide Form' : 'Create New Plan'}
-      </button>
-      {showForm && <WorkoutPlanForm onSubmit={handleAddWorkoutPlan} />}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {workoutPlans.map((plan) => (
-          <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">
-            <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
-            <ul className="list-disc list-inside mb-4">
-              {plan.exercises.map((exercise) => (
-                <li key={exercise._id} className="mb-2">
-                  <span className="font-medium">{exercise.name}</span>
-                  <p className="text-sm text-gray-600 ml-4">{exercise.description}</p>
-                  <p className="text-sm text-gray-500 ml-4">Target: {exercise.target}</p>
-                </li>
-              ))}
-            </ul>
-            <div className="flex justify-between">
-              <button
-                onClick={() => handleStartWorkout(plan)}
-                className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
-              >
-                Start Workout
-              </button>
-              <button
-                onClick={() => deleteWorkoutPlan(plan._id)}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-              >
-                Delete Plan
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default WorkoutPlans;
-```
-
 # postcss.config.js
 
 ```js
@@ -638,9 +64,12 @@ export default {
   },
   "dependencies": {
     "axios": "^1.7.3",
+    "date-fns": "^3.6.0",
     "react": "^18.3.1",
+    "react-big-calendar": "^1.13.2",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.25.1"
+    "react-router-dom": "^6.25.1",
+    "recharts": "^2.13.0-alpha.4"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
@@ -695,30 +124,152 @@ Currently, two official plugins are available:
 # .gitignore
 
 ```
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Directory for instrumented libs generated by jscoverage/JSCover
+lib-cov/
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output/
+
+# Grunt intermediate storage (http://gruntjs.com/creating-plugins#storing-task-files)
+.grunt/
+
+# Bower dependency directory (https://bower.io/)
+bower_components/
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# dotenv environment variables file
+.env
+.env.test
+.env.development
+.env.production
+.env.staging
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out/
+
+# Nuxt.js build / generate output
+.nuxt
+dist/
+
+# Gatsby files
+.cache/
+# Comment in the public line in if your project uses Gatsby and not Next.js
+# public
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Storybook
+out/
+.storybook-out/
+
+# Mac system files
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+
+# JetBrains IDEs
+.idea/
+
+# VS Code
+.vscode/
+
+# npm
+package-lock.json
+yarn.lock
+
+# IDE specific files
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Temporary files
+tmp/
+temp/
+
+# Build directories
+build/
+dist/
+
+# Static files
+public/static/
+
+# Test coverage
+coverage/
+
+# Compiled output
+lib/
+target/
+
+# Dependency directories
+jspm_packages/
+
+# Python virtualenv
+venv/
+.venv/
+
+# Miscellaneous
+*.bak
+*.old
+*.orig
+*.merged
+
+# Local git configuration
 
 ```
 
@@ -747,6 +298,13 @@ module.exports = {
   },
 }
 
+```
+
+# .aidigestignore
+
+```
+node_modules/
+public/
 ```
 
 # src/main.jsx
@@ -786,14 +344,19 @@ import WorkoutTracker from './pages/WorkoutTracker';
 import ExerciseLibrary from './pages/ExerciseLibrary';
 import WorkoutPlans from './pages/WorkoutPlans';
 import WorkoutSummary from './pages/WorkoutSummary';
+import IndividualWorkoutSummary from './components/IndividualWorkoutSummary';
+import WorkoutPlanDetails from './components/WorkoutPlanDetails';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Login from './components/Login';
 import Register from './components/Register';
+import Dashboard from './components/Dashboard';
+import WorkoutCalendar from './components/WorkoutCalendar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
 import NotificationToast from './components/NotificationToast';
+
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -819,10 +382,14 @@ function AppContent() {
             <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
             <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
             <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/calendar" element={<PrivateRoute><WorkoutCalendar /></PrivateRoute>} />
             <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
             <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
             <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
+            <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
             <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
+            <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
           </Routes>
         </main>
         <Footer />
@@ -895,14 +462,11 @@ export default App;
 
 ```
 
-# public/vite.svg
-
-This is a file of the type: SVG Image
-
 # src/pages/WorkoutTracker.jsx
 
 ```jsx
 // src/pages/WorkoutTracker.jsx
+
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -1023,10 +587,12 @@ function WorkoutTracker() {
         {currentPlan.exercises.map((_, index) => (
           <div
             key={index}
-            className={`h-3 w-3 rounded-full cursor-pointer ${
-              index === currentExerciseIndex ? 'bg-blue-500' : 'bg-gray-300'
-            } ${
-              isExerciseComplete(index) ? 'bg-green-500' : ''
+            className={`h-5 w-5 rounded-full cursor-pointer ${
+              index === currentExerciseIndex
+                ? 'bg-blue-500'  // Always blue when it's the current exercise
+                : isExerciseComplete(index)
+                  ? 'bg-green-500'
+                  : 'bg-gray-300'
             }`}
             title={`Exercise ${index + 1}: ${currentPlan.exercises[index].name}`}
             onClick={() => handleExerciseChange(index)}
@@ -1261,8 +827,9 @@ import { useGymContext } from '../context/GymContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
 
 function WorkoutPlans() {
-  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan } = useGymContext();
+  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan, updateWorkoutPlan } = useGymContext();
   const [showForm, setShowForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
   const navigate = useNavigate();
 
@@ -1286,8 +853,24 @@ function WorkoutPlans() {
     try {
       await addWorkoutPlan(plan);
       setShowForm(false);
+      setEditingPlan(null);
     } catch (error) {
       console.error('Error adding workout plan:', error);
+    }
+  };
+
+  const handleEditPlan = (plan) => {
+    setEditingPlan(plan);
+    setShowForm(true);
+  };
+
+  const handleUpdateWorkoutPlan = async (updatedPlan) => {
+    try {
+      await updateWorkoutPlan(editingPlan._id, updatedPlan);
+      setShowForm(false);
+      setEditingPlan(null);
+    } catch (error) {
+      console.error('Error updating workout plan:', error);
     }
   };
 
@@ -1307,12 +890,20 @@ function WorkoutPlans() {
         </div>
       )}
       <button
-        onClick={() => setShowForm(!showForm)}
+        onClick={() => {
+          setShowForm(!showForm);
+          setEditingPlan(null);
+        }}
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
       >
         {showForm ? 'Hide Form' : 'Create New Plan'}
       </button>
-      {showForm && <WorkoutPlanForm onSubmit={handleAddWorkoutPlan} />}
+      {showForm && (
+        <WorkoutPlanForm 
+          onSubmit={editingPlan ? handleUpdateWorkoutPlan : handleAddWorkoutPlan} 
+          initialPlan={editingPlan}
+        />
+      )}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {workoutPlans.map((plan) => (
           <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">
@@ -1332,6 +923,12 @@ function WorkoutPlans() {
                 className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
               >
                 Start Workout
+              </button>
+              <button
+                onClick={() => handleEditPlan(plan)}
+                className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mx-2"
+              >
+                Edit Plan
               </button>
               <button
                 onClick={() => deleteWorkoutPlan(plan._id)}
@@ -1371,7 +968,7 @@ export default Home;
 ```jsx
 // src/pages/ExerciseLibrary.jsx
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
 import WorkoutPlanSelector from '../components/WorkoutPlanSelector';
@@ -1384,6 +981,18 @@ function ExerciseLibrary() {
   const [editingExercise, setEditingExercise] = useState(null);
   const [showWorkoutPlanSelector, setShowWorkoutPlanSelector] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
+  const [filterText, setFilterText] = useState('');
+  const [filteredExercises, setFilteredExercises] = useState(exercises);
+
+  useEffect(() => {
+    const lowercasedFilter = filterText.toLowerCase();
+    const filtered = exercises.filter(exercise => 
+      exercise.name.toLowerCase().includes(lowercasedFilter) ||
+      exercise.description.toLowerCase().includes(lowercasedFilter) ||
+      exercise.target.toLowerCase().includes(lowercasedFilter)
+    );
+    setFilteredExercises(filtered);
+  }, [filterText, exercises]);
 
   const handleEdit = (exercise) => {
     setEditingExercise(exercise);
@@ -1429,9 +1038,18 @@ function ExerciseLibrary() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-4">Exercise Library</h1>
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Filter exercises..."
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
       <AddExerciseForm onSave={handleSave} initialExercise={editingExercise} />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {exercises.map((exercise) => (
+        {filteredExercises.map((exercise) => (
           <ExerciseItem 
             key={exercise._id} 
             exercise={exercise}
@@ -1453,6 +1071,1146 @@ function ExerciseLibrary() {
 
 export default ExerciseLibrary;
 ```
+
+# src/components/WorkoutPlanSelector.jsx
+
+```jsx
+// src/components/WorkoutPlanSelector.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+
+function WorkoutPlanSelector({ onSelect, onClose }) {
+  const [workoutPlans, setWorkoutPlans] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { fetchWorkoutPlans } = useGymContext();
+
+  useEffect(() => {
+    const getWorkoutPlans = async () => {
+      try {
+        setIsLoading(true);
+        const plans = await fetchWorkoutPlans();
+        setWorkoutPlans(plans || []);
+      } catch (error) {
+        console.error('Error fetching workout plans:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    getWorkoutPlans();
+  }, [fetchWorkoutPlans]);
+
+  const handleSelect = async (plan) => {
+    await onSelect(plan);
+    onClose();
+  };
+
+  if (isLoading) {
+    return <div>Loading workout plans...</div>;
+  }
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+      <div className="bg-white p-5 rounded-lg shadow-xl max-w-md w-full">
+        <h2 className="text-xl font-bold mb-4">Select Workout Plan</h2>
+        {workoutPlans.length === 0 ? (
+          <p>No workout plans available. Create a plan first.</p>
+        ) : (
+          workoutPlans.map((plan) => (
+            <button
+              key={plan._id}
+              onClick={() => handleSelect(plan)}
+              className="block w-full text-left p-2 hover:bg-gray-100 rounded mb-2"
+            >
+              {plan.name}
+            </button>
+          ))
+        )}
+        <button
+          onClick={onClose}
+          className="mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default WorkoutPlanSelector;
+```
+
+# src/components/WorkoutPlanForm.jsx
+
+```jsx
+// src/components/WorkoutPlanForm.jsx
+
+import { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+
+function WorkoutPlanForm({ onSubmit, initialPlan }) {
+  const [planName, setPlanName] = useState('');
+  const [selectedExercises, setSelectedExercises] = useState([]);
+  const { exercises } = useGymContext();
+
+  useEffect(() => {
+    if (initialPlan) {
+      setPlanName(initialPlan.name);
+      setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id));
+    }
+  }, [initialPlan]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const workoutPlan = {
+        name: planName,
+        exercises: selectedExercises.map(exerciseId => 
+          exercises.find(exercise => exercise._id === exerciseId)
+        ),
+      };
+      await onSubmit(workoutPlan);
+      // Reset form if it's not editing
+      if (!initialPlan) {
+        setPlanName('');
+        setSelectedExercises([]);
+      }
+    } catch (error) {
+      console.error('Error submitting workout plan:', error);
+    }
+  };
+  
+  const handleExerciseToggle = (exerciseId) => {
+    setSelectedExercises(prevSelected =>
+      prevSelected.includes(exerciseId)
+        ? prevSelected.filter(id => id !== exerciseId)
+        : [...prevSelected, exerciseId]
+    );
+  };   
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
+      <div className="mb-4">
+        <label htmlFor="planName" className="block text-gray-700 font-bold mb-2">
+          Workout Plan Name
+        </label>
+        <input
+          type="text"
+          id="planName"
+          value={planName}
+          onChange={(e) => setPlanName(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 font-bold mb-2">
+          Select Exercises
+        </label>
+        {exercises.map((exercise) => (
+          <div key={exercise._id} className="flex items-center mb-2">
+            <input
+              type="checkbox"
+              id={`exercise-${exercise._id}`}
+              checked={selectedExercises.includes(exercise._id)}
+              onChange={() => handleExerciseToggle(exercise._id)}
+              className="mr-2"
+            />
+            <label htmlFor={`exercise-${exercise._id}`}>{exercise.name}</label>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          {initialPlan ? 'Update Workout Plan' : 'Create Workout Plan'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default WorkoutPlanForm;
+```
+
+# src/components/WorkoutPlanDetails.jsx
+
+```jsx
+// src/components/WorkoutPlanDetails.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useGymContext } from '../context/GymContext';
+
+function WorkoutPlanDetails() {
+  const { id } = useParams();
+  const { workoutPlans, updateWorkoutPlan, deleteWorkoutPlan } = useGymContext();
+  const [plan, setPlan] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const foundPlan = workoutPlans.find(p => p._id === id);
+    setPlan(foundPlan);
+  }, [id, workoutPlans]);
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this workout plan?')) {
+      await deleteWorkoutPlan(id);
+      navigate('/plans');
+    }
+  };
+
+  const handleReschedule = () => {
+    const newDate = prompt('Enter new date (YYYY-MM-DD):', plan.scheduledDate ? new Date(plan.scheduledDate).toISOString().split('T')[0] : '');
+    if (newDate) {
+      const updatedPlan = { ...plan, scheduledDate: new Date(newDate) };
+      updateWorkoutPlan(id, updatedPlan);
+    }
+  };
+
+  if (!plan) {
+    return <div>Loading workout plan...</div>;
+  }
+
+  return (
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">{plan.name}</h2>
+      <p><strong>Type:</strong> {plan.type || 'Not specified'}</p>
+      <p><strong>Scheduled Date:</strong> {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}</p>
+      
+      <h3 className="text-xl font-semibold mt-4 mb-2">Exercises:</h3>
+      <ul className="list-disc list-inside">
+        {plan.exercises.map((exercise, index) => (
+          <li key={index}>{exercise.name}</li>
+        ))}
+      </ul>
+
+      <div className="mt-4">
+        <button onClick={handleReschedule} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
+          Reschedule
+        </button>
+        <button onClick={handleDelete} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+          Delete Plan
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default WorkoutPlanDetails;
+```
+
+# src/components/WorkoutForm.jsx
+
+```jsx
+// src/components/WorkoutForm.jsx
+import { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+
+function WorkoutForm({ onSave, initialWorkout }) {
+  const [selectedExercise, setSelectedExercise] = useState('');
+  const [sets, setSets] = useState('');
+  const [reps, setReps] = useState('');
+  const [weight, setWeight] = useState('');
+  const { exercises } = useGymContext();
+
+  useEffect(() => {
+    if (initialWorkout) {
+      setSelectedExercise(initialWorkout.exercise);
+      setSets(initialWorkout.sets.toString());
+      setReps(initialWorkout.reps.toString());
+      setWeight(initialWorkout.weight.toString());
+    }
+  }, [initialWorkout]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const workout = {
+      exercise: selectedExercise,
+      sets: parseInt(sets),
+      reps: parseInt(reps),
+      weight: parseFloat(weight),
+      date: new Date().toISOString()
+    };
+    onSave(workout);
+    // Reset form
+    setSelectedExercise('');
+    setSets('');
+    setReps('');
+    setWeight('');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
+      <div className="mb-4">
+        <label htmlFor="exercise" className="block text-gray-700 font-bold mb-2">
+          Exercise
+        </label>
+        <select
+          id="exercise"
+          value={selectedExercise}
+          onChange={(e) => setSelectedExercise(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        >
+          <option value="">Select an exercise</option>
+          {exercises.map((exercise) => (
+            <option key={exercise._id} value={exercise.name}>
+              {exercise.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="mb-4">
+        <label htmlFor="sets" className="block text-gray-700 font-bold mb-2">
+          Sets
+        </label>
+        <input
+          type="number"
+          id="sets"
+          value={sets}
+          onChange={(e) => setSets(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="reps" className="block text-gray-700 font-bold mb-2">
+          Reps
+        </label>
+        <input
+          type="number"
+          id="reps"
+          value={reps}
+          onChange={(e) => setReps(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="mb-6">
+        <label htmlFor="weight" className="block text-gray-700 font-bold mb-2">
+          Weight (kg)
+        </label>
+        <input
+          type="number"
+          id="weight"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          step="0.1"
+          required
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          {initialWorkout ? 'Update Workout' : 'Log Workout'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default WorkoutForm;
+```
+
+# src/components/WorkoutCalendar.jsx
+
+```jsx
+// src/components/WorkoutCalendar.jsx
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import { useGymContext } from '../context/GymContext';
+import { useNavigate } from 'react-router-dom';
+import { useNotification } from '../context/NotificationContext';
+
+const localizer = momentLocalizer(moment);
+const DnDCalendar = withDragAndDrop(Calendar); // Create a Calendar with drag and drop
+
+// Define color scheme for different workout types
+const workoutColors = {
+  strength: '#FF6B6B',
+  cardio: '#4ECDC4',
+  flexibility: '#45B7D1',
+  default: '#FFA07A'
+};
+
+function WorkoutCalendar() {
+  const { workoutHistory, workoutPlans, updateWorkoutPlan, addWorkoutPlan } = useGymContext();
+  const [events, setEvents] = useState([]);
+  const navigate = useNavigate();
+  const { addNotification } = useNotification();
+
+  const getEventColor = useCallback((event) => {
+    if (event.resource === 'history') {
+      return workoutColors.default;
+    }
+    const plan = workoutPlans.find(p => p._id === event.id);
+    return plan && plan.type ? workoutColors[plan.type] : workoutColors.default;
+  }, [workoutPlans]);
+
+  useEffect(() => {
+    const historyEvents = workoutHistory.map(workout => ({
+      id: workout._id,
+      title: workout.planName || 'Completed Workout',
+      start: new Date(workout.startTime),
+      end: new Date(workout.endTime),
+      allDay: false,
+      resource: 'history'
+    }));
+
+    const scheduledEvents = workoutPlans
+      .filter(plan => plan.scheduledDate)
+      .map(plan => ({
+        id: plan._id,
+        title: plan.name,
+        start: new Date(plan.scheduledDate),
+        end: new Date(new Date(plan.scheduledDate).setHours(new Date(plan.scheduledDate).getHours() + 1)),
+        allDay: false,
+        resource: 'scheduled'
+      }));
+
+    setEvents([...historyEvents, ...scheduledEvents]);
+  }, [workoutHistory, workoutPlans]);
+
+  const handleSelectSlot = async ({ start }) => {
+    const planName = prompt('Enter workout plan name:');
+    if (planName) {
+      const workoutType = prompt('Enter workout type (strength, cardio, flexibility):');
+      const newPlan = {
+        name: planName,
+        exercises: [],
+        scheduledDate: start,
+        type: workoutType
+      };
+      try {
+        const addedPlan = await addWorkoutPlan(newPlan);
+        setEvents(prev => [...prev, {
+          id: addedPlan._id,
+          title: addedPlan.name,
+          start: new Date(addedPlan.scheduledDate),
+          end: new Date(new Date(addedPlan.scheduledDate).setHours(new Date(addedPlan.scheduledDate).getHours() + 1)),
+          allDay: false,
+          resource: 'scheduled'
+        }]);
+      } catch (error) {
+        console.error('Error adding workout plan:', error);
+        addNotification('Failed to add workout plan', 'error');
+      }
+    }
+  };
+
+  const handleSelectEvent = (event) => {
+    if (event.resource === 'history') {
+      navigate(`/workout-summary/${event.id}`);
+    } else if (event.resource === 'scheduled') {
+      navigate(`/plans/${event.id}`);
+    }
+  };
+
+  const moveEvent = useCallback(
+    ({ event, start, end }) => {
+      if (event.resource === 'history') {
+        addNotification('Cannot reschedule completed workouts', 'error');
+        return;
+      }
+
+      setEvents(prev => {
+        const existing = prev.find(ev => ev.id === event.id) ?? {};
+        const filtered = prev.filter(ev => ev.id !== event.id);
+        return [...filtered, { ...existing, start, end }];
+      });
+
+      const updatedPlan = workoutPlans.find(plan => plan._id === event.id);
+      if (updatedPlan) {
+        updatedPlan.scheduledDate = start;
+        updateWorkoutPlan(event.id, updatedPlan);
+        addNotification('Workout rescheduled successfully', 'success');
+      }
+    },
+    [workoutPlans, updateWorkoutPlan, addNotification]
+  );
+
+  const resizeEvent = useCallback(
+    ({ event, start, end }) => {
+      if (event.resource === 'history') {
+        addNotification('Cannot modify completed workouts', 'error');
+        return;
+      }
+
+      setEvents(prev => {
+        const existing = prev.find(ev => ev.id === event.id) ?? {};
+        const filtered = prev.filter(ev => ev.id !== event.id);
+        return [...filtered, { ...existing, start, end }];
+      });
+
+      const updatedPlan = workoutPlans.find(plan => plan._id === event.id);
+      if (updatedPlan) {
+        updatedPlan.scheduledDate = start;
+        // You might want to store the duration separately in your backend
+        updateWorkoutPlan(event.id, updatedPlan);
+        addNotification('Workout duration updated successfully', 'success');
+      }
+    },
+    [workoutPlans, updateWorkoutPlan, addNotification]
+  );
+
+  const eventPropGetter = useCallback(
+    (event) => ({
+      style: {
+        backgroundColor: getEventColor(event)
+      }
+    }),
+    [getEventColor]
+  );
+
+  return (
+    <div className="h-screen p-4">
+      <h2 className="text-2xl font-bold mb-4">Workout Calendar</h2>
+      <DnDCalendar
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        style={{ height: 'calc(100% - 80px)' }}
+        onSelectSlot={handleSelectSlot}
+        onSelectEvent={handleSelectEvent}
+        onEventDrop={moveEvent}
+        onEventResize={resizeEvent}
+        selectable
+        resizable
+        eventPropGetter={eventPropGetter}
+      />
+    </div>
+  );
+}
+
+export default WorkoutCalendar;
+```
+
+# src/components/Register.jsx
+
+```jsx
+// src/components/Register.jsx
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
+function Register() {
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await register(username, email, password);
+      navigate('/login');
+    } catch (error) {
+      console.error('Registration failed:', error);
+      // Handle error (e.g., show error message to user)
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
+      <div className="mb-4">
+        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">Username</label>
+        <input
+          type="text"
+          id="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="email" className="block text-gray-700 font-bold mb-2">Email</label>
+        <input
+          type="email"
+          id="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="mb-6">
+        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">Password</label>
+        <input
+          type="password"
+          id="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Register
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default Register;
+```
+
+# src/components/NotificationToast.jsx
+
+```jsx
+// src/components/NotificationToast.jsx
+
+import React from 'react';
+import { useNotification } from '../context/NotificationContext';
+
+function NotificationToast() {
+  const { notifications, removeNotification } = useNotification();
+
+  return (
+    <div className="fixed top-4 right-4 z-50">
+      {notifications.map((notification) => (
+        <div
+          key={notification.id}
+          className={`mb-2 p-4 rounded shadow-md ${
+            notification.type === 'error' ? 'bg-red-500' : 
+            notification.type === 'success' ? 'bg-green-500' : 
+            notification.type === 'info' ? 'bg-blue-500' : 'bg-yellow-500'
+          } text-white`}
+        >
+          {notification.message}
+          <button
+            onClick={() => removeNotification(notification.id)}
+            className="ml-2 text-white font-bold"
+          >
+            &times;
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default NotificationToast;
+```
+
+# src/components/Login.jsx
+
+```jsx
+// src/components/Login.jsx
+
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useNotification } from '../context/NotificationContext';
+
+function Login() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const { addNotification } = useNotification();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await login(username, password);
+      addNotification('Logged in successfully', 'success');
+      navigate('/'); // Redirect to home page after successful login
+    } catch (err) {
+      addNotification('Failed to log in', 'error');
+      console.error(err);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
+      <div className="mb-4">
+        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">
+          Username
+        </label>
+        <input
+          type="text"
+          id="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+          autoComplete="username"
+        />
+      </div>
+      <div className="mb-6">
+        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">
+          Password
+        </label>
+        <input
+          type="password"
+          id="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+          autoComplete="current-password"
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Log In
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default Login;
+```
+
+# src/components/IndividualWorkoutSummary.jsx
+
+```jsx
+// src/components/IndividualWorkoutSummary.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { useGymContext } from '../context/GymContext';
+
+function IndividualWorkoutSummary() {
+  const { id } = useParams();
+  const { workoutHistory } = useGymContext();
+  const [workout, setWorkout] = useState(null);
+
+  useEffect(() => {
+    const foundWorkout = workoutHistory.find(w => w._id === id);
+    setWorkout(foundWorkout);
+  }, [id, workoutHistory]);
+
+  if (!workout) {
+    return <div>Loading workout summary...</div>;
+  }
+
+  return (
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">Workout Summary</h2>
+      <p><strong>Date:</strong> {new Date(workout.startTime).toLocaleDateString()}</p>
+      <p><strong>Duration:</strong> {((new Date(workout.endTime) - new Date(workout.startTime)) / (1000 * 60)).toFixed(0)} minutes</p>
+      <p><strong>Plan:</strong> {workout.planName}</p>
+      
+      <h3 className="text-xl font-semibold mt-4 mb-2">Exercises:</h3>
+      {workout.exercises.map((exercise, index) => (
+        <div key={index} className="mb-4">
+          <h4 className="text-lg font-medium">{exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}</h4>
+          <ul className="list-disc list-inside">
+            {exercise.sets.map((set, setIndex) => (
+              <li key={setIndex}>
+                Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default IndividualWorkoutSummary;
+```
+
+# src/components/Header.jsx
+
+```jsx
+// src/components/Header.jsx
+
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+function Header() {
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    // You might want to redirect to the login page after logout
+    // If you're using react-router-dom v6, you can use the useNavigate hook for this
+  };
+
+  return (
+    <header className="bg-blue-600 text-white p-4">
+      <nav className="container mx-auto flex justify-between items-center">
+        <Link to="/" className="text-2xl font-bold">Gym App</Link>
+        <ul className="flex space-x-4 items-center">
+          {user ? (
+            <>
+              <li><Link to="/dashboard">Dashboard</Link></li>
+              <li><Link to="/calendar">Calendar</Link></li>
+              <li><Link to="/tracker">Workout Tracker</Link></li>
+              <li><Link to="/exercises">Exercise Library</Link></li>
+              <li><Link to="/plans">Workout Plans</Link></li>
+              <li><Link to="/workout-summary">Workout History</Link></li>
+              <li>
+                <button 
+                  onClick={handleLogout}
+                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Logout
+                </button>
+              </li>
+            </>
+          ) : (
+            <>
+              <li>
+                <Link 
+                  to="/login"
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Login
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/register"
+                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Register
+                </Link>
+              </li>
+            </>
+          )}
+        </ul>
+      </nav>
+    </header>
+  );
+}
+
+export default Header;
+```
+
+# src/components/Footer.jsx
+
+```jsx
+// src/components/Footer.jsx
+function Footer() {
+  return (
+    <footer className="bg-gray-200 p-4 mt-8">
+      <div className="container mx-auto text-center">
+        <p>&copy; 2024 Gym App. All rights reserved.</p>
+      </div>
+    </footer>
+  );
+}
+
+export default Footer;
+```
+
+# src/components/ExerciseItem.jsx
+
+```jsx
+// src/components/ExerciseItem.jsx
+
+import React from 'react';
+
+function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan }) {
+  return (
+    <div className="bg-white shadow-md rounded-lg overflow-hidden">
+      <img 
+        src={exercise.imageUrl} 
+        alt={exercise.name} 
+        className="w-full h-48 object-cover"
+      />
+      <div className="p-4">
+        <h3 className="font-bold text-xl mb-2">{exercise.name}</h3>
+        <p className="text-gray-700 text-base mb-2">{exercise.description}</p>
+        <p className="text-gray-600 text-sm mb-4">Target: {exercise.target}</p>
+        <div className="flex justify-between">
+          <button 
+            onClick={() => onEdit(exercise)} 
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Edit
+          </button>
+          <button 
+            onClick={() => onDelete(exercise._id)} 
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Delete
+          </button>
+          <button 
+            onClick={() => onAddToPlan(exercise)} 
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Add to Plan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ExerciseItem;
+```
+
+# src/components/Dashboard.jsx
+
+```jsx
+// src/components/Dashboard.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
+
+function Dashboard() {
+  const { workoutHistory } = useGymContext();
+  const [totalWorkouts, setTotalWorkouts] = useState(0);
+  const [averageWorkoutDuration, setAverageWorkoutDuration] = useState(0);
+  const [workoutFrequencyData, setWorkoutFrequencyData] = useState([]);
+  const [exerciseFrequencyData, setExerciseFrequencyData] = useState([]);
+
+  useEffect(() => {
+    if (workoutHistory.length > 0) {
+      // Calculate total workouts
+      setTotalWorkouts(workoutHistory.length);
+
+      // Calculate average workout duration
+      const totalDuration = workoutHistory.reduce((sum, workout) => {
+        const duration = new Date(workout.endTime) - new Date(workout.startTime);
+        return sum + duration;
+      }, 0);
+      setAverageWorkoutDuration(totalDuration / workoutHistory.length / (1000 * 60)); // Convert to minutes
+
+      // Prepare data for workout frequency chart
+      const frequencyMap = {};
+      workoutHistory.forEach(workout => {
+        const date = new Date(workout.startTime).toLocaleDateString();
+        frequencyMap[date] = (frequencyMap[date] || 0) + 1;
+      });
+      const frequencyData = Object.entries(frequencyMap).map(([date, count]) => ({ date, count }));
+      setWorkoutFrequencyData(frequencyData);
+
+      // Prepare data for exercise frequency chart
+      const exerciseMap = {};
+      workoutHistory.forEach(workout => {
+        workout.exercises.forEach(exercise => {
+          const exerciseName = exercise.exercise ? exercise.exercise.name : 'Unknown';
+          exerciseMap[exerciseName] = (exerciseMap[exerciseName] || 0) + 1;
+        });
+      });
+      const exerciseData = Object.entries(exerciseMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10); // Top 10 exercises
+      setExerciseFrequencyData(exerciseData);
+    }
+  }, [workoutHistory]);
+
+  return (
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">Workout Dashboard</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white p-4 rounded shadow">
+          <h3 className="text-lg font-semibold mb-2">Total Workouts</h3>
+          <p className="text-3xl font-bold">{totalWorkouts}</p>
+        </div>
+        <div className="bg-white p-4 rounded shadow">
+          <h3 className="text-lg font-semibold mb-2">Average Workout Duration</h3>
+          <p className="text-3xl font-bold">{averageWorkoutDuration.toFixed(1)} minutes</p>
+        </div>
+        </div>
+      <div className="mb-8">
+        <h3 className="text-xl font-semibold mb-4">Workout Frequency</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={workoutFrequencyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis 
+              allowDecimals={false}
+              domain={[0, 'dataMax + 1']}
+              tickCount={5}
+            />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="count" stroke="#8884d8" activeDot={{ r: 8 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div>
+        <h3 className="text-xl font-semibold mb-4">Top 10 Exercises</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={exerciseFrequencyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis 
+              allowDecimals={false}
+              domain={[0, 'dataMax + 1']}
+              tickCount={5}
+            />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="count" fill="#82ca9d" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+export default Dashboard;
+```
+
+# src/components/AddExerciseForm.jsx
+
+```jsx
+// src/components/AddExerciseForm.jsx
+
+import { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+import { useNotification } from '../context/NotificationContext';
+
+function AddExerciseForm({ onSave, initialExercise }) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [target, setTarget] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { addExercise, updateExercise } = useGymContext();
+  const { addNotification } = useNotification();
+
+  useEffect(() => {
+    if (initialExercise) {
+      setName(initialExercise.name);
+      setDescription(initialExercise.description);
+      setTarget(initialExercise.target);
+      setImageUrl(initialExercise.imageUrl);
+    } else {
+      setName('');
+      setDescription('');
+      setTarget('');
+      setImageUrl('');
+    }
+  }, [initialExercise]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    const exercise = { name, description, target, imageUrl };
+    try {
+      let savedExercise;
+      if (initialExercise) {
+        savedExercise = await updateExercise(initialExercise._id, exercise);
+        addNotification('Exercise updated successfully', 'success');
+      } else {
+        savedExercise = await addExercise(exercise);
+        addNotification('Exercise added successfully', 'success');
+      }
+      // Reset form
+      setName('');
+      setDescription('');
+      setTarget('');
+      setImageUrl('');
+      // Call onSave with the saved exercise from the server
+      onSave(savedExercise);
+    } catch (error) {
+      addNotification('Failed to save exercise', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+      <h2 className="text-2xl font-bold mb-4">
+        {initialExercise ? 'Edit Exercise' : 'Add New Exercise'}
+      </h2>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
+          Exercise Name
+        </label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="name"
+          type="text"
+          placeholder="Exercise Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
+          Description
+        </label>
+        <textarea
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="description"
+          placeholder="Exercise Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="target">
+          Target Muscle Group
+        </label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="target"
+          type="text"
+          placeholder="Target Muscle Group"
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imageUrl">
+          Image URL
+        </label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="imageUrl"
+          type="text"
+          placeholder="Image URL"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="submit"
+        >
+          {initialExercise ? 'Update Exercise' : 'Add Exercise'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default AddExerciseForm;
+```
+
+# src/assets/react.svg
+
+This is a file of the type: SVG Image
 
 # src/context/NotificationContext.jsx
 
@@ -1491,7 +2249,7 @@ export function NotificationProvider({ children }) {
 # src/context/GymContext.jsx
 
 ```jsx
-// context/GymContext.jsx
+// src/context/GymContext.jsx
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
@@ -1716,10 +2474,22 @@ export function GymProvider({ children }) {
   const addWorkoutPlan = async (plan) => {
     try {
       const response = await axios.post(`${API_URL}/workoutplans`, plan, getAuthConfig());
-      const fullPlan = await axios.get(`${API_URL}/workoutplans/${response.data._id}`, getAuthConfig());
-      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan.data]);
+      
+      // Instead of fetching the plan again, use the response data
+      const newPlan = response.data;
+      
+      // If the response doesn't include full exercise details, you might want to populate them here
+      const fullPlan = {
+        ...newPlan,
+        exercises: await Promise.all(newPlan.exercises.map(async (exerciseId) => {
+          const exerciseResponse = await axios.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
+          return exerciseResponse.data;
+        }))
+      };
+
+      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan]);
       addNotification('Workout plan added successfully', 'success');
-      return fullPlan.data;
+      return fullPlan;
     } catch (error) {
       console.error('Error adding workout plan:', error);
       addNotification('Failed to add workout plan', 'error');
@@ -1730,6 +2500,10 @@ export function GymProvider({ children }) {
   // Update a workout plan
   const updateWorkoutPlan = async (id, updatedPlan) => {
     try {
+      if (!id) {
+        // If there's no id, it's a new plan
+        return addWorkoutPlan(updatedPlan);
+      }
       const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
       setWorkoutPlans(prevPlans =>
         prevPlans.map(plan =>
@@ -1917,728 +2691,4 @@ export function AuthProvider({ children }) {
   );
 }
 ```
-
-# src/components/WorkoutPlanSelector.jsx
-
-```jsx
-// src/components/WorkoutPlanSelector.jsx
-
-import React, { useState, useEffect } from 'react';
-import { useGymContext } from '../context/GymContext';
-
-function WorkoutPlanSelector({ onSelect, onClose }) {
-  const [workoutPlans, setWorkoutPlans] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { fetchWorkoutPlans } = useGymContext();
-
-  useEffect(() => {
-    const getWorkoutPlans = async () => {
-      try {
-        setIsLoading(true);
-        const plans = await fetchWorkoutPlans();
-        setWorkoutPlans(plans || []);
-      } catch (error) {
-        console.error('Error fetching workout plans:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    getWorkoutPlans();
-  }, [fetchWorkoutPlans]);
-
-  const handleSelect = async (plan) => {
-    await onSelect(plan);
-    onClose();
-  };
-
-  if (isLoading) {
-    return <div>Loading workout plans...</div>;
-  }
-
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-      <div className="bg-white p-5 rounded-lg shadow-xl max-w-md w-full">
-        <h2 className="text-xl font-bold mb-4">Select Workout Plan</h2>
-        {workoutPlans.length === 0 ? (
-          <p>No workout plans available. Create a plan first.</p>
-        ) : (
-          workoutPlans.map((plan) => (
-            <button
-              key={plan._id}
-              onClick={() => handleSelect(plan)}
-              className="block w-full text-left p-2 hover:bg-gray-100 rounded mb-2"
-            >
-              {plan.name}
-            </button>
-          ))
-        )}
-        <button
-          onClick={onClose}
-          className="mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export default WorkoutPlanSelector;
-```
-
-# src/components/WorkoutPlanForm.jsx
-
-```jsx
-// src/components/WorkoutPlanForm.jsx
-
-import { useState } from 'react';
-import { useGymContext } from '../context/GymContext';
-
-function WorkoutPlanForm({ onSubmit }) {
-  const [planName, setPlanName] = useState('');
-  const [selectedExercises, setSelectedExercises] = useState([]);
-  const { exercises } = useGymContext();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const workoutPlan = {
-        name: planName,
-        exercises: selectedExercises.map(exerciseId => 
-          exercises.find(exercise => exercise._id === exerciseId)
-        ),
-      };
-      await onSubmit(workoutPlan);
-      // Reset form
-      setPlanName('');
-      setSelectedExercises([]);
-    } catch (error) {
-      console.error('Error submitting workout plan:', error);
-    }
-  };
-  
-  const handleExerciseToggle = (exerciseId) => {
-    setSelectedExercises(prevSelected =>
-      prevSelected.includes(exerciseId)
-        ? prevSelected.filter(id => id !== exerciseId)
-        : [...prevSelected, exerciseId]
-    );
-  };   
-
-  return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <label htmlFor="planName" className="block text-gray-700 font-bold mb-2">
-          Workout Plan Name
-        </label>
-        <input
-          type="text"
-          id="planName"
-          value={planName}
-          onChange={(e) => setPlanName(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-gray-700 font-bold mb-2">
-          Select Exercises
-        </label>
-        {exercises.map((exercise) => (
-          <div key={exercise._id} className="flex items-center mb-2">
-            <input
-              type="checkbox"
-              id={`exercise-${exercise._id}`}
-              checked={selectedExercises.includes(exercise._id)}
-              onChange={() => handleExerciseToggle(exercise._id)}
-              className="mr-2"
-            />
-            <label htmlFor={`exercise-${exercise._id}`}>{exercise.name}</label>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          Create Workout Plan
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export default WorkoutPlanForm;
-```
-
-# src/components/WorkoutForm.jsx
-
-```jsx
-// src/components/WorkoutForm.jsx
-import { useState, useEffect } from 'react';
-import { useGymContext } from '../context/GymContext';
-
-function WorkoutForm({ onSave, initialWorkout }) {
-  const [selectedExercise, setSelectedExercise] = useState('');
-  const [sets, setSets] = useState('');
-  const [reps, setReps] = useState('');
-  const [weight, setWeight] = useState('');
-  const { exercises } = useGymContext();
-
-  useEffect(() => {
-    if (initialWorkout) {
-      setSelectedExercise(initialWorkout.exercise);
-      setSets(initialWorkout.sets.toString());
-      setReps(initialWorkout.reps.toString());
-      setWeight(initialWorkout.weight.toString());
-    }
-  }, [initialWorkout]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const workout = {
-      exercise: selectedExercise,
-      sets: parseInt(sets),
-      reps: parseInt(reps),
-      weight: parseFloat(weight),
-      date: new Date().toISOString()
-    };
-    onSave(workout);
-    // Reset form
-    setSelectedExercise('');
-    setSets('');
-    setReps('');
-    setWeight('');
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <label htmlFor="exercise" className="block text-gray-700 font-bold mb-2">
-          Exercise
-        </label>
-        <select
-          id="exercise"
-          value={selectedExercise}
-          onChange={(e) => setSelectedExercise(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        >
-          <option value="">Select an exercise</option>
-          {exercises.map((exercise) => (
-            <option key={exercise._id} value={exercise.name}>
-              {exercise.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="mb-4">
-        <label htmlFor="sets" className="block text-gray-700 font-bold mb-2">
-          Sets
-        </label>
-        <input
-          type="number"
-          id="sets"
-          value={sets}
-          onChange={(e) => setSets(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label htmlFor="reps" className="block text-gray-700 font-bold mb-2">
-          Reps
-        </label>
-        <input
-          type="number"
-          id="reps"
-          value={reps}
-          onChange={(e) => setReps(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-6">
-        <label htmlFor="weight" className="block text-gray-700 font-bold mb-2">
-          Weight (kg)
-        </label>
-        <input
-          type="number"
-          id="weight"
-          value={weight}
-          onChange={(e) => setWeight(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          step="0.1"
-          required
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          {initialWorkout ? 'Update Workout' : 'Log Workout'}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export default WorkoutForm;
-```
-
-# src/components/Register.jsx
-
-```jsx
-// src/components/Register.jsx
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-
-function Register() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { register } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await register(username, email, password);
-      navigate('/login');
-    } catch (error) {
-      console.error('Registration failed:', error);
-      // Handle error (e.g., show error message to user)
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">Username</label>
-        <input
-          type="text"
-          id="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label htmlFor="email" className="block text-gray-700 font-bold mb-2">Email</label>
-        <input
-          type="email"
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-6">
-        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">Password</label>
-        <input
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          Register
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export default Register;
-```
-
-# src/components/NotificationToast.jsx
-
-```jsx
-// src/components/NotificationToast.jsx
-
-import React from 'react';
-import { useNotification } from '../context/NotificationContext';
-
-function NotificationToast() {
-  const { notifications, removeNotification } = useNotification();
-
-  return (
-    <div className="fixed top-4 right-4 z-50">
-      {notifications.map((notification) => (
-        <div
-          key={notification.id}
-          className={`mb-2 p-4 rounded shadow-md ${
-            notification.type === 'error' ? 'bg-red-500' : 
-            notification.type === 'success' ? 'bg-green-500' : 
-            notification.type === 'info' ? 'bg-blue-500' : 'bg-yellow-500'
-          } text-white`}
-        >
-          {notification.message}
-          <button
-            onClick={() => removeNotification(notification.id)}
-            className="ml-2 text-white font-bold"
-          >
-            &times;
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export default NotificationToast;
-```
-
-# src/components/Login.jsx
-
-```jsx
-// src/components/Login.jsx
-
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { useNotification } from '../context/NotificationContext';
-
-function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const { addNotification } = useNotification();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await login(username, password);
-      addNotification('Logged in successfully', 'success');
-      navigate('/'); // Redirect to home page after successful login
-    } catch (err) {
-      addNotification('Failed to log in', 'error');
-      console.error(err);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">
-          Username
-        </label>
-        <input
-          type="text"
-          id="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-          autoComplete="username"
-        />
-      </div>
-      <div className="mb-6">
-        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">
-          Password
-        </label>
-        <input
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-          autoComplete="current-password"
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          Log In
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export default Login;
-```
-
-# src/components/Header.jsx
-
-```jsx
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-
-function Header() {
-  const { user, logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    // You might want to redirect to the login page after logout
-    // If you're using react-router-dom v6, you can use the useNavigate hook for this
-  };
-
-  return (
-    <header className="bg-blue-600 text-white p-4">
-      <nav className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold">Gym App</Link>
-        <ul className="flex space-x-4 items-center">
-          {user ? (
-            <>
-              <li><Link to="/tracker">Workout Tracker</Link></li>
-              <li><Link to="/exercises">Exercise Library</Link></li>
-              <li><Link to="/plans">Workout Plans</Link></li>
-              <li><Link to="/workout-summary">Workout History</Link></li>
-              <li>
-                <button 
-                  onClick={handleLogout}
-                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                >
-                  Logout
-                </button>
-              </li>
-            </>
-          ) : (
-            <>
-              <li>
-                <Link 
-                  to="/login"
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                >
-                  Login
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/register"
-                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                >
-                  Register
-                </Link>
-              </li>
-            </>
-          )}
-        </ul>
-      </nav>
-    </header>
-  );
-}
-
-export default Header;
-```
-
-# src/components/Footer.jsx
-
-```jsx
-// src/components/Footer.jsx
-function Footer() {
-  return (
-    <footer className="bg-gray-200 p-4 mt-8">
-      <div className="container mx-auto text-center">
-        <p>&copy; 2024 Gym App. All rights reserved.</p>
-      </div>
-    </footer>
-  );
-}
-
-export default Footer;
-```
-
-# src/components/ExerciseItem.jsx
-
-```jsx
-// src/components/ExerciseItem.jsx
-
-import React from 'react';
-
-function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan }) {
-  return (
-    <div className="bg-white shadow-md rounded-lg overflow-hidden">
-      <img 
-        src={exercise.imageUrl} 
-        alt={exercise.name} 
-        className="w-full h-48 object-cover"
-      />
-      <div className="p-4">
-        <h3 className="font-bold text-xl mb-2">{exercise.name}</h3>
-        <p className="text-gray-700 text-base mb-2">{exercise.description}</p>
-        <p className="text-gray-600 text-sm mb-4">Target: {exercise.target}</p>
-        <div className="flex justify-between">
-          <button 
-            onClick={() => onEdit(exercise)} 
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Edit
-          </button>
-          <button 
-            onClick={() => onDelete(exercise._id)} 
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Delete
-          </button>
-          <button 
-            onClick={() => onAddToPlan(exercise)} 
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Add to Plan
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default ExerciseItem;
-```
-
-# src/components/AddExerciseForm.jsx
-
-```jsx
-// src/components/AddExerciseForm.jsx
-
-import { useState, useEffect } from 'react';
-import { useGymContext } from '../context/GymContext';
-import { useNotification } from '../context/NotificationContext';
-
-function AddExerciseForm({ onSave, initialExercise }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [target, setTarget] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { addExercise, updateExercise } = useGymContext();
-  const { addNotification } = useNotification();
-
-  useEffect(() => {
-    if (initialExercise) {
-      setName(initialExercise.name);
-      setDescription(initialExercise.description);
-      setTarget(initialExercise.target);
-      setImageUrl(initialExercise.imageUrl);
-    } else {
-      setName('');
-      setDescription('');
-      setTarget('');
-      setImageUrl('');
-    }
-  }, [initialExercise]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    const exercise = { name, description, target, imageUrl };
-    try {
-      let savedExercise;
-      if (initialExercise) {
-        savedExercise = await updateExercise(initialExercise._id, exercise);
-        addNotification('Exercise updated successfully', 'success');
-      } else {
-        savedExercise = await addExercise(exercise);
-        addNotification('Exercise added successfully', 'success');
-      }
-      // Reset form
-      setName('');
-      setDescription('');
-      setTarget('');
-      setImageUrl('');
-      // Call onSave with the saved exercise from the server
-      onSave(savedExercise);
-    } catch (error) {
-      addNotification('Failed to save exercise', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-      <h2 className="text-2xl font-bold mb-4">
-        {initialExercise ? 'Edit Exercise' : 'Add New Exercise'}
-      </h2>
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
-          Exercise Name
-        </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="name"
-          type="text"
-          placeholder="Exercise Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
-          Description
-        </label>
-        <textarea
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="description"
-          placeholder="Exercise Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="target">
-          Target Muscle Group
-        </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="target"
-          type="text"
-          placeholder="Target Muscle Group"
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imageUrl">
-          Image URL
-        </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="imageUrl"
-          type="text"
-          placeholder="Image URL"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          type="submit"
-        >
-          {initialExercise ? 'Update Exercise' : 'Add Exercise'}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export default AddExerciseForm;
-```
-
-# src/assets/react.svg
-
-This is a file of the type: SVG Image
 

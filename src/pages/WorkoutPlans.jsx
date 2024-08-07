@@ -6,9 +6,8 @@ import { useGymContext } from '../context/GymContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
 
 function WorkoutPlans() {
-  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan, updateWorkoutPlan } = useGymContext();
+  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan } = useGymContext();
   const [showForm, setShowForm] = useState(false);
-  const [editingPlan, setEditingPlan] = useState(null);
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
   const navigate = useNavigate();
 
@@ -32,24 +31,8 @@ function WorkoutPlans() {
     try {
       await addWorkoutPlan(plan);
       setShowForm(false);
-      setEditingPlan(null);
     } catch (error) {
       console.error('Error adding workout plan:', error);
-    }
-  };
-
-  const handleEditPlan = (plan) => {
-    setEditingPlan(plan);
-    setShowForm(true);
-  };
-
-  const handleUpdateWorkoutPlan = async (updatedPlan) => {
-    try {
-      await updateWorkoutPlan(editingPlan._id, updatedPlan);
-      setShowForm(false);
-      setEditingPlan(null);
-    } catch (error) {
-      console.error('Error updating workout plan:', error);
     }
   };
 
@@ -69,24 +52,22 @@ function WorkoutPlans() {
         </div>
       )}
       <button
-        onClick={() => {
-          setShowForm(!showForm);
-          setEditingPlan(null);
-        }}
+        onClick={() => setShowForm(!showForm)}
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
       >
         {showForm ? 'Hide Form' : 'Create New Plan'}
       </button>
-      {showForm && (
-        <WorkoutPlanForm 
-          onSubmit={editingPlan ? handleUpdateWorkoutPlan : handleAddWorkoutPlan} 
-          initialPlan={editingPlan}
-        />
-      )}
+      {showForm && <WorkoutPlanForm onSubmit={handleAddWorkoutPlan} />}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {workoutPlans.map((plan) => (
           <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">
             <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
+            <p className="text-sm text-gray-600 mb-2">
+              Type: {plan.type || 'Not specified'}
+            </p>
+            <p className="text-sm text-gray-600 mb-2">
+              Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
+            </p>
             <ul className="list-disc list-inside mb-4">
               {plan.exercises.map((exercise) => (
                 <li key={exercise._id} className="mb-2">
@@ -102,12 +83,6 @@ function WorkoutPlans() {
                 className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
               >
                 Start Workout
-              </button>
-              <button
-                onClick={() => handleEditPlan(plan)}
-                className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mx-2"
-              >
-                Edit Plan
               </button>
               <button
                 onClick={() => deleteWorkoutPlan(plan._id)}
