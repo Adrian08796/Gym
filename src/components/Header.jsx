@@ -1,3 +1,5 @@
+// src/components/Header.jsx
+
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,6 +19,7 @@ function Header() {
         <ul className="flex space-x-4 items-center">
           {user ? (
             <>
+              <li><Link to="/dashboard">Dashboard</Link></li>
               <li><Link to="/tracker">Workout Tracker</Link></li>
               <li><Link to="/exercises">Exercise Library</Link></li>
               <li><Link to="/plans">Workout Plans</Link></li>
