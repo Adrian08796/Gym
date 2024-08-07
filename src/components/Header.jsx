@@ -20,6 +20,7 @@ function Header() {
           {user ? (
             <>
               <li><Link to="/dashboard">Dashboard</Link></li>
+              <li><Link to="/calendar">Calendar</Link></li>
               <li><Link to="/tracker">Workout Tracker</Link></li>
               <li><Link to="/exercises">Exercise Library</Link></li>
               <li><Link to="/plans">Workout Plans</Link></li>
