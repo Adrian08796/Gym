@@ -220,37 +220,45 @@ export function GymProvider({ children }) {
   };
 
   // Add a workout plan
-  const addWorkoutPlan = async (plan) => {
-    try {
-      const response = await axios.post(`${API_URL}/workoutplans`, plan, getAuthConfig());
-      const fullPlan = await axios.get(`${API_URL}/workoutplans/${response.data._id}`, getAuthConfig());
-      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan.data]);
-      addNotification('Workout plan added successfully', 'success');
-      return fullPlan.data;
-    } catch (error) {
-      console.error('Error adding workout plan:', error);
-      addNotification('Failed to add workout plan', 'error');
-      throw error;
-    }
-  };
+const addWorkoutPlan = async (plan) => {
+  try {
+    const planWithTitleCase = {
+      ...plan,
+      name: toTitleCase(plan.name)
+    };
+    const response = await axios.post(`${API_URL}/workoutplans`, planWithTitleCase, getAuthConfig());
+    const fullPlan = await axios.get(`${API_URL}/workoutplans/${response.data._id}`, getAuthConfig());
+    setWorkoutPlans(prevPlans => [...prevPlans, fullPlan.data]);
+    addNotification('Workout plan added successfully', 'success');
+    return fullPlan.data;
+  } catch (error) {
+    console.error('Error adding workout plan:', error);
+    addNotification('Failed to add workout plan', 'error');
+    throw error;
+  }
+};
 
   // Update a workout plan
-  const updateWorkoutPlan = async (id, updatedPlan) => {
-    try {
-      const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
-      setWorkoutPlans(prevPlans =>
-        prevPlans.map(plan =>
-          plan._id === id ? response.data : plan
-        )
-      );
-      addNotification('Workout plan updated successfully', 'success');
-      return response.data;
-    } catch (error) {
-      console.error('Error updating workout plan:', error);
-      addNotification('Failed to update workout plan', 'error');
-      throw error;
-    }
-  };
+const updateWorkoutPlan = async (id, updatedPlan) => {
+  try {
+    const planWithTitleCase = {
+      ...updatedPlan,
+      name: toTitleCase(updatedPlan.name)
+    };
+    const response = await axios.put(`${API_URL}/workoutplans/${id}`, planWithTitleCase, getAuthConfig());
+    setWorkoutPlans(prevPlans =>
+      prevPlans.map(plan =>
+        plan._id === id ? response.data : plan
+      )
+    );
+    addNotification('Workout plan updated successfully', 'success');
+    return response.data;
+  } catch (error) {
+    console.error('Error updating workout plan:', error);
+    addNotification('Failed to update workout plan', 'error');
+    throw error;
+  }
+};
 
   // Delete a workout plan
   const deleteWorkoutPlan = async (id) => {
