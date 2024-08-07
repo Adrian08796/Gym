@@ -223,10 +223,22 @@ export function GymProvider({ children }) {
   const addWorkoutPlan = async (plan) => {
     try {
       const response = await axios.post(`${API_URL}/workoutplans`, plan, getAuthConfig());
-      const fullPlan = await axios.get(`${API_URL}/workoutplans/${response.data._id}`, getAuthConfig());
-      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan.data]);
+      
+      // Instead of fetching the plan again, use the response data
+      const newPlan = response.data;
+      
+      // If the response doesn't include full exercise details, you might want to populate them here
+      const fullPlan = {
+        ...newPlan,
+        exercises: await Promise.all(newPlan.exercises.map(async (exerciseId) => {
+          const exerciseResponse = await axios.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
+          return exerciseResponse.data;
+        }))
+      };
+
+      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan]);
       addNotification('Workout plan added successfully', 'success');
-      return fullPlan.data;
+      return fullPlan;
     } catch (error) {
       console.error('Error adding workout plan:', error);
       addNotification('Failed to add workout plan', 'error');

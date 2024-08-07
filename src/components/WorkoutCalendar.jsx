@@ -5,7 +5,7 @@ import { Calendar, momentLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import 'react-big-calendar/lib/addons/dragAndDrop/styles.css'; // Import drag and drop styles
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useGymContext } from '../context/GymContext';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
@@ -22,7 +22,7 @@ const workoutColors = {
 };
 
 function WorkoutCalendar() {
-  const { workoutHistory, workoutPlans, updateWorkoutPlan } = useGymContext();
+  const { workoutHistory, workoutPlans, updateWorkoutPlan, addWorkoutPlan } = useGymContext();
   const [events, setEvents] = useState([]);
   const navigate = useNavigate();
   const { addNotification } = useNotification();
@@ -59,7 +59,7 @@ function WorkoutCalendar() {
     setEvents([...historyEvents, ...scheduledEvents]);
   }, [workoutHistory, workoutPlans]);
 
-  const handleSelectSlot = ({ start }) => {
+  const handleSelectSlot = async ({ start }) => {
     const planName = prompt('Enter workout plan name:');
     if (planName) {
       const workoutType = prompt('Enter workout type (strength, cardio, flexibility):');
@@ -69,7 +69,20 @@ function WorkoutCalendar() {
         scheduledDate: start,
         type: workoutType
       };
-      updateWorkoutPlan(null, newPlan);
+      try {
+        const addedPlan = await addWorkoutPlan(newPlan);
+        setEvents(prev => [...prev, {
+          id: addedPlan._id,
+          title: addedPlan.name,
+          start: new Date(addedPlan.scheduledDate),
+          end: new Date(new Date(addedPlan.scheduledDate).setHours(new Date(addedPlan.scheduledDate).getHours() + 1)),
+          allDay: false,
+          resource: 'scheduled'
+        }]);
+      } catch (error) {
+        console.error('Error adding workout plan:', error);
+        addNotification('Failed to add workout plan', 'error');
+      }
     }
   };
 

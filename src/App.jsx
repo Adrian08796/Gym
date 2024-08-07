@@ -7,6 +7,7 @@ import ExerciseLibrary from './pages/ExerciseLibrary';
 import WorkoutPlans from './pages/WorkoutPlans';
 import WorkoutSummary from './pages/WorkoutSummary';
 import IndividualWorkoutSummary from './components/IndividualWorkoutSummary';
+import WorkoutPlanDetails from './components/WorkoutPlanDetails';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Login from './components/Login';
@@ -17,6 +18,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
 import NotificationToast from './components/NotificationToast';
+
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -47,6 +49,7 @@ function AppContent() {
             <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
             <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
             <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
+            <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
             <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
             <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
           </Routes>

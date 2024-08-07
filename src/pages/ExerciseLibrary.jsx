@@ -1,6 +1,6 @@
 // src/pages/ExerciseLibrary.jsx
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
 import WorkoutPlanSelector from '../components/WorkoutPlanSelector';
@@ -13,6 +13,18 @@ function ExerciseLibrary() {
   const [editingExercise, setEditingExercise] = useState(null);
   const [showWorkoutPlanSelector, setShowWorkoutPlanSelector] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
+  const [filterText, setFilterText] = useState('');
+  const [filteredExercises, setFilteredExercises] = useState(exercises);
+
+  useEffect(() => {
+    const lowercasedFilter = filterText.toLowerCase();
+    const filtered = exercises.filter(exercise => 
+      exercise.name.toLowerCase().includes(lowercasedFilter) ||
+      exercise.description.toLowerCase().includes(lowercasedFilter) ||
+      exercise.target.toLowerCase().includes(lowercasedFilter)
+    );
+    setFilteredExercises(filtered);
+  }, [filterText, exercises]);
 
   const handleEdit = (exercise) => {
     setEditingExercise(exercise);
@@ -58,9 +70,18 @@ function ExerciseLibrary() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-4">Exercise Library</h1>
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Filter exercises..."
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
       <AddExerciseForm onSave={handleSave} initialExercise={editingExercise} />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {exercises.map((exercise) => (
+        {filteredExercises.map((exercise) => (
           <ExerciseItem 
             key={exercise._id} 
             exercise={exercise}
