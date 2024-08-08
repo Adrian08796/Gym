@@ -44,4 +44,4 @@ function WorkoutPlanModal({ plan, onClose }) {
   );
 }
 
-export default WorkoutPlanModal;
+export default W

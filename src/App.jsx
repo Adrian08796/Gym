@@ -58,24 +58,4 @@ function AppContent() {
           </div>
         </main>
         <Footer />
-        <NotificationToast />
-      </div>
-    </Router>
-  );
-}
-
-function App() {
-  return (
-    <AuthProvider>
-      <NotificationProvider>
-        <GymProvider>
-          <ThemeProvider>
-            <AppContent />
-          </ThemeProvider>
-        </GymProvider>
-      </NotificationProvider>
-    </AuthProvider>
-  );
-}
-
-export default App;
+        <NotificationToast 

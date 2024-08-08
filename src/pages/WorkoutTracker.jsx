@@ -232,16 +232,4 @@ function WorkoutTracker() {
                   <li key={setIndex}>
                     Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No sets completed yet</p>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default WorkoutTracker;
+                
