@@ -834,8 +834,9 @@ import { useGymContext } from '../context/GymContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
 
 function WorkoutPlans() {
-  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan } = useGymContext();
+  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan, updateWorkoutPlan } = useGymContext();
   const [showForm, setShowForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
   const navigate = useNavigate();
 
@@ -859,9 +860,25 @@ function WorkoutPlans() {
     try {
       await addWorkoutPlan(plan);
       setShowForm(false);
+      setEditingPlan(null);
     } catch (error) {
       console.error('Error adding workout plan:', error);
     }
+  };
+
+  const handleEditWorkoutPlan = async (plan) => {
+    try {
+      await updateWorkoutPlan(plan._id, plan);
+      setShowForm(false);
+      setEditingPlan(null);
+    } catch (error) {
+      console.error('Error updating workout plan:', error);
+    }
+  };
+
+  const handleEdit = (plan) => {
+    setEditingPlan(plan);
+    setShowForm(true);
   };
 
   return (
@@ -880,12 +897,20 @@ function WorkoutPlans() {
         </div>
       )}
       <button
-        onClick={() => setShowForm(!showForm)}
+        onClick={() => {
+          setShowForm(!showForm);
+          setEditingPlan(null);
+        }}
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
       >
         {showForm ? 'Hide Form' : 'Create New Plan'}
       </button>
-      {showForm && <WorkoutPlanForm onSubmit={handleAddWorkoutPlan} />}
+      {showForm && (
+        <WorkoutPlanForm
+          onSubmit={editingPlan ? handleEditWorkoutPlan : handleAddWorkoutPlan}
+          initialPlan={editingPlan}
+        />
+      )}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {workoutPlans.map((plan) => (
           <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">
@@ -911,6 +936,12 @@ function WorkoutPlans() {
                 className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
               >
                 Start Workout
+              </button>
+              <button
+                onClick={() => handleEdit(plan)}
+                className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mx-2"
+              >
+                Edit Plan
               </button>
               <button
                 onClick={() => deleteWorkoutPlan(plan._id)}
@@ -1123,6 +1154,7 @@ export function GymProvider({ children }) {
   }, []);
 
   const toTitleCase = (str) => {
+    if (typeof str !== 'string') return str;
     return str.replace(
       /\w\S*/g,
       function(txt) {
@@ -1152,7 +1184,9 @@ export function GymProvider({ children }) {
         ...exercise,
         name: toTitleCase(exercise.name),
         description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target)
+        target: Array.isArray(exercise.target) 
+          ? exercise.target.map(toTitleCase) 
+          : toTitleCase(exercise.target)
       }));
       setExercises(formattedExercises);
     } catch (error) {
@@ -1160,6 +1194,7 @@ export function GymProvider({ children }) {
       addNotification('Failed to fetch exercises', 'error');
     }
   }, [API_URL, getAuthConfig, addNotification]);
+  
 
   // Fetch workout plans
   const fetchWorkoutPlans = useCallback(async () => {
@@ -1688,6 +1723,12 @@ function WorkoutPlanForm({ onSubmit, initialPlan }) {
       setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id));
       setWorkoutType(initialPlan.type || '');
       setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
+    } else {
+      // Reset form when not editing
+      setPlanName('');
+      setSelectedExercises([]);
+      setWorkoutType('');
+      setScheduledDate('');
     }
   }, [initialPlan]);
 
@@ -1698,9 +1739,15 @@ function WorkoutPlanForm({ onSubmit, initialPlan }) {
         name: planName,
         exercises: selectedExercises,
         type: workoutType,
-        scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : new Date().toISOString()
+        scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null
       };
+      
+      if (initialPlan) {
+        workoutPlan._id = initialPlan._id;  // Include the ID when updating
+      }
+
       await onSubmit(workoutPlan);
+      
       // Reset form if it's not editing
       if (!initialPlan) {
         setPlanName('');
@@ -2486,7 +2533,9 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan }) {
       <div className="p-4">
         <h3 className="font-bold text-xl mb-2">{exercise.name}</h3>
         <p className="text-gray-700 text-base mb-2">{exercise.description}</p>
-        <p className="text-gray-600 text-sm mb-4">Target: {exercise.target}</p>
+        <p className="text-gray-600 text-sm mb-4">
+          Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
+        </p>
         <div className="flex justify-between">
           <button 
             onClick={() => onEdit(exercise)} 
@@ -2631,10 +2680,14 @@ import { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 
+const muscleGroups = [
+  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'
+];
+
 function AddExerciseForm({ onSave, initialExercise }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [target, setTarget] = useState('');
+  const [target, setTarget] = useState([]);
   const [imageUrl, setImageUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addExercise, updateExercise } = useGymContext();
@@ -2644,12 +2697,12 @@ function AddExerciseForm({ onSave, initialExercise }) {
     if (initialExercise) {
       setName(initialExercise.name);
       setDescription(initialExercise.description);
-      setTarget(initialExercise.target);
+      setTarget(Array.isArray(initialExercise.target) ? initialExercise.target : [initialExercise.target]);
       setImageUrl(initialExercise.imageUrl);
     } else {
       setName('');
       setDescription('');
-      setTarget('');
+      setTarget([]);
       setImageUrl('');
     }
   }, [initialExercise]);
@@ -2671,7 +2724,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
       // Reset form
       setName('');
       setDescription('');
-      setTarget('');
+      setTarget([]);
       setImageUrl('');
       // Call onSave with the saved exercise from the server
       onSave(savedExercise);
@@ -2680,6 +2733,14 @@ function AddExerciseForm({ onSave, initialExercise }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleTargetChange = (group) => {
+    setTarget(prev => 
+      prev.includes(group) 
+        ? prev.filter(item => item !== group)
+        : [...prev, group]
+    );
   };
 
   return (
@@ -2715,18 +2776,26 @@ function AddExerciseForm({ onSave, initialExercise }) {
         />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="target">
-          Target Muscle Group
+        <label className="block text-gray-700 text-sm font-bold mb-2">
+          Target Muscle Groups
         </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="target"
-          type="text"
-          placeholder="Target Muscle Group"
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          required
-        />
+        <div className="flex flex-wrap -mx-1">
+          {muscleGroups.map(group => (
+            <div key={group} className="px-1 mb-2">
+              <button
+                type="button"
+                onClick={() => handleTargetChange(group)}
+                className={`py-1 px-2 rounded ${
+                  target.includes(group)
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                {group}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imageUrl">

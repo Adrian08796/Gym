@@ -67,6 +67,10 @@ function ExerciseLibrary() {
     setSelectedExercise(null);
   };
 
+  const handleCancelEdit = () => {
+    setEditingExercise(null);
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-4">Exercise Library</h1>
@@ -79,7 +83,11 @@ function ExerciseLibrary() {
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
         />
       </div>
-      <AddExerciseForm onSave={handleSave} initialExercise={editingExercise} />
+      <AddExerciseForm 
+        onSave={handleSave} 
+        initialExercise={editingExercise}
+        onCancel={handleCancelEdit}
+      />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredExercises.map((exercise) => (
           <ExerciseItem 

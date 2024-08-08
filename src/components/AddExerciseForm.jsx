@@ -8,7 +8,7 @@ const muscleGroups = [
   'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'
 ];
 
-function AddExerciseForm({ onSave, initialExercise }) {
+function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState([]);
@@ -65,6 +65,18 @@ function AddExerciseForm({ onSave, initialExercise }) {
         ? prev.filter(item => item !== group)
         : [...prev, group]
     );
+  };
+
+  const handleCancel = () => {
+    // Reset form
+    setName('');
+    setDescription('');
+    setTarget([]);
+    setImageUrl('');
+    // Call onCancel prop if it exists
+    if (typeof onCancel === 'function') {
+      onCancel();
+    }
   };
 
   return (
@@ -140,6 +152,13 @@ function AddExerciseForm({ onSave, initialExercise }) {
           type="submit"
         >
           {initialExercise ? 'Update Exercise' : 'Add Exercise'}
+        </button>
+        <button
+          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="button"
+          onClick={handleCancel}
+        >
+          Cancel
         </button>
       </div>
     </form>
