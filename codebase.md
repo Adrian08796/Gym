@@ -1,14 +1,21 @@
 # vite.config.js
 
 ```js
+// vite.config.js
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true, // This makes the server listen on all addresses, including your local network
-    port: 5173, // or whatever port you want to use
+    host: true,
+    port: 5173,
+  },
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
   },
 });
 ```
@@ -34,580 +41,6 @@ export default {
   },
   plugins: [],
 }
-```
-
-# recover3.jsx
-
-```jsx
-// pages/WorkoutTracker.jsx
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useGymContext } from '../context/GymContext';
-
-function WorkoutTracker() {
-  const [currentPlan, setCurrentPlan] = useState(null);
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [sets, setSets] = useState([]);
-  const { addWorkout } = useGymContext();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const storedPlan = localStorage.getItem('currentPlan');
-    const storedSets = localStorage.getItem('currentSets');
-    const storedIndex = localStorage.getItem('currentExerciseIndex');
-
-    if (storedPlan) {
-      const parsedPlan = JSON.parse(storedPlan);
-      setCurrentPlan(parsedPlan);
-      
-      if (storedSets) {
-        setSets(JSON.parse(storedSets));
-      } else {
-        setSets(parsedPlan.exercises.map(() => []));
-      }
-      
-      if (storedIndex) {
-        setCurrentExerciseIndex(parseInt(storedIndex));
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (currentPlan) {
-      localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
-    }
-    if (sets.length > 0) {
-      localStorage.setItem('currentSets', JSON.stringify(sets));
-    }
-    localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
-  }, [currentPlan, sets, currentExerciseIndex]);
-
-  const handleSetComplete = (weight, reps) => {
-    setSets(prevSets => {
-      const newSets = [...prevSets];
-      newSets[currentExerciseIndex] = [...(newSets[currentExerciseIndex] || []), { weight, reps }];
-      return newSets;
-    });
-  };
-
-  const handlePreviousExercise = () => {
-    if (currentExerciseIndex > 0) {
-      setCurrentExerciseIndex(prevIndex => prevIndex - 1);
-    }
-  };
-
-  const handleNextExercise = async () => {
-    if (currentExerciseIndex < currentPlan.exercises.length - 1) {
-      setCurrentExerciseIndex(prevIndex => prevIndex + 1);
-    } else {
-      // Workout complete, save it
-      const completedWorkout = {
-        plan: currentPlan._id,
-        planName: currentPlan.name,
-        exercises: currentPlan.exercises.map((exercise, index) => ({
-          exercise: exercise._id,
-          sets: sets[index] || []
-        }))
-      };
-      console.log('Completed workout data:', completedWorkout);
-      try {
-        await addWorkout(completedWorkout);
-        alert('Workout completed and saved!');
-        // Clear localStorage
-        localStorage.removeItem('currentPlan');
-        localStorage.removeItem('currentSets');
-        localStorage.removeItem('currentExerciseIndex');
-        navigate('/');
-      } catch (error) {
-        console.error('Error saving workout:', error);
-        alert('Failed to save workout. Please try again.');
-      }
-    }
-  };
-
-  if (!currentPlan) {
-    return <div>Loading workout plan...</div>;
-  }
-
-  const currentExercise = currentPlan.exercises[currentExerciseIndex];
-
-  return (
-    <div className="container mx-auto mt-8">
-      <h2 className="text-2xl font-bold mb-4">Workout Tracker</h2>
-      <h3 className="text-xl mb-4">{currentPlan.name}</h3>
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
-        <div className="flex mb-4">
-          <img 
-            src={currentExercise.imageUrl} 
-            alt={currentExercise.name} 
-            className="w-1/3 h-auto object-cover rounded-lg mr-4"
-          />
-          <div>
-            <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
-            <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
-            <p className="mb-2"><strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length}</p>
-          </div>
-        </div>
-        <div className="mb-4">
-          <input
-            type="number"
-            placeholder="Weight"
-            id="weight"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2 mb-2"
-          />
-          <input
-            type="number"
-            placeholder="Reps"
-            id="reps"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2"
-          />
-        </div>
-        <button
-          onClick={() => {
-            const weight = document.getElementById('weight').value;
-            const reps = document.getElementById('reps').value;
-            if (weight && reps) {
-              handleSetComplete(Number(weight), Number(reps));
-              document.getElementById('weight').value = '';
-              document.getElementById('reps').value = '';
-            } else {
-              alert('Please enter both weight and reps');
-            }
-          }}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-        >
-          Complete Set
-        </button>
-      </div>
-      <div className="flex justify-between">
-        <button
-          onClick={handlePreviousExercise}
-          disabled={currentExerciseIndex === 0}
-          className={`bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4 ${currentExerciseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          Previous Exercise
-        </button>
-        <button
-          onClick={handleNextExercise}
-          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-        >
-          {currentExerciseIndex < currentPlan.exercises.length - 1 ? 'Next Exercise' : 'Finish Workout'}
-        </button>
-      </div>
-
-      {/* Set Log */}
-      <div className="mt-8">
-        <h3 className="text-xl font-semibold mb-4">Set Log</h3>
-        {currentPlan.exercises.map((exercise, index) => (
-          <div key={exercise._id} className="mb-4">
-            <h4 className="text-lg font-medium">{exercise.name}</h4>
-            {sets[index] && sets[index].length > 0 ? (
-              <ul className="list-disc pl-5">
-                {sets[index].map((set, setIndex) => (
-                  <li key={setIndex}>
-                    Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No sets completed yet</p>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default WorkoutTracker;
-```
-
-# recover2.jsx
-
-```jsx
-// context/GymContext.jsx
-
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { useAuth } from './AuthContext';
-import { useNotification } from './NotificationContext';
-export const hostName = 'http://192.168.178.42';
-
-const GymContext = createContext();
-
-export function useGymContext() {
-  return useContext(GymContext);
-}
-
-export function GymProvider({ children }) {
-  const [workouts, setWorkouts] = useState([]);
-  const [exercises, setExercises] = useState([]);
-  const [workoutPlans, setWorkoutPlans] = useState([]);
-  const [workoutHistory, setWorkoutHistory] = useState([]);
-  const { user } = useAuth();
-  const { addNotification } = useNotification();
-  
-  const API_URL = `${hostName}:4500/api`;
-
-  const getAuthConfig = () => {
-    const token = localStorage.getItem('token');
-    return {
-      headers: { 'x-auth-token': token }
-    };
-  };
-
-  const toTitleCase = (str) => {
-    return str.replace(
-      /\w\S*/g,
-      function(txt) {
-        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-      }
-    );
-  };
-
-  const fetchWorkoutHistory = useCallback(async () => {
-    if (user) {
-      try {
-        const response = await axios.get(`${API_URL}/workouts/user`, getAuthConfig());
-        setWorkoutHistory(response.data);
-      } catch (error) {
-        console.error('Error fetching workout history:', error);
-        addNotification('Failed to fetch workout history', 'error');
-      }
-    }
-  }, [user, addNotification]);
-
-  useEffect(() => {
-    if (user) {
-      fetchWorkouts();
-      fetchExercises();
-      fetchWorkoutPlans();
-      fetchWorkoutHistory();
-    }
-  }, [user, fetchWorkoutHistory]);
-
-  // Workouts
-  const fetchWorkouts = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/workouts/user`, getAuthConfig());
-      setWorkouts(response.data);
-    } catch (error) {
-      console.error('Error fetching workouts:', error);
-      addNotification('Failed to fetch workouts', 'error');
-    }
-  };
-
-  const addWorkout = async (workout) => {
-    try {
-      console.log('Sending workout data:', workout);
-      const response = await axios.post(`${API_URL}/workouts`, workout, getAuthConfig());
-      console.log('Server response:', response.data);
-      setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
-      setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
-      addNotification('Workout added successfully', 'success');
-    } catch (error) {
-      console.error('Error adding workout:', error.response?.data || error.message);
-      addNotification('Failed to add workout', 'error');
-      throw error;
-    }
-  };
-
-  const updateWorkout = async (id, updatedWorkout) => {
-    try {
-      const response = await axios.put(`${API_URL}/workouts/${id}`, updatedWorkout, getAuthConfig());
-      setWorkouts(prevWorkouts =>
-        prevWorkouts.map(workout =>
-          workout._id === id ? response.data : workout
-        )
-      );
-      setWorkoutHistory(prevHistory =>
-        prevHistory.map(workout =>
-          workout._id === id ? response.data : workout
-        )
-      );
-      addNotification('Workout updated successfully', 'success');
-    } catch (error) {
-      console.error('Error updating workout:', error);
-      addNotification('Failed to update workout', 'error');
-    }
-  };
-
-  const deleteWorkout = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/workouts/${id}`, getAuthConfig());
-      setWorkouts(prevWorkouts => prevWorkouts.filter(workout => workout._id !== id));
-      setWorkoutHistory(prevHistory => prevHistory.filter(workout => workout._id !== id));
-      addNotification('Workout deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting workout:', error);
-      addNotification('Failed to delete workout', 'error');
-    }
-  };
-
-  // Exercises
-const fetchExercises = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/exercises`, getAuthConfig());
-    const formattedExercises = response.data.map(exercise => ({
-      ...exercise,
-      name: toTitleCase(exercise.name),
-      description: toTitleCase(exercise.description),
-      target: toTitleCase(exercise.target)
-    }));
-    setExercises(formattedExercises);
-  } catch (error) {
-    console.error('Error fetching exercises:', error);
-    addNotification('Failed to fetch exercises', 'error');
-  }
-};
-
-const addExercise = async (exercise) => {
-  try {
-    const exerciseWithTitleCase = {
-      ...exercise,
-      name: toTitleCase(exercise.name),
-      description: toTitleCase(exercise.description),
-      target: toTitleCase(exercise.target)
-    };
-    const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
-    setExercises(prevExercises => [...prevExercises, response.data]);
-    return response.data; // Return the newly added exercise
-  } catch (error) {
-    console.error('Error adding exercise:', error);
-    throw error;
-  }
-};
-
-const updateExercise = async (id, updatedExercise) => {
-  try {
-    const exerciseWithTitleCase = {
-      ...updatedExercise,
-      name: toTitleCase(updatedExercise.name),
-      description: toTitleCase(updatedExercise.description),
-      target: toTitleCase(updatedExercise.target)
-    };
-    const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
-    setExercises(prevExercises =>
-      prevExercises.map(exercise =>
-        exercise._id === id ? response.data : exercise
-      )
-    );
-    return response.data; // Return the updated exercise
-  } catch (error) {
-    console.error('Error updating exercise:', error);
-    throw error;
-  }
-};
-
-  const deleteExercise = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
-      setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
-      addNotification('Exercise deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting exercise:', error);
-      addNotification('Failed to delete exercise', 'error');
-    }
-  };
-
-   // Workout Plans
-  const fetchWorkoutPlans = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/workoutplans`, getAuthConfig());
-      // Ensure each exercise in the plan has all its details
-      const plansWithFullExerciseDetails = await Promise.all(response.data.map(async (plan) => {
-        const fullExercises = await Promise.all(plan.exercises.map(async (exercise) => {
-          if (!exercise.description || !exercise.imageUrl) {
-            const fullExercise = await axios.get(`${API_URL}/exercises/${exercise._id}`, getAuthConfig());
-            return fullExercise.data;
-          }
-          return exercise;
-        }));
-        return { ...plan, exercises: fullExercises };
-      }));
-      setWorkoutPlans(plansWithFullExerciseDetails);
-    } catch (error) {
-      console.error('Error fetching workout plans:', error);
-      addNotification('Failed to fetch workout plans', 'error');
-    }
-  };
-
-  const addWorkoutPlan = async (plan) => {
-    try {
-      const response = await axios.post(`${API_URL}/workoutplans`, plan, getAuthConfig());
-      // Fetch the full details of the newly added plan
-      const fullPlan = await axios.get(`${API_URL}/workoutplans/${response.data._id}`, getAuthConfig());
-      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan.data]);
-      addNotification('Workout plan added successfully', 'success');
-    } catch (error) {
-      console.error('Error adding workout plan:', error.response ? error.response.data : error.message);
-      addNotification('Failed to add workout plan', 'error');
-      throw error;
-    }
-  };
-
-  const updateWorkoutPlan = async (id, updatedPlan) => {
-    try {
-      const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
-      setWorkoutPlans(prevPlans =>
-        prevPlans.map(plan =>
-          plan._id === id ? response.data : plan
-        )
-      );
-      addNotification('Workout plan updated successfully', 'success');
-    } catch (error) {
-      console.error('Error updating workout plan:', error);
-      addNotification('Failed to update workout plan', 'error');
-    }
-  };
-
-  const deleteWorkoutPlan = async (id) => {
-    try {
-      const response = await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
-      console.log('Server response:', response.data);
-      setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
-      
-      // Update workout history to reflect deleted plan
-      setWorkoutHistory(prevHistory => 
-        prevHistory.map(workout => 
-          workout.plan && workout.plan._id === id 
-            ? { ...workout, plan: null, planDeleted: true } 
-            : workout
-        )
-      );
-      addNotification('Workout plan deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting workout plan:', error.response?.data || error.message);
-      addNotification('Failed to delete workout plan', 'error');
-      throw error;
-    }
-  };
-
-  return (
-    <GymContext.Provider value={{
-      workouts,
-      exercises,
-      workoutPlans,
-      workoutHistory,
-      addWorkout,
-      updateWorkout,
-      deleteWorkout,
-      addExercise,
-      updateExercise,
-      deleteExercise,
-      addWorkoutPlan,
-      updateWorkoutPlan,
-      deleteWorkoutPlan,
-      fetchWorkoutHistory
-    }}>
-      {children}
-    </GymContext.Provider>
-  );
-}
-
-export default GymProvider;
-```
-
-# recover1.jsx
-
-```jsx
-// src/pages/WorkoutPlans.jsx
-
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useGymContext } from '../context/GymContext';
-import WorkoutPlanForm from '../components/WorkoutPlanForm';
-
-function WorkoutPlans() {
-  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan } = useGymContext();
-  const [showForm, setShowForm] = useState(false);
-  const [ongoingWorkout, setOngoingWorkout] = useState(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const storedPlan = localStorage.getItem('currentPlan');
-    if (storedPlan) {
-      setOngoingWorkout(JSON.parse(storedPlan));
-    }
-  }, []);
-
-  const handleStartWorkout = (plan) => {
-    localStorage.setItem('currentPlan', JSON.stringify(plan));
-    navigate('/tracker');
-  };
-
-  const handleResumeWorkout = () => {
-    navigate('/tracker');
-  };
-
-  const handleAddWorkoutPlan = async (plan) => {
-    try {
-      await addWorkoutPlan(plan);
-      setShowForm(false);
-    } catch (error) {
-      console.error('Error adding workout plan:', error);
-    }
-  };
-
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-4">Workout Plans</h1>
-      {ongoingWorkout && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-          <p className="font-bold">Ongoing Workout</p>
-          <p>You have an unfinished workout: {ongoingWorkout.name}</p>
-          <button
-            onClick={handleResumeWorkout}
-            className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Resume Workout
-          </button>
-        </div>
-      )}
-      <button
-        onClick={() => setShowForm(!showForm)}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
-      >
-        {showForm ? 'Hide Form' : 'Create New Plan'}
-      </button>
-      {showForm && <WorkoutPlanForm onSubmit={handleAddWorkoutPlan} />}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {workoutPlans.map((plan) => (
-          <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">
-            <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
-            <ul className="list-disc list-inside mb-4">
-              {plan.exercises.map((exercise) => (
-                <li key={exercise._id} className="mb-2">
-                  <span className="font-medium">{exercise.name}</span>
-                  <p className="text-sm text-gray-600 ml-4">{exercise.description}</p>
-                  <p className="text-sm text-gray-500 ml-4">Target: {exercise.target}</p>
-                </li>
-              ))}
-            </ul>
-            <div className="flex justify-between">
-              <button
-                onClick={() => handleStartWorkout(plan)}
-                className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
-              >
-                Start Workout
-              </button>
-              <button
-                onClick={() => deleteWorkoutPlan(plan._id)}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-              >
-                Delete Plan
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default WorkoutPlans;
 ```
 
 # postcss.config.js
@@ -638,9 +71,12 @@ export default {
   },
   "dependencies": {
     "axios": "^1.7.3",
+    "date-fns": "^3.6.0",
     "react": "^18.3.1",
+    "react-big-calendar": "^1.13.2",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.25.1"
+    "react-router-dom": "^6.25.1",
+    "recharts": "^2.13.0-alpha.4"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
@@ -695,30 +131,152 @@ Currently, two official plugins are available:
 # .gitignore
 
 ```
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Directory for instrumented libs generated by jscoverage/JSCover
+lib-cov/
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output/
+
+# Grunt intermediate storage (http://gruntjs.com/creating-plugins#storing-task-files)
+.grunt/
+
+# Bower dependency directory (https://bower.io/)
+bower_components/
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# dotenv environment variables file
+.env
+.env.test
+.env.development
+.env.production
+.env.staging
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out/
+
+# Nuxt.js build / generate output
+.nuxt
+dist/
+
+# Gatsby files
+.cache/
+# Comment in the public line in if your project uses Gatsby and not Next.js
+# public
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Storybook
+out/
+.storybook-out/
+
+# Mac system files
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+
+# JetBrains IDEs
+.idea/
+
+# VS Code
+.vscode/
+
+# npm
+package-lock.json
+yarn.lock
+
+# IDE specific files
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Temporary files
+tmp/
+temp/
+
+# Build directories
+build/
+dist/
+
+# Static files
+public/static/
+
+# Test coverage
+coverage/
+
+# Compiled output
+lib/
+target/
+
+# Dependency directories
+jspm_packages/
+
+# Python virtualenv
+venv/
+.venv/
+
+# Miscellaneous
+*.bak
+*.old
+*.orig
+*.merged
+
+# Local git configuration
 
 ```
 
@@ -747,6 +305,13 @@ module.exports = {
   },
 }
 
+```
+
+# .aidigestignore
+
+```
+node_modules/
+public/
 ```
 
 # src/main.jsx
@@ -786,14 +351,19 @@ import WorkoutTracker from './pages/WorkoutTracker';
 import ExerciseLibrary from './pages/ExerciseLibrary';
 import WorkoutPlans from './pages/WorkoutPlans';
 import WorkoutSummary from './pages/WorkoutSummary';
+import IndividualWorkoutSummary from './components/IndividualWorkoutSummary';
+import WorkoutPlanDetails from './components/WorkoutPlanDetails';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Login from './components/Login';
 import Register from './components/Register';
+import Dashboard from './components/Dashboard';
+import WorkoutCalendar from './components/WorkoutCalendar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
 import NotificationToast from './components/NotificationToast';
+
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -819,10 +389,14 @@ function AppContent() {
             <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
             <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
             <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/calendar" element={<PrivateRoute><WorkoutCalendar /></PrivateRoute>} />
             <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
             <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
             <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
+            <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
             <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
+            <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
           </Routes>
         </main>
         <Footer />
@@ -895,14 +469,11 @@ export default App;
 
 ```
 
-# public/vite.svg
-
-This is a file of the type: SVG Image
-
 # src/pages/WorkoutTracker.jsx
 
 ```jsx
 // src/pages/WorkoutTracker.jsx
+
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -1023,10 +594,12 @@ function WorkoutTracker() {
         {currentPlan.exercises.map((_, index) => (
           <div
             key={index}
-            className={`h-3 w-3 rounded-full cursor-pointer ${
-              index === currentExerciseIndex ? 'bg-blue-500' : 'bg-gray-300'
-            } ${
-              isExerciseComplete(index) ? 'bg-green-500' : ''
+            className={`h-5 w-5 rounded-full cursor-pointer ${
+              index === currentExerciseIndex
+                ? 'bg-blue-500'  // Always blue when it's the current exercise
+                : isExerciseComplete(index)
+                  ? 'bg-green-500'
+                  : 'bg-gray-300'
             }`}
             title={`Exercise ${index + 1}: ${currentPlan.exercises[index].name}`}
             onClick={() => handleExerciseChange(index)}
@@ -1261,8 +834,9 @@ import { useGymContext } from '../context/GymContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
 
 function WorkoutPlans() {
-  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan } = useGymContext();
+  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan, updateWorkoutPlan } = useGymContext();
   const [showForm, setShowForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
   const navigate = useNavigate();
 
@@ -1286,9 +860,25 @@ function WorkoutPlans() {
     try {
       await addWorkoutPlan(plan);
       setShowForm(false);
+      setEditingPlan(null);
     } catch (error) {
       console.error('Error adding workout plan:', error);
     }
+  };
+
+  const handleEditWorkoutPlan = async (plan) => {
+    try {
+      await updateWorkoutPlan(plan._id, plan);
+      setShowForm(false);
+      setEditingPlan(null);
+    } catch (error) {
+      console.error('Error updating workout plan:', error);
+    }
+  };
+
+  const handleEdit = (plan) => {
+    setEditingPlan(plan);
+    setShowForm(true);
   };
 
   return (
@@ -1307,16 +897,30 @@ function WorkoutPlans() {
         </div>
       )}
       <button
-        onClick={() => setShowForm(!showForm)}
+        onClick={() => {
+          setShowForm(!showForm);
+          setEditingPlan(null);
+        }}
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
       >
         {showForm ? 'Hide Form' : 'Create New Plan'}
       </button>
-      {showForm && <WorkoutPlanForm onSubmit={handleAddWorkoutPlan} />}
+      {showForm && (
+        <WorkoutPlanForm
+          onSubmit={editingPlan ? handleEditWorkoutPlan : handleAddWorkoutPlan}
+          initialPlan={editingPlan}
+        />
+      )}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {workoutPlans.map((plan) => (
           <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">
             <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
+            <p className="text-sm text-gray-600 mb-2">
+              Type: {plan.type || 'Not specified'}
+            </p>
+            <p className="text-sm text-gray-600 mb-2">
+              Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
+            </p>
             <ul className="list-disc list-inside mb-4">
               {plan.exercises.map((exercise) => (
                 <li key={exercise._id} className="mb-2">
@@ -1332,6 +936,12 @@ function WorkoutPlans() {
                 className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
               >
                 Start Workout
+              </button>
+              <button
+                onClick={() => handleEdit(plan)}
+                className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mx-2"
+              >
+                Edit Plan
               </button>
               <button
                 onClick={() => deleteWorkoutPlan(plan._id)}
@@ -1371,7 +981,7 @@ export default Home;
 ```jsx
 // src/pages/ExerciseLibrary.jsx
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
 import WorkoutPlanSelector from '../components/WorkoutPlanSelector';
@@ -1384,6 +994,18 @@ function ExerciseLibrary() {
   const [editingExercise, setEditingExercise] = useState(null);
   const [showWorkoutPlanSelector, setShowWorkoutPlanSelector] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
+  const [filterText, setFilterText] = useState('');
+  const [filteredExercises, setFilteredExercises] = useState(exercises);
+
+  useEffect(() => {
+    const lowercasedFilter = filterText.toLowerCase();
+    const filtered = exercises.filter(exercise => 
+      exercise.name.toLowerCase().includes(lowercasedFilter) ||
+      exercise.description.toLowerCase().includes(lowercasedFilter) ||
+      exercise.target.toLowerCase().includes(lowercasedFilter)
+    );
+    setFilteredExercises(filtered);
+  }, [filterText, exercises]);
 
   const handleEdit = (exercise) => {
     setEditingExercise(exercise);
@@ -1429,9 +1051,18 @@ function ExerciseLibrary() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-4">Exercise Library</h1>
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Filter exercises..."
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
       <AddExerciseForm onSave={handleSave} initialExercise={editingExercise} />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {exercises.map((exercise) => (
+        {filteredExercises.map((exercise) => (
           <ExerciseItem 
             key={exercise._id} 
             exercise={exercise}
@@ -1491,7 +1122,7 @@ export function NotificationProvider({ children }) {
 # src/context/GymContext.jsx
 
 ```jsx
-// context/GymContext.jsx
+// src/context/GymContext.jsx
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
@@ -1523,6 +1154,7 @@ export function GymProvider({ children }) {
   }, []);
 
   const toTitleCase = (str) => {
+    if (typeof str !== 'string') return str;
     return str.replace(
       /\w\S*/g,
       function(txt) {
@@ -1552,7 +1184,9 @@ export function GymProvider({ children }) {
         ...exercise,
         name: toTitleCase(exercise.name),
         description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target)
+        target: Array.isArray(exercise.target) 
+          ? exercise.target.map(toTitleCase) 
+          : toTitleCase(exercise.target)
       }));
       setExercises(formattedExercises);
     } catch (error) {
@@ -1560,6 +1194,7 @@ export function GymProvider({ children }) {
       addNotification('Failed to fetch exercises', 'error');
     }
   }, [API_URL, getAuthConfig, addNotification]);
+  
 
   // Fetch workout plans
   const fetchWorkoutPlans = useCallback(async () => {
@@ -1715,11 +1350,36 @@ export function GymProvider({ children }) {
   // Add a workout plan
   const addWorkoutPlan = async (plan) => {
     try {
-      const response = await axios.post(`${API_URL}/workoutplans`, plan, getAuthConfig());
-      const fullPlan = await axios.get(`${API_URL}/workoutplans/${response.data._id}`, getAuthConfig());
-      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan.data]);
+      // Ensure the plan object doesn't include full exercise objects
+      const planToSend = {
+        ...plan,
+        exercises: plan.exercises.map(exercise => 
+          typeof exercise === 'string' ? exercise : exercise._id
+        )
+      };
+
+      const response = await axios.post(`${API_URL}/workoutplans`, planToSend, getAuthConfig());
+      
+      // If the response doesn't include full exercise details, populate them here
+      const fullPlan = {
+        ...response.data,
+        exercises: await Promise.all(response.data.exercises.map(async (exerciseId) => {
+          if (typeof exerciseId === 'string') {
+            try {
+              const exerciseResponse = await axios.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
+              return exerciseResponse.data;
+            } catch (error) {
+              console.error(`Error fetching exercise ${exerciseId}:`, error);
+              return null; // or some placeholder data
+            }
+          }
+          return exerciseId; // if it's already a full exercise object
+        }))
+      };
+
+      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan]);
       addNotification('Workout plan added successfully', 'success');
-      return fullPlan.data;
+      return fullPlan;
     } catch (error) {
       console.error('Error adding workout plan:', error);
       addNotification('Failed to add workout plan', 'error');
@@ -1730,6 +1390,10 @@ export function GymProvider({ children }) {
   // Update a workout plan
   const updateWorkoutPlan = async (id, updatedPlan) => {
     try {
+      if (!id) {
+        // If there's no id, it's a new plan
+        return addWorkoutPlan(updatedPlan);
+      }
       const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
       setWorkoutPlans(prevPlans =>
         prevPlans.map(plan =>
@@ -1986,32 +1650,111 @@ function WorkoutPlanSelector({ onSelect, onClose }) {
 export default WorkoutPlanSelector;
 ```
 
+# src/components/WorkoutPlanModal.jsx
+
+```jsx
+// src/components/WorkoutPlanModal.jsx
+
+import React from 'react';
+
+function WorkoutPlanModal({ plan, onClose }) {
+  if (!plan) return null;
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="my-modal">
+      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div className="mt-3 text-center">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">{plan.name}</h3>
+          <div className="mt-2 px-7 py-3">
+            <p className="text-sm text-gray-500">
+              Type: {plan.type || 'Not specified'}
+            </p>
+            <p className="text-sm text-gray-500">
+              Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleString() : 'Not scheduled'}
+            </p>
+            <p className="text-sm text-gray-500">
+              Status: {plan.completed ? 'Completed' : 'Scheduled'}
+            </p>
+            <div className="mt-4">
+              <h4 className="text-md font-medium text-gray-900">Exercises:</h4>
+              <ul className="list-disc list-inside">
+                {plan.exercises.map((exercise, index) => (
+                  <li key={index} className="text-sm text-gray-500">{exercise.name}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="items-center px-4 py-3">
+            <button
+              id="ok-btn"
+              className="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default WorkoutPlanModal;
+```
+
 # src/components/WorkoutPlanForm.jsx
 
 ```jsx
 // src/components/WorkoutPlanForm.jsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 
-function WorkoutPlanForm({ onSubmit }) {
+function WorkoutPlanForm({ onSubmit, initialPlan }) {
   const [planName, setPlanName] = useState('');
   const [selectedExercises, setSelectedExercises] = useState([]);
+  const [workoutType, setWorkoutType] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
   const { exercises } = useGymContext();
+
+  useEffect(() => {
+    if (initialPlan) {
+      setPlanName(initialPlan.name);
+      setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id));
+      setWorkoutType(initialPlan.type || '');
+      setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
+    } else {
+      // Reset form when not editing
+      setPlanName('');
+      setSelectedExercises([]);
+      setWorkoutType('');
+      setScheduledDate('');
+    }
+  }, [initialPlan]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const workoutPlan = {
         name: planName,
-        exercises: selectedExercises.map(exerciseId => 
-          exercises.find(exercise => exercise._id === exerciseId)
-        ),
+        exercises: selectedExercises,
+        type: workoutType,
+        scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null
       };
+      
+      if (initialPlan) {
+        workoutPlan._id = initialPlan._id;  // Include the ID when updating
+      }
+
       await onSubmit(workoutPlan);
-      // Reset form
-      setPlanName('');
-      setSelectedExercises([]);
+      
+      // Reset form if it's not editing
+      if (!initialPlan) {
+        setPlanName('');
+        setSelectedExercises([]);
+        setWorkoutType('');
+        setScheduledDate('');
+      }
     } catch (error) {
       console.error('Error submitting workout plan:', error);
     }
@@ -2041,6 +1784,35 @@ function WorkoutPlanForm({ onSubmit }) {
         />
       </div>
       <div className="mb-4">
+        <label htmlFor="workoutType" className="block text-gray-700 font-bold mb-2">
+          Workout Type
+        </label>
+        <select
+          id="workoutType"
+          value={workoutType}
+          onChange={(e) => setWorkoutType(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        >
+          <option value="">Select a type</option>
+          <option value="strength">Strength</option>
+          <option value="cardio">Cardio</option>
+          <option value="flexibility">Flexibility</option>
+        </select>
+      </div>
+      <div className="mb-4">
+        <label htmlFor="scheduledDate" className="block text-gray-700 font-bold mb-2">
+          Scheduled Date
+        </label>
+        <input
+          type="date"
+          id="scheduledDate"
+          value={scheduledDate}
+          onChange={(e) => setScheduledDate(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
+      <div className="mb-4">
         <label className="block text-gray-700 font-bold mb-2">
           Select Exercises
         </label>
@@ -2062,7 +1834,7 @@ function WorkoutPlanForm({ onSubmit }) {
           type="submit"
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         >
-          Create Workout Plan
+          {initialPlan ? 'Update Workout Plan' : 'Create Workout Plan'}
         </button>
       </div>
     </form>
@@ -2070,6 +1842,73 @@ function WorkoutPlanForm({ onSubmit }) {
 }
 
 export default WorkoutPlanForm;
+```
+
+# src/components/WorkoutPlanDetails.jsx
+
+```jsx
+// src/components/WorkoutPlanDetails.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useGymContext } from '../context/GymContext';
+
+function WorkoutPlanDetails() {
+  const { id } = useParams();
+  const { workoutPlans, updateWorkoutPlan, deleteWorkoutPlan } = useGymContext();
+  const [plan, setPlan] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const foundPlan = workoutPlans.find(p => p._id === id);
+    setPlan(foundPlan);
+  }, [id, workoutPlans]);
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this workout plan?')) {
+      await deleteWorkoutPlan(id);
+      navigate('/plans');
+    }
+  };
+
+  const handleReschedule = () => {
+    const newDate = prompt('Enter new date (YYYY-MM-DD):', plan.scheduledDate ? new Date(plan.scheduledDate).toISOString().split('T')[0] : '');
+    if (newDate) {
+      const updatedPlan = { ...plan, scheduledDate: new Date(newDate) };
+      updateWorkoutPlan(id, updatedPlan);
+    }
+  };
+
+  if (!plan) {
+    return <div>Loading workout plan...</div>;
+  }
+
+  return (
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">{plan.name}</h2>
+      <p><strong>Type:</strong> {plan.type || 'Not specified'}</p>
+      <p><strong>Scheduled Date:</strong> {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}</p>
+      
+      <h3 className="text-xl font-semibold mt-4 mb-2">Exercises:</h3>
+      <ul className="list-disc list-inside">
+        {plan.exercises.map((exercise, index) => (
+          <li key={index}>{exercise.name}</li>
+        ))}
+      </ul>
+
+      <div className="mt-4">
+        <button onClick={handleReschedule} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
+          Reschedule
+        </button>
+        <button onClick={handleDelete} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+          Delete Plan
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default WorkoutPlanDetails;
 ```
 
 # src/components/WorkoutForm.jsx
@@ -2186,6 +2025,171 @@ function WorkoutForm({ onSave, initialWorkout }) {
 }
 
 export default WorkoutForm;
+```
+
+# src/components/WorkoutCalendar.jsx
+
+```jsx
+// src/components/WorkoutCalendar.jsx
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import { useGymContext } from '../context/GymContext';
+import { useNavigate } from 'react-router-dom';
+import { useNotification } from '../context/NotificationContext';
+import WorkoutPlanModal from './WorkoutPlanModal';
+
+const localizer = momentLocalizer(moment);
+const DnDCalendar = withDragAndDrop(Calendar);
+
+const workoutColors = {
+  strength: '#FF6B6B',
+  cardio: '#4ECDC4',
+  flexibility: '#45B7D1',
+  default: '#FFA07A',
+  completed: '#A9A9A9'
+};
+
+function WorkoutCalendar() {
+  const { workoutHistory, workoutPlans, updateWorkoutPlan } = useGymContext();
+  const [events, setEvents] = useState([]);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const navigate = useNavigate();
+  const { addNotification } = useNotification();
+
+  const getEventColor = useCallback((event) => {
+    if (event.resource === 'history' || event.resource === 'completed') {
+      return workoutColors.completed;
+    }
+    const plan = workoutPlans.find(p => p._id === event.id);
+    return plan && plan.type ? workoutColors[plan.type] : workoutColors.default;
+  }, [workoutPlans]);
+
+  useEffect(() => {
+    const historyEvents = workoutHistory.map(workout => ({
+      id: workout._id,
+      title: `${workout.planName} (Completed)`,
+      start: new Date(workout.startTime),
+      end: new Date(workout.endTime),
+      allDay: false,
+      resource: 'history'
+    }));
+
+    const planEvents = workoutPlans
+      .filter(plan => plan.scheduledDate)
+      .map(plan => ({
+        id: plan._id,
+        title: plan.name,
+        start: new Date(plan.scheduledDate),
+        end: new Date(new Date(plan.scheduledDate).setHours(new Date(plan.scheduledDate).getHours() + 1)),
+        allDay: false,
+        resource: plan.completed ? 'completed' : 'scheduled'
+      }));
+
+    setEvents([...historyEvents, ...planEvents]);
+  }, [workoutHistory, workoutPlans]);
+
+  const handleSelectEvent = (event) => {
+    if (event.resource === 'history') {
+      navigate(`/workout-summary/${event.id}`);
+    } else {
+      const plan = workoutPlans.find(p => p._id === event.id);
+      setSelectedPlan(plan);
+    }
+  };
+
+  const handleSelectSlot = ({ start }) => {
+    const planName = prompt('Enter workout plan name:');
+    if (planName) {
+      const workoutType = prompt('Enter workout type (strength, cardio, flexibility):');
+      const newPlan = {
+        name: planName,
+        exercises: [],
+        scheduledDate: start,
+        type: workoutType
+      };
+      updateWorkoutPlan(null, newPlan);
+    }
+  };
+
+  const moveEvent = useCallback(
+    ({ event, start, end }) => {
+      if (event.resource === 'history' || event.resource === 'completed') {
+        addNotification('Cannot reschedule completed workouts', 'error');
+        return;
+      }
+
+      const updatedPlan = workoutPlans.find(plan => plan._id === event.id);
+      if (updatedPlan) {
+        updatedPlan.scheduledDate = start;
+        updateWorkoutPlan(event.id, updatedPlan);
+        addNotification('Workout rescheduled successfully', 'success');
+      }
+    },
+    [workoutPlans, updateWorkoutPlan, addNotification]
+  );
+
+  const resizeEvent = useCallback(
+    ({ event, start, end }) => {
+      if (event.resource === 'history' || event.resource === 'completed') {
+        addNotification('Cannot modify completed workouts', 'error');
+        return;
+      }
+
+      const updatedPlan = workoutPlans.find(plan => plan._id === event.id);
+      if (updatedPlan) {
+        updatedPlan.scheduledDate = start;
+        updateWorkoutPlan(event.id, updatedPlan);
+        addNotification('Workout duration updated successfully', 'success');
+      }
+    },
+    [workoutPlans, updateWorkoutPlan, addNotification]
+  );
+
+  const eventPropGetter = useCallback((event) => {
+    const backgroundColor = getEventColor(event);
+    return {
+      style: {
+        backgroundColor,
+        opacity: event.resource === 'history' || event.resource === 'completed' ? 0.7 : 1,
+        cursor: event.resource === 'history' || event.resource === 'completed' ? 'not-allowed' : 'pointer'
+      }
+    };
+  }, [getEventColor]);
+
+  return (
+    <div className="h-screen p-4">
+      <h2 className="text-2xl font-bold mb-4">Workout Calendar</h2>
+      <DnDCalendar
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        style={{ height: 'calc(100% - 80px)' }}
+        onSelectSlot={handleSelectSlot}
+        onSelectEvent={handleSelectEvent}
+        onEventDrop={moveEvent}
+        onEventResize={resizeEvent}
+        selectable
+        resizable
+        eventPropGetter={eventPropGetter}
+        draggableAccessor={(event) => event.resource !== 'history' && event.resource !== 'completed'}
+      />
+      {selectedPlan && (
+        <WorkoutPlanModal
+          plan={selectedPlan}
+          onClose={() => setSelectedPlan(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+export default WorkoutCalendar;
 ```
 
 # src/components/Register.jsx
@@ -2376,9 +2380,61 @@ function Login() {
 export default Login;
 ```
 
+# src/components/IndividualWorkoutSummary.jsx
+
+```jsx
+// src/components/IndividualWorkoutSummary.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { useGymContext } from '../context/GymContext';
+
+function IndividualWorkoutSummary() {
+  const { id } = useParams();
+  const { workoutHistory } = useGymContext();
+  const [workout, setWorkout] = useState(null);
+
+  useEffect(() => {
+    const foundWorkout = workoutHistory.find(w => w._id === id);
+    setWorkout(foundWorkout);
+  }, [id, workoutHistory]);
+
+  if (!workout) {
+    return <div>Loading workout summary...</div>;
+  }
+
+  return (
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">Workout Summary</h2>
+      <p><strong>Date:</strong> {new Date(workout.startTime).toLocaleDateString()}</p>
+      <p><strong>Duration:</strong> {((new Date(workout.endTime) - new Date(workout.startTime)) / (1000 * 60)).toFixed(0)} minutes</p>
+      <p><strong>Plan:</strong> {workout.planName}</p>
+      
+      <h3 className="text-xl font-semibold mt-4 mb-2">Exercises:</h3>
+      {workout.exercises.map((exercise, index) => (
+        <div key={index} className="mb-4">
+          <h4 className="text-lg font-medium">{exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}</h4>
+          <ul className="list-disc list-inside">
+            {exercise.sets.map((set, setIndex) => (
+              <li key={setIndex}>
+                Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default IndividualWorkoutSummary;
+```
+
 # src/components/Header.jsx
 
 ```jsx
+// src/components/Header.jsx
+
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -2398,6 +2454,8 @@ function Header() {
         <ul className="flex space-x-4 items-center">
           {user ? (
             <>
+              <li><Link to="/dashboard">Dashboard</Link></li>
+              <li><Link to="/calendar">Calendar</Link></li>
               <li><Link to="/tracker">Workout Tracker</Link></li>
               <li><Link to="/exercises">Exercise Library</Link></li>
               <li><Link to="/plans">Workout Plans</Link></li>
@@ -2475,7 +2533,9 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan }) {
       <div className="p-4">
         <h3 className="font-bold text-xl mb-2">{exercise.name}</h3>
         <p className="text-gray-700 text-base mb-2">{exercise.description}</p>
-        <p className="text-gray-600 text-sm mb-4">Target: {exercise.target}</p>
+        <p className="text-gray-600 text-sm mb-4">
+          Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
+        </p>
         <div className="flex justify-between">
           <button 
             onClick={() => onEdit(exercise)} 
@@ -2504,6 +2564,113 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan }) {
 export default ExerciseItem;
 ```
 
+# src/components/Dashboard.jsx
+
+```jsx
+// src/components/Dashboard.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
+
+function Dashboard() {
+  const { workoutHistory } = useGymContext();
+  const [totalWorkouts, setTotalWorkouts] = useState(0);
+  const [averageWorkoutDuration, setAverageWorkoutDuration] = useState(0);
+  const [workoutFrequencyData, setWorkoutFrequencyData] = useState([]);
+  const [exerciseFrequencyData, setExerciseFrequencyData] = useState([]);
+
+  useEffect(() => {
+    if (workoutHistory.length > 0) {
+      // Calculate total workouts
+      setTotalWorkouts(workoutHistory.length);
+
+      // Calculate average workout duration
+      const totalDuration = workoutHistory.reduce((sum, workout) => {
+        const duration = new Date(workout.endTime) - new Date(workout.startTime);
+        return sum + duration;
+      }, 0);
+      setAverageWorkoutDuration(totalDuration / workoutHistory.length / (1000 * 60)); // Convert to minutes
+
+      // Prepare data for workout frequency chart
+      const frequencyMap = {};
+      workoutHistory.forEach(workout => {
+        const date = new Date(workout.startTime).toLocaleDateString();
+        frequencyMap[date] = (frequencyMap[date] || 0) + 1;
+      });
+      const frequencyData = Object.entries(frequencyMap).map(([date, count]) => ({ date, count }));
+      setWorkoutFrequencyData(frequencyData);
+
+      // Prepare data for exercise frequency chart
+      const exerciseMap = {};
+      workoutHistory.forEach(workout => {
+        workout.exercises.forEach(exercise => {
+          const exerciseName = exercise.exercise ? exercise.exercise.name : 'Unknown';
+          exerciseMap[exerciseName] = (exerciseMap[exerciseName] || 0) + 1;
+        });
+      });
+      const exerciseData = Object.entries(exerciseMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10); // Top 10 exercises
+      setExerciseFrequencyData(exerciseData);
+    }
+  }, [workoutHistory]);
+
+  return (
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">Workout Dashboard</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white p-4 rounded shadow">
+          <h3 className="text-lg font-semibold mb-2">Total Workouts</h3>
+          <p className="text-3xl font-bold">{totalWorkouts}</p>
+        </div>
+        <div className="bg-white p-4 rounded shadow">
+          <h3 className="text-lg font-semibold mb-2">Average Workout Duration</h3>
+          <p className="text-3xl font-bold">{averageWorkoutDuration.toFixed(1)} minutes</p>
+        </div>
+        </div>
+      <div className="mb-8">
+        <h3 className="text-xl font-semibold mb-4">Workout Frequency</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={workoutFrequencyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis 
+              allowDecimals={false}
+              domain={[0, 'dataMax + 1']}
+              tickCount={5}
+            />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="count" stroke="#8884d8" activeDot={{ r: 8 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div>
+        <h3 className="text-xl font-semibold mb-4">Top 10 Exercises</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={exerciseFrequencyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis 
+              allowDecimals={false}
+              domain={[0, 'dataMax + 1']}
+              tickCount={5}
+            />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="count" fill="#82ca9d" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+export default Dashboard;
+```
+
 # src/components/AddExerciseForm.jsx
 
 ```jsx
@@ -2513,10 +2680,14 @@ import { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 
+const muscleGroups = [
+  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'
+];
+
 function AddExerciseForm({ onSave, initialExercise }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [target, setTarget] = useState('');
+  const [target, setTarget] = useState([]);
   const [imageUrl, setImageUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addExercise, updateExercise } = useGymContext();
@@ -2526,12 +2697,12 @@ function AddExerciseForm({ onSave, initialExercise }) {
     if (initialExercise) {
       setName(initialExercise.name);
       setDescription(initialExercise.description);
-      setTarget(initialExercise.target);
+      setTarget(Array.isArray(initialExercise.target) ? initialExercise.target : [initialExercise.target]);
       setImageUrl(initialExercise.imageUrl);
     } else {
       setName('');
       setDescription('');
-      setTarget('');
+      setTarget([]);
       setImageUrl('');
     }
   }, [initialExercise]);
@@ -2553,7 +2724,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
       // Reset form
       setName('');
       setDescription('');
-      setTarget('');
+      setTarget([]);
       setImageUrl('');
       // Call onSave with the saved exercise from the server
       onSave(savedExercise);
@@ -2562,6 +2733,14 @@ function AddExerciseForm({ onSave, initialExercise }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleTargetChange = (group) => {
+    setTarget(prev => 
+      prev.includes(group) 
+        ? prev.filter(item => item !== group)
+        : [...prev, group]
+    );
   };
 
   return (
@@ -2597,18 +2776,26 @@ function AddExerciseForm({ onSave, initialExercise }) {
         />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="target">
-          Target Muscle Group
+        <label className="block text-gray-700 text-sm font-bold mb-2">
+          Target Muscle Groups
         </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="target"
-          type="text"
-          placeholder="Target Muscle Group"
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          required
-        />
+        <div className="flex flex-wrap -mx-1">
+          {muscleGroups.map(group => (
+            <div key={group} className="px-1 mb-2">
+              <button
+                type="button"
+                onClick={() => handleTargetChange(group)}
+                className={`py-1 px-2 rounded ${
+                  target.includes(group)
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                {group}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imageUrl">

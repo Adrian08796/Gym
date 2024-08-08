@@ -30,6 +30,7 @@ export function GymProvider({ children }) {
   }, []);
 
   const toTitleCase = (str) => {
+    if (typeof str !== 'string') return str;
     return str.replace(
       /\w\S*/g,
       function(txt) {
@@ -59,7 +60,9 @@ export function GymProvider({ children }) {
         ...exercise,
         name: toTitleCase(exercise.name),
         description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target)
+        target: Array.isArray(exercise.target) 
+          ? exercise.target.map(toTitleCase) 
+          : toTitleCase(exercise.target)
       }));
       setExercises(formattedExercises);
     } catch (error) {
@@ -67,6 +70,7 @@ export function GymProvider({ children }) {
       addNotification('Failed to fetch exercises', 'error');
     }
   }, [API_URL, getAuthConfig, addNotification]);
+  
 
   // Fetch workout plans
   const fetchWorkoutPlans = useCallback(async () => {
@@ -222,11 +226,36 @@ export function GymProvider({ children }) {
   // Add a workout plan
   const addWorkoutPlan = async (plan) => {
     try {
-      const response = await axios.post(`${API_URL}/workoutplans`, plan, getAuthConfig());
-      const fullPlan = await axios.get(`${API_URL}/workoutplans/${response.data._id}`, getAuthConfig());
-      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan.data]);
+      // Ensure the plan object doesn't include full exercise objects
+      const planToSend = {
+        ...plan,
+        exercises: plan.exercises.map(exercise => 
+          typeof exercise === 'string' ? exercise : exercise._id
+        )
+      };
+
+      const response = await axios.post(`${API_URL}/workoutplans`, planToSend, getAuthConfig());
+      
+      // If the response doesn't include full exercise details, populate them here
+      const fullPlan = {
+        ...response.data,
+        exercises: await Promise.all(response.data.exercises.map(async (exerciseId) => {
+          if (typeof exerciseId === 'string') {
+            try {
+              const exerciseResponse = await axios.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
+              return exerciseResponse.data;
+            } catch (error) {
+              console.error(`Error fetching exercise ${exerciseId}:`, error);
+              return null; // or some placeholder data
+            }
+          }
+          return exerciseId; // if it's already a full exercise object
+        }))
+      };
+
+      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan]);
       addNotification('Workout plan added successfully', 'success');
-      return fullPlan.data;
+      return fullPlan;
     } catch (error) {
       console.error('Error adding workout plan:', error);
       addNotification('Failed to add workout plan', 'error');

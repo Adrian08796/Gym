@@ -38,14 +38,9 @@ function WorkoutPlans() {
     }
   };
 
-  const handleEditPlan = (plan) => {
-    setEditingPlan(plan);
-    setShowForm(true);
-  };
-
-  const handleUpdateWorkoutPlan = async (updatedPlan) => {
+  const handleEditWorkoutPlan = async (plan) => {
     try {
-      await updateWorkoutPlan(editingPlan._id, updatedPlan);
+      await updateWorkoutPlan(plan._id, plan);
       setShowForm(false);
       setEditingPlan(null);
     } catch (error) {
@@ -53,8 +48,13 @@ function WorkoutPlans() {
     }
   };
 
+  const handleEdit = (plan) => {
+    setEditingPlan(plan);
+    setShowForm(true);
+  };
+
   return (
-    <div>
+    <div className="text-gray-900 dark:text-gray-100">
       <h1 className="text-3xl font-bold mb-4">Workout Plans</h1>
       {ongoingWorkout && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
@@ -78,8 +78,8 @@ function WorkoutPlans() {
         {showForm ? 'Hide Form' : 'Create New Plan'}
       </button>
       {showForm && (
-        <WorkoutPlanForm 
-          onSubmit={editingPlan ? handleUpdateWorkoutPlan : handleAddWorkoutPlan} 
+        <WorkoutPlanForm
+          onSubmit={editingPlan ? handleEditWorkoutPlan : handleAddWorkoutPlan}
           initialPlan={editingPlan}
         />
       )}
@@ -87,6 +87,12 @@ function WorkoutPlans() {
         {workoutPlans.map((plan) => (
           <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">
             <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
+            <p className="text-sm text-gray-600 mb-2">
+              Type: {plan.type || 'Not specified'}
+            </p>
+            <p className="text-sm text-gray-600 mb-2">
+              Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
+            </p>
             <ul className="list-disc list-inside mb-4">
               {plan.exercises.map((exercise) => (
                 <li key={exercise._id} className="mb-2">
@@ -104,7 +110,7 @@ function WorkoutPlans() {
                 Start Workout
               </button>
               <button
-                onClick={() => handleEditPlan(plan)}
+                onClick={() => handleEdit(plan)}
                 className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mx-2"
               >
                 Edit Plan
