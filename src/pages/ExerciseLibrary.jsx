@@ -14,6 +14,7 @@ function ExerciseLibrary() {
   const [editingExercise, setEditingExercise] = useState(null);
   const [showWorkoutPlanSelector, setShowWorkoutPlanSelector] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
+  const [exerciseToAddToPlan, setExerciseToAddToPlan] = useState(null);
   const [filterText, setFilterText] = useState('');
   const [filteredExercises, setFilteredExercises] = useState(exercises);
 
@@ -32,27 +33,27 @@ function ExerciseLibrary() {
     setSelectedExercise(null);
   };
 
-  const handleDelete = (id) => {
-    deleteExercise(id);
+  const handleDelete = (exercise) => {
+    deleteExercise(exercise._id);
     setSelectedExercise(null);
+  };
+
+  const handleAddToPlan = (exercise) => {
+    setExerciseToAddToPlan(exercise);
+    setShowWorkoutPlanSelector(true);
   };
 
   const handleSave = (savedExercise) => {
     setEditingExercise(null);
   };
 
-  const handleAddToPlan = (exercise) => {
-    setSelectedExercise(null);
-    setShowWorkoutPlanSelector(true);
-  };
-
   const handleSelectWorkoutPlan = async (plan) => {
-    if (!selectedExercise || !selectedExercise._id) {
+    if (!exerciseToAddToPlan || !exerciseToAddToPlan._id) {
       addNotification('No exercise selected', 'error');
       return;
     }
     
-    const result = await addExerciseToPlan(plan._id, selectedExercise._id);
+    const result = await addExerciseToPlan(plan._id, exerciseToAddToPlan._id);
     
     if (result.success) {
       addNotification(`Exercise added to ${plan.name}`, 'success');
@@ -63,7 +64,7 @@ function ExerciseLibrary() {
     }
     
     setShowWorkoutPlanSelector(false);
-    setSelectedExercise(null);
+    setExerciseToAddToPlan(null);
   };
 
   const handleCancelEdit = () => {
@@ -93,6 +94,9 @@ function ExerciseLibrary() {
             key={exercise._id} 
             exercise={exercise}
             onClick={() => setSelectedExercise(exercise)}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onAddToPlan={handleAddToPlan}
           />
         ))}
       </div>
@@ -108,7 +112,10 @@ function ExerciseLibrary() {
       {showWorkoutPlanSelector && (
         <WorkoutPlanSelector
           onSelect={handleSelectWorkoutPlan}
-          onClose={() => setShowWorkoutPlanSelector(false)}
+          onClose={() => {
+            setShowWorkoutPlanSelector(false);
+            setExerciseToAddToPlan(null);
+          }}
         />
       )}
     </div>
