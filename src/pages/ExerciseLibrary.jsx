@@ -45,6 +45,7 @@ function ExerciseLibrary() {
 
   const handleSave = (savedExercise) => {
     setEditingExercise(null);
+    // Optionally, you can refresh the exercise list here
   };
 
   const handleSelectWorkoutPlan = async (plan) => {
