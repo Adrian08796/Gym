@@ -21,7 +21,7 @@ function ExerciseLibrary() {
     const filtered = exercises.filter(exercise => 
       exercise.name.toLowerCase().includes(lowercasedFilter) ||
       exercise.description.toLowerCase().includes(lowercasedFilter) ||
-      exercise.target.toLowerCase().includes(lowercasedFilter)
+      (Array.isArray(exercise.target) && exercise.target.some(t => t.toLowerCase().includes(lowercasedFilter)))
     );
     setFilteredExercises(filtered);
   }, [filterText, exercises]);

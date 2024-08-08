@@ -1,16 +1,30 @@
+// tailwind.config.js
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        'app-dark-green': '#054029',
-        'app-light-green': '#0B5C3B',
-        'app-bright-green': '#10A37F',
-        'app-white': '#FFFFFF',
+        'primary': '#3490dc',
+        'secondary': '#ffed4a',
+        'accent': '#f6993f',
+        'background': {
+          light: '#f8fafc',
+          dark: '#1a202c',
+        },
+        'text': {
+          light: '#2d3748',
+          dark: '#e2e8f0',
+        },
+      },
+      fontFamily: {
+        'sans': ['Roboto', 'Arial', 'sans-serif'],
+        'heading': ['Montserrat', 'Helvetica', 'sans-serif'],
       },
     },
   },

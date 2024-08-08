@@ -17,8 +17,8 @@ import WorkoutCalendar from './components/WorkoutCalendar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import NotificationToast from './components/NotificationToast';
-
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -30,6 +30,7 @@ const PrivateRoute = ({ children }) => {
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const { darkMode } = useTheme();
 
   if (loading) {
     return <div>Loading...</div>;
@@ -37,9 +38,9 @@ function AppContent() {
 
   return (
     <Router>
-      <div className="App flex flex-col min-h-screen">
+      <div className={`App flex flex-col min-h-screen ${darkMode ? 'dark' : ''}`}>
         <Header />
-        <main className="flex-grow container mx-auto px-4 py-8">
+        <main className="flex-grow container mx-auto px-4 py-8 bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
           <Routes>
             <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
             <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
@@ -66,7 +67,9 @@ function App() {
     <AuthProvider>
       <NotificationProvider>
         <GymProvider>
-          <AppContent />
+          <ThemeProvider>
+            <AppContent />
+          </ThemeProvider>
         </GymProvider>
       </NotificationProvider>
     </AuthProvider>
