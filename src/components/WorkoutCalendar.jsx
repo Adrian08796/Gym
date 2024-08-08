@@ -9,17 +9,19 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useGymContext } from '../context/GymContext';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
 import WorkoutPlanModal from './WorkoutPlanModal';
+import './WorkoutCalendar.css';
 
 const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop(Calendar);
 
 const workoutColors = {
-  strength: '#FF6B6B',
-  cardio: '#4ECDC4',
-  flexibility: '#45B7D1',
-  default: '#FFA07A',
-  completed: '#A9A9A9'
+  strength: '#4CAF50',
+  cardio: '#2196F3',
+  flexibility: '#FF9800',
+  default: '#9C27B0',
+  completed: '#607D8B'
 };
 
 function WorkoutCalendar() {
@@ -28,6 +30,7 @@ function WorkoutCalendar() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+  const { darkMode } = useTheme();
 
   const getEventColor = useCallback((event) => {
     if (event.resource === 'history' || event.resource === 'completed') {
@@ -123,30 +126,51 @@ function WorkoutCalendar() {
     return {
       style: {
         backgroundColor,
+        borderRadius: '5px',
         opacity: event.resource === 'history' || event.resource === 'completed' ? 0.7 : 1,
+        color: '#fff',
+        border: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '14px',
+        fontWeight: '500',
         cursor: event.resource === 'history' || event.resource === 'completed' ? 'not-allowed' : 'pointer'
       }
     };
   }, [getEventColor]);
 
   return (
-    <div className="h-screen p-4">
-      <h2 className="text-2xl font-bold mb-4">Workout Calendar</h2>
-      <DnDCalendar
-        localizer={localizer}
-        events={events}
-        startAccessor="start"
-        endAccessor="end"
-        style={{ height: 'calc(100% - 80px)' }}
-        onSelectSlot={handleSelectSlot}
-        onSelectEvent={handleSelectEvent}
-        onEventDrop={moveEvent}
-        onEventResize={resizeEvent}
-        selectable
-        resizable
-        eventPropGetter={eventPropGetter}
-        draggableAccessor={(event) => event.resource !== 'history' && event.resource !== 'completed'}
-      />
+    <div className={`h-screen p-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+      <h2 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Workout Calendar</h2>
+      <div className={`${darkMode ? 'bg-gray-700' : 'bg-white'} rounded-lg shadow-lg p-4`} style={{ height: 'calc(100% - 80px)' }}>
+        <DnDCalendar
+          localizer={localizer}
+          events={events}
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: '100%' }}
+          onSelectSlot={handleSelectSlot}
+          onSelectEvent={handleSelectEvent}
+          onEventDrop={moveEvent}
+          onEventResize={resizeEvent}
+          selectable
+          resizable
+          eventPropGetter={eventPropGetter}
+          draggableAccessor={(event) => event.resource !== 'history' && event.resource !== 'completed'}
+          views={['month', 'week', 'day']}
+          defaultView="month"
+          formats={{
+            monthHeaderFormat: (date, culture, localizer) =>
+              localizer.format(date, 'MMMM YYYY', culture),
+            dayHeaderFormat: (date, culture, localizer) =>
+              localizer.format(date, 'dddd, MMMM D', culture),
+          }}
+          components={{
+            toolbar: CustomToolbar,
+          }}
+        />
+      </div>
       {selectedPlan && (
         <WorkoutPlanModal
           plan={selectedPlan}
@@ -156,5 +180,57 @@ function WorkoutCalendar() {
     </div>
   );
 }
+
+const CustomToolbar = (toolbar) => {
+  const goToBack = () => {
+    toolbar.date.setMonth(toolbar.date.getMonth() - 1);
+    toolbar.onNavigate('prev');
+  };
+
+  const goToNext = () => {
+    toolbar.date.setMonth(toolbar.date.getMonth() + 1);
+    toolbar.onNavigate('next');
+  };
+
+  const goToCurrent = () => {
+    const now = new Date();
+    toolbar.date.setMonth(now.getMonth());
+    toolbar.date.setYear(now.getFullYear());
+    toolbar.onNavigate('current');
+  };
+
+  const label = () => {
+    const date = moment(toolbar.date);
+    return (
+      <span className="text-lg font-semibold">{date.format('MMMM YYYY')}</span>
+    );
+  };
+
+  return (
+    <div className="flex justify-between items-center mb-4">
+      <div>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
+          onClick={goToBack}
+        >
+          &lt;
+        </button>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          onClick={goToNext}
+        >
+          &gt;
+        </button>
+      </div>
+      <div>{label()}</div>
+      <button
+        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        onClick={goToCurrent}
+      >
+        Today
+      </button>
+    </div>
+  );
+};
 
 export default WorkoutCalendar;
