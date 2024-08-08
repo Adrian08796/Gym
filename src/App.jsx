@@ -38,22 +38,24 @@ function AppContent() {
 
   return (
     <Router>
-      <div className={`App flex flex-col min-h-screen ${darkMode ? 'dark' : ''}`}>
+      <div className={`App min-h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
         <Header />
-        <main className="flex-grow container mx-auto px-4 py-8 bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-          <Routes>
-            <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-            <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
-            <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
-            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/calendar" element={<PrivateRoute><WorkoutCalendar /></PrivateRoute>} />
-            <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
-            <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
-            <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
-            <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
-            <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
-            <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
-          </Routes>
+        <main className="flex-grow bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+          <div className="container mx-auto px-4 py-8">
+            <Routes>
+              <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+              <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+              <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/calendar" element={<PrivateRoute><WorkoutCalendar /></PrivateRoute>} />
+              <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
+              <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
+              <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
+              <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
+              <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
+              <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
+            </Routes>
+          </div>
         </main>
         <Footer />
         <NotificationToast />

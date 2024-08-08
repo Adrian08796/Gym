@@ -12,7 +12,7 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan }) {
       />
       <div className="p-4">
         <h3 className="font-heading text-xl font-bold mb-2 text-primary dark:text-blue-400">{exercise.name}</h3>
-        <p className="text-text-light dark:text-text-dark text-sm mb-2">{exercise.description}</p>
+        <p className="text-gray-700 dark:text-gray-300 text-sm mb-2">{exercise.description}</p>
         <p className="text-accent dark:text-yellow-300 text-xs mb-4">
           Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
         </p>

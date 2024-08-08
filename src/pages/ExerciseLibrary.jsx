@@ -49,10 +49,6 @@ function ExerciseLibrary() {
       return;
     }
     
-    console.log('Selected exercise:', selectedExercise);
-    console.log('Selected plan:', plan);
-    console.log(`Attempting to add exercise ${selectedExercise._id} to plan ${plan._id}`);
-    
     const result = await addExerciseToPlan(plan._id, selectedExercise._id);
     
     if (result.success) {
@@ -72,7 +68,7 @@ function ExerciseLibrary() {
   };
 
   return (
-    <div>
+    <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
       <h1 className="text-3xl font-bold mb-4">Exercise Library</h1>
       <div className="mb-4">
         <input
@@ -80,7 +76,7 @@ function ExerciseLibrary() {
           placeholder="Filter exercises..."
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
         />
       </div>
       <AddExerciseForm 

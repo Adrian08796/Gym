@@ -54,7 +54,7 @@ function WorkoutPlans() {
   };
 
   return (
-    <div>
+    <div className="text-gray-900 dark:text-gray-100">
       <h1 className="text-3xl font-bold mb-4">Workout Plans</h1>
       {ongoingWorkout && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">

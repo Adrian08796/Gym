@@ -45,12 +45,10 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
         savedExercise = await addExercise(exercise);
         addNotification('Exercise added successfully', 'success');
       }
-      // Reset form
       setName('');
       setDescription('');
       setTarget([]);
       setImageUrl('');
-      // Call onSave with the saved exercise from the server
       onSave(savedExercise);
     } catch (error) {
       addNotification('Failed to save exercise', 'error');
@@ -68,28 +66,26 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   };
 
   const handleCancel = () => {
-    // Reset form
     setName('');
     setDescription('');
     setTarget([]);
     setImageUrl('');
-    // Call onCancel prop if it exists
     if (typeof onCancel === 'function') {
       onCancel();
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-      <h2 className="text-2xl font-bold mb-4">
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
         {initialExercise ? 'Edit Exercise' : 'Add New Exercise'}
       </h2>
       <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
+        <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="name">
           Exercise Name
         </label>
         <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
           id="name"
           type="text"
           placeholder="Exercise Name"
@@ -99,11 +95,11 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
         />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
+        <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="description">
           Description
         </label>
         <textarea
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
           id="description"
           placeholder="Exercise Description"
           value={description}
@@ -112,7 +108,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
         />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
+        <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
           Target Muscle Groups
         </label>
         <div className="flex flex-wrap -mx-1">
@@ -124,7 +120,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                 className={`py-1 px-2 rounded ${
                   target.includes(group)
                     ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-700'
+                    : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
                 }`}
               >
                 {group}
@@ -134,11 +130,11 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
         </div>
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imageUrl">
+        <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="imageUrl">
           Image URL
         </label>
         <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
           id="imageUrl"
           type="text"
           placeholder="Image URL"

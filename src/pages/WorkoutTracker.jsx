@@ -1,6 +1,5 @@
 // src/pages/WorkoutTracker.jsx
 
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
@@ -142,24 +141,24 @@ function WorkoutTracker() {
   const currentExercise = currentPlan.exercises[currentExerciseIndex];
 
   return (
-    <div className="container mx-auto mt-8 relative">
+    <div className="container mx-auto mt-8 relative text-gray-900 dark:text-gray-100">
       <h2 className="text-2xl font-bold mb-4">Workout Tracker</h2>
-      <h3 className="text-xl mb-4">{currentPlan.name}</h3>
+      <h3 className="text-xl mb-4">{currentPlan?.name}</h3>
       
       {renderCarouselIndicator()}
       
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
-        <p className="text-sm text-gray-600 mb-2">Exercise {currentExerciseIndex + 1} of {currentPlan.exercises.length}</p>
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise?.name}</h4>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Exercise {currentExerciseIndex + 1} of {currentPlan?.exercises.length}</p>
         <div className="flex mb-4">
           <img 
-            src={currentExercise.imageUrl} 
-            alt={currentExercise.name} 
+            src={currentExercise?.imageUrl} 
+            alt={currentExercise?.name} 
             className="w-1/3 h-auto object-cover rounded-lg mr-4"
           />
           <div>
-            <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
-            <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+            <p className="mb-2"><strong>Description:</strong> {currentExercise?.description}</p>
+            <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise?.target}</p>
             <p className="mb-2">
               <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / 3
               {isExerciseComplete(currentExerciseIndex) && ' (Complete)'}
@@ -171,13 +170,13 @@ function WorkoutTracker() {
             type="number"
             placeholder="Weight"
             id="weight"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2 mb-2"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 leading-tight focus:outline-none focus:shadow-outline mr-2 mb-2 dark:bg-gray-700 dark:border-gray-600"
           />
           <input
             type="number"
             placeholder="Reps"
             id="reps"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 leading-tight focus:outline-none focus:shadow-outline mb-2 dark:bg-gray-700 dark:border-gray-600"
           />
         </div>
         <button
@@ -204,7 +203,7 @@ function WorkoutTracker() {
         >
           Previous Exercise
         </button>
-        {currentExerciseIndex < currentPlan.exercises.length - 1 ? (
+        {currentExerciseIndex < currentPlan?.exercises.length - 1 ? (
           <button
             onClick={() => handleExerciseChange(currentExerciseIndex + 1)}
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
@@ -224,7 +223,7 @@ function WorkoutTracker() {
       {/* Set Log */}
       <div className="mt-8">
         <h3 className="text-xl font-semibold mb-4">Set Log</h3>
-        {currentPlan.exercises.map((exercise, index) => (
+        {currentPlan?.exercises.map((exercise, index) => (
           <div key={exercise._id} className="mb-4">
             <h4 className="text-lg font-medium">{exercise.name}</h4>
             {sets[index] && sets[index].length > 0 ? (
