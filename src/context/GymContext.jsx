@@ -1,6 +1,6 @@
 // src/context/GymContext.jsx
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
@@ -70,7 +70,6 @@ export function GymProvider({ children }) {
       addNotification('Failed to fetch exercises', 'error');
     }
   }, [API_URL, getAuthConfig, addNotification]);
-  
 
   // Fetch workout plans
   const fetchWorkoutPlans = useCallback(async () => {
@@ -106,7 +105,7 @@ export function GymProvider({ children }) {
     }
   }, [user, fetchWorkoutHistory, fetchExercises, fetchWorkoutPlans]);
 
-  // Add a workout
+  // Add a workout (updated to include notes)
   const addWorkout = async (workout) => {
     try {
       console.log('Sending workout data:', JSON.stringify(workout, null, 2));
@@ -226,7 +225,6 @@ export function GymProvider({ children }) {
   // Add a workout plan
   const addWorkoutPlan = async (plan) => {
     try {
-      // Ensure the plan object doesn't include full exercise objects
       const planToSend = {
         ...plan,
         exercises: plan.exercises.map(exercise => 
@@ -236,7 +234,6 @@ export function GymProvider({ children }) {
 
       const response = await axios.post(`${API_URL}/workoutplans`, planToSend, getAuthConfig());
       
-      // If the response doesn't include full exercise details, populate them here
       const fullPlan = {
         ...response.data,
         exercises: await Promise.all(response.data.exercises.map(async (exerciseId) => {
@@ -246,10 +243,10 @@ export function GymProvider({ children }) {
               return exerciseResponse.data;
             } catch (error) {
               console.error(`Error fetching exercise ${exerciseId}:`, error);
-              return null; // or some placeholder data
+              return null;
             }
           }
-          return exerciseId; // if it's already a full exercise object
+          return exerciseId;
         }))
       };
 
@@ -267,7 +264,6 @@ export function GymProvider({ children }) {
   const updateWorkoutPlan = async (id, updatedPlan) => {
     try {
       if (!id) {
-        // If there's no id, it's a new plan
         return addWorkoutPlan(updatedPlan);
       }
       const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
@@ -312,7 +308,6 @@ export function GymProvider({ children }) {
     }
     console.log(`Attempting to add exercise ${exerciseId} to plan ${planId}`);
     
-    // Find the plan
     const plan = workoutPlans.find(p => p._id === planId);
     if (!plan) {
       console.error('Plan not found');
@@ -320,7 +315,6 @@ export function GymProvider({ children }) {
       return { success: false, error: 'Plan not found' };
     }
 
-    // Check if the exercise is already in the plan
     if (plan.exercises.some(e => e._id === exerciseId)) {
       console.log('Exercise is already in the workout plan');
       addNotification('This exercise is already in the workout plan', 'info');
@@ -349,25 +343,45 @@ export function GymProvider({ children }) {
     }
   };
 
+  // Get the last workout for a given plan
+const getLastWorkoutByPlan = useCallback(async (planId) => {
+  try {
+    const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      // No previous workout found, this is not an error
+      console.log('No previous workout found for this plan');
+      return null;
+    }
+    console.error('Error fetching last workout:', error);
+    addNotification('Failed to fetch last workout', 'error');
+    return null;
+  }
+}, [API_URL, getAuthConfig, addNotification]);
+
+  const contextValue = useMemo(() => ({
+    workouts,
+    exercises,
+    workoutPlans,
+    workoutHistory,
+    addWorkout,
+    updateWorkout,
+    deleteWorkout,
+    addExercise,
+    updateExercise,
+    deleteExercise,
+    addWorkoutPlan,
+    updateWorkoutPlan,
+    deleteWorkoutPlan,
+    fetchWorkoutHistory,
+    fetchWorkoutPlans,
+    addExerciseToPlan,
+    getLastWorkoutByPlan
+  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan]);
+
   return (
-    <GymContext.Provider value={{
-      workouts,
-      exercises,
-      workoutPlans,
-      workoutHistory,
-      addWorkout,
-      updateWorkout,
-      deleteWorkout,
-      addExercise,
-      updateExercise,
-      deleteExercise,
-      addWorkoutPlan,
-      updateWorkoutPlan,
-      deleteWorkoutPlan,
-      fetchWorkoutHistory,
-      fetchWorkoutPlans,
-      addExerciseToPlan
-    }}>
+    <GymContext.Provider value={contextValue}>
       {children}
     </GymContext.Provider>
   );
