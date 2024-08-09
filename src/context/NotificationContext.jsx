@@ -1,28 +1,32 @@
 // src/context/NotificationContext.jsx
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const NotificationContext = createContext();
 
-export function useNotification() {
-  return useContext(NotificationContext);
-}
+export const useNotification = () => useContext(NotificationContext);
 
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
 
-  const addNotification = (message, type = 'info', duration = 5000) => {
-    const id = Date.now() + Math.random(); // This should create a unique ID
+  const addNotification = useCallback((message, type = 'info', duration = 5000) => {
+    const id = Date.now() + Math.random();
     setNotifications(prev => [...prev, { id, message, type }]);
     setTimeout(() => removeNotification(id), duration);
-  };
+  }, []);
 
-  const removeNotification = (id) => {
+  const removeNotification = useCallback((id) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
-  };
+  }, []);
+
+  const contextValue = React.useMemo(() => ({
+    notifications,
+    addNotification,
+    removeNotification
+  }), [notifications, addNotification, removeNotification]);
 
   return (
-    <NotificationContext.Provider value={{ notifications, addNotification, removeNotification }}>
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );
