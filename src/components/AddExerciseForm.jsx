@@ -37,6 +37,13 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
+
+    if (target.length === 0) {
+      addNotification('Please select at least one target muscle group', 'error');
+      setIsSubmitting(false);
+      return;
+    }
+
     const exercise = { name, description, target, imageUrl };
     try {
       let savedExercise;
@@ -54,7 +61,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       setIsExpanded(false);
       onSave(savedExercise);
     } catch (error) {
-      addNotification('Failed to save exercise', 'error');
+      addNotification('Failed to save exercise. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -166,10 +173,11 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           </div>
           <div className="flex items-center justify-between">
             <button
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               type="submit"
+              disabled={isSubmitting}
             >
-              {initialExercise ? 'Update Exercise' : 'Add Exercise'}
+              {isSubmitting ? 'Saving...' : (initialExercise ? 'Update Exercise' : 'Add Exercise')}
             </button>
             <button
               className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
