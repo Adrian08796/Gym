@@ -17,7 +17,6 @@ function Header() {
 
   const menuItems = [
     { to: "/dashboard", text: "Dashboard" },
-    { to: "/calendar", text: "Calendar" },
     { to: "/tracker", text: "Workout Tracker" },
     { to: "/exercises", text: "Exercise Library" },
     { to: "/plans", text: "Workout Plans" },

@@ -1,10 +1,10 @@
 // src/components/WorkoutPlanModal.jsx
 
 import React from 'react';
-import { useTheme } from '../context/ThemeContext'; // Import the useTheme hook
+import { useTheme } from '../context/ThemeContext';
 
-function WorkoutPlanModal({ plan, onClose }) {
-  const { darkMode } = useTheme(); // Use the useTheme hook to get the current theme
+function WorkoutPlanModal({ plan, onClose, onEdit, onStart }) {
+  const { darkMode } = useTheme();
 
   if (!plan) return null;
 
@@ -32,10 +32,27 @@ function WorkoutPlanModal({ plan, onClose }) {
               </ul>
             </div>
           </div>
-          <div className="items-center px-4 py-3">
+          <div className="flex justify-between items-center px-4 py-3">
             <button
-              id="ok-btn"
-              className={`px-4 py-2 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white text-base font-medium rounded-md w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300`}
+              className={`px-4 py-2 ${darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-300`}
+              onClick={() => {
+                onEdit(plan);
+                onClose();
+              }}
+            >
+              Edit
+            </button>
+            <button
+              className={`px-4 py-2 ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300`}
+              onClick={() => {
+                onStart(plan);
+                onClose();
+              }}
+            >
+              Start Workout
+            </button>
+            <button
+              className={`px-4 py-2 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300`}
               onClick={onClose}
             >
               Close
