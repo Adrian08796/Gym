@@ -55,7 +55,9 @@ function WorkoutSummary() {
           <p className="mb-2">Date: {formatDate(workout.date || workout.startTime)}</p>
           <p className="mb-2">Start Time: {formatTime(workout.startTime)}</p>
           <p className="mb-2">End Time: {formatTime(workout.endTime)}</p>
-          <p className="mb-4">Duration: {formatDuration(workout.startTime, workout.endTime)}</p>
+          <p className="mb-2">Duration: {formatDuration(workout.startTime, workout.endTime)}</p>
+          <p className="mb-2">Progression: {workout.progression ? `${workout.progression.toFixed(2)}%` : 'N/A'}</p>
+          <p className="mb-4">Total Pause Time: {workout.totalPauseTime ? `${workout.totalPauseTime} seconds` : 'N/A'}</p>
 
           {workout.exercises.map((exercise, index) => (
             <div key={index} className={`mb-4 p-3 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
@@ -74,6 +76,9 @@ function WorkoutSummary() {
                         <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>
                           (at {formatTime(set.completedAt)})
                         </span>
+                      )}
+                      {set.skippedRest && (
+                        <span className="text-yellow-500 ml-2">(Rest Skipped)</span>
                       )}
                     </li>
                   ))}

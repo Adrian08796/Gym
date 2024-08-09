@@ -360,31 +360,31 @@ const getLastWorkoutByPlan = useCallback(async (planId) => {
   }
 }, [API_URL, getAuthConfig, addNotification]);
 
-  const contextValue = useMemo(() => ({
-    workouts,
-    exercises,
-    workoutPlans,
-    workoutHistory,
-    addWorkout,
-    updateWorkout,
-    deleteWorkout,
-    addExercise,
-    updateExercise,
-    deleteExercise,
-    addWorkoutPlan,
-    updateWorkoutPlan,
-    deleteWorkoutPlan,
-    fetchWorkoutHistory,
-    fetchWorkoutPlans,
-    addExerciseToPlan,
-    getLastWorkoutByPlan
-  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan]);
+const contextValue = useMemo(() => ({
+  workouts,
+  exercises,
+  workoutPlans,
+  workoutHistory,
+  addWorkout,
+  updateWorkout,
+  deleteWorkout,
+  addExercise,
+  updateExercise,
+  deleteExercise,
+  addWorkoutPlan,
+  updateWorkoutPlan,
+  deleteWorkoutPlan,
+  fetchWorkoutHistory,
+  fetchWorkoutPlans,
+  addExerciseToPlan,
+  getLastWorkoutByPlan
+}), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan]);
 
-  return (
-    <GymContext.Provider value={contextValue}>
-      {children}
-    </GymContext.Provider>
-  );
+return (
+  <GymContext.Provider value={contextValue}>
+    {children}
+  </GymContext.Provider>
+);
 }
 
 export default GymProvider;

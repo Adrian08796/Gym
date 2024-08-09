@@ -22,6 +22,9 @@ function WorkoutTracker() {
   const [notes, setNotes] = useState([]);
   const [previousWorkout, setPreviousWorkout] = useState(null);
   const [isPreviousWorkoutLoading, setIsPreviousWorkoutLoading] = useState(false);
+  const [totalPauseTime, setTotalPauseTime] = useState(0);
+  const [skippedPauses, setSkippedPauses] = useState(0);
+  const [progression, setProgression] = useState(0);
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
@@ -143,7 +146,12 @@ function WorkoutTracker() {
       const newSets = [...prevSets];
       newSets[currentExerciseIndex] = [
         ...(newSets[currentExerciseIndex] || []),
-        { weight: Number(weight), reps: Number(reps), completedAt: new Date().toISOString() }
+        { 
+          weight: Number(weight), 
+          reps: Number(reps), 
+          completedAt: new Date().toISOString(),
+          skippedRest: !isResting && remainingRestTime === 0
+        }
       ];
       return newSets;
     });
@@ -155,10 +163,14 @@ function WorkoutTracker() {
       const restartTimer = window.confirm("Do you want to restart the rest timer?");
       if (restartTimer) {
         startRestTimer();
+      } else {
+        setSkippedPauses(prevSkipped => prevSkipped + 1);
       }
     } else {
       startRestTimer();
     }
+
+    updateProgression();
   };
 
   const startRestTimer = () => {
@@ -166,16 +178,18 @@ function WorkoutTracker() {
     setRemainingRestTime(restTime);
   };
 
-  const handleExerciseChange = (newIndex) => {
-    setCurrentExerciseIndex(newIndex);
+  const skipRestTimer = () => {
+    setIsResting(false);
+    setRemainingRestTime(0);
+    setSkippedPauses(prevSkipped => prevSkipped + 1);
+    addNotification('Rest timer skipped', 'info');
   };
 
-  const handleNoteChange = (index, value) => {
-    setNotes(prevNotes => {
-      const newNotes = [...prevNotes];
-      newNotes[index] = value;
-      return newNotes;
-    });
+  const updateProgression = () => {
+    const totalExercises = currentPlan.exercises.length;
+    const completedExercises = sets.filter(exerciseSets => exerciseSets.length > 0).length;
+    const newProgression = (completedExercises / totalExercises) * 100;
+    setProgression(newProgression);
   };
 
   const handleFinishWorkout = async () => {
@@ -192,7 +206,10 @@ function WorkoutTracker() {
         notes: notes[index]
       })),
       startTime: startTime.toISOString(),
-      endTime: endTime.toISOString()
+      endTime: endTime.toISOString(),
+      totalPauseTime,
+      skippedPauses,
+      progression
     };
     
     try {
@@ -203,6 +220,18 @@ function WorkoutTracker() {
     } catch (error) {
       console.error('Error saving workout:', error);
       addNotification('Failed to save workout. Please try again.', 'error');
+    }
+  };
+
+  const handleCancelWorkout = () => {
+    if (window.confirm("Are you sure you want to cancel this workout? All progress will be lost.")) {
+      clearLocalStorage();
+      setCurrentPlan(null);
+      setSets([]);
+      setNotes([]);
+      setStartTime(null);
+      setElapsedTime(0);
+      addNotification('Workout cancelled', 'info');
     }
   };
 
@@ -228,8 +257,32 @@ function WorkoutTracker() {
     return (completedExercises / totalExercises) * 100;
   };
 
+  const handleNoteChange = (index, value) => {
+    setNotes(prevNotes => {
+      const newNotes = [...prevNotes];
+      newNotes[index] = value;
+      return newNotes;
+    });
+  };
+
+  const handleExerciseChange = (newIndex) => {
+    setCurrentExerciseIndex(newIndex);
+  };
+
   if (!currentPlan) {
-    return <div className="text-center mt-8">Loading workout plan...</div>;
+    return (
+      <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
+        <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
+        <p className="text-xl mb-4">No active workout</p>
+        <p className="mb-4">To start a new workout, please select a workout plan from the Workout Plans page.</p>
+        <button
+          onClick={() => navigate('/plans')}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Go to Workout Plans
+        </button>
+      </div>
+    );
   }
 
   const currentExercise = currentPlan.exercises[currentExerciseIndex];
@@ -250,22 +303,30 @@ function WorkoutTracker() {
         <p className="text-sm mt-2">Overall Progress: {calculateProgress().toFixed(2)}%</p>
       </div>
 
-      <div className="mb-4 flex flex-wrap">
-        {currentPlan.exercises.map((exercise, index) => (
-          <button
-            key={exercise._id}
-            onClick={() => handleExerciseChange(index)}
-            className={`mr-2 mb-2 px-3 py-1 rounded ${
-              index === currentExerciseIndex
-                ? 'bg-blue-500 text-white'
-                : sets[index] && sets[index].length > 0
-                ? 'bg-green-500 text-white'
-                : 'bg-gray-300 text-gray-800'
-            }`}
-          >
-            {exercise.name}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap justify-between items-center">
+        <div className="flex flex-wrap">
+          {currentPlan.exercises.map((exercise, index) => (
+            <button
+              key={exercise._id}
+              onClick={() => handleExerciseChange(index)}
+              className={`mr-2 mb-2 px-3 py-1 rounded ${
+                index === currentExerciseIndex
+                  ? 'bg-blue-500 text-white'
+                  : sets[index] && sets[index].length > 0
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-300 text-gray-800'
+              }`}
+            >
+              {exercise.name}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={handleCancelWorkout}
+          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Cancel Workout
+        </button>
       </div>
       
       <TransitionGroup>
@@ -289,7 +350,7 @@ function WorkoutTracker() {
                 <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
                 <p className="mb-2">
                   <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length}
-                </p>
+                  </p>
               </div>
             </div>
             <div className="mb-4 flex">
@@ -324,7 +385,7 @@ function WorkoutTracker() {
                   ></div>
                 </div>
                 <button
-                  onClick={() => setIsResting(false)}
+                  onClick={skipRestTimer}
                   className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
                 >
                   Skip Rest
@@ -359,7 +420,8 @@ function WorkoutTracker() {
         </CSSTransition>
       </TransitionGroup>
 
-      <div className="flex justify-between"><button
+      <div className="flex justify-between">
+        <button
           onClick={() => handleExerciseChange(Math.max(0, currentExerciseIndex - 1))}
           className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
         >
