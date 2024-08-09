@@ -1,13 +1,15 @@
-// pages/WorkoutSummary.jsx
+// src/pages/WorkoutSummary.jsx
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 function WorkoutSummary() {
   const { workoutHistory, fetchWorkoutHistory } = useGymContext();
   const { user } = useAuth();
+  const { darkMode } = useTheme();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,10 +45,10 @@ function WorkoutSummary() {
   }
 
   return (
-    <div className="container mx-auto mt-8">
+    <div className={`container mx-auto mt-8 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
       <h2 className="text-2xl font-bold mb-4">Workout History</h2>
       {workoutHistory.map((workout) => (
-        <div key={workout._id} className="mb-8 p-4 border rounded shadow">
+        <div key={workout._id} className={`mb-8 p-4 border rounded shadow ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}>
           <h3 className="text-xl mb-2">
             {workout.planName} {workout.planDeleted && <span className="text-red-500">(Deleted)</span>}
           </h3>
@@ -56,20 +58,20 @@ function WorkoutSummary() {
           <p className="mb-4">Duration: {formatDuration(workout.startTime, workout.endTime)}</p>
 
           {workout.exercises.map((exercise, index) => (
-            <div key={index} className="mb-4 p-3 bg-gray-100 rounded">
-              <h4 className="text-lg font-medium">
+            <div key={index} className={`mb-4 p-3 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <h4 className={`text-lg font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
                 {exercise.exercise ? exercise.exercise.name : 'Deleted Exercise'}
               </h4>
               {exercise.completedAt && (
-                <p className="text-sm text-gray-600">Completed at: {formatTime(exercise.completedAt)}</p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completed at: {formatTime(exercise.completedAt)}</p>
               )}
               {exercise.sets && exercise.sets.length > 0 ? (
                 <ul className="list-disc pl-5 mt-2">
                   {exercise.sets.map((set, setIndex) => (
-                    <li key={setIndex} className="mb-1">
+                    <li key={setIndex} className={`mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
                       {set.completedAt && (
-                        <span className="text-sm text-gray-600 ml-2">
+                        <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>
                           (at {formatTime(set.completedAt)})
                         </span>
                       )}
@@ -77,7 +79,12 @@ function WorkoutSummary() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 italic">No sets completed</p>
+                <p className={`mt-2 italic ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>No sets completed</p>
+              )}
+              {exercise.notes && (
+                <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <strong>Notes:</strong> {exercise.notes}
+                </p>
               )}
             </div>
           ))}
@@ -85,7 +92,7 @@ function WorkoutSummary() {
       ))}
       <button
         onClick={() => navigate('/')}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4"
+        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4`}
       >
         Back to Home
       </button>

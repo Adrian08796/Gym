@@ -23,19 +23,33 @@ export default defineConfig({
 # tailwind.config.js
 
 ```js
+// tailwind.config.js
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        'app-dark-green': '#054029',
-        'app-light-green': '#0B5C3B',
-        'app-bright-green': '#10A37F',
-        'app-white': '#FFFFFF',
+        'primary': '#3490dc',
+        'secondary': '#ffed4a',
+        'accent': '#f6993f',
+        'background': {
+          light: '#f8fafc',
+          dark: '#1a202c',
+        },
+        'text': {
+          light: '#2d3748',
+          dark: '#e2e8f0',
+        },
+      },
+      fontFamily: {
+        'sans': ['Roboto', 'Arial', 'sans-serif'],
+        'heading': ['Montserrat', 'Helvetica', 'sans-serif'],
       },
     },
   },
@@ -76,6 +90,7 @@ export default {
     "react-big-calendar": "^1.13.2",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.25.1",
+    "react-transition-group": "^4.4.5",
     "recharts": "^2.13.0-alpha.4"
   },
   "devDependencies": {
@@ -362,8 +377,8 @@ import WorkoutCalendar from './components/WorkoutCalendar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import NotificationToast from './components/NotificationToast';
-
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -375,6 +390,7 @@ const PrivateRoute = ({ children }) => {
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const { darkMode } = useTheme();
 
   if (loading) {
     return <div>Loading...</div>;
@@ -382,22 +398,24 @@ function AppContent() {
 
   return (
     <Router>
-      <div className="App flex flex-col min-h-screen">
+      <div className={`App min-h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
         <Header />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <Routes>
-            <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-            <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
-            <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
-            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/calendar" element={<PrivateRoute><WorkoutCalendar /></PrivateRoute>} />
-            <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
-            <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
-            <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
-            <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
-            <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
-            <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
-          </Routes>
+        <main className="flex-grow bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+          <div className="container mx-auto px-4 py-8">
+            <Routes>
+              <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+              <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+              <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/calendar" element={<PrivateRoute><WorkoutCalendar /></PrivateRoute>} />
+              <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
+              <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
+              <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
+              <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
+              <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
+              <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
+            </Routes>
+          </div>
         </main>
         <Footer />
         <NotificationToast />
@@ -411,7 +429,9 @@ function App() {
     <AuthProvider>
       <NotificationProvider>
         <GymProvider>
-          <AppContent />
+          <ThemeProvider>
+            <AppContent />
+          </ThemeProvider>
         </GymProvider>
       </NotificationProvider>
     </AuthProvider>
@@ -474,79 +494,182 @@ export default App;
 ```jsx
 // src/pages/WorkoutTracker.jsx
 
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
+import { CSSTransition, TransitionGroup } from 'react-transition-group';
+import './WorkoutTracker.css';
 
 function WorkoutTracker() {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [sets, setSets] = useState([]);
   const [startTime, setStartTime] = useState(null);
-  const { addWorkout } = useGymContext();
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [weight, setWeight] = useState('');
+  const [reps, setReps] = useState('');
+  const [restTime, setRestTime] = useState(60);
+  const [isResting, setIsResting] = useState(false);
+  const [remainingRestTime, setRemainingRestTime] = useState(0);
+  const [notes, setNotes] = useState([]);
+  const [previousWorkout, setPreviousWorkout] = useState(null);
+  const [isPreviousWorkoutLoading, setIsPreviousWorkoutLoading] = useState(false);
+  const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
+  const { darkMode } = useTheme();
   const navigate = useNavigate();
+  const nodeRef = useRef(null);
 
-  useEffect(() => {
+  const loadStoredData = useCallback(() => {
     const storedPlan = localStorage.getItem('currentPlan');
     const storedSets = localStorage.getItem('currentSets');
     const storedIndex = localStorage.getItem('currentExerciseIndex');
     const storedStartTime = localStorage.getItem('workoutStartTime');
+    const storedNotes = localStorage.getItem('workoutNotes');
 
     if (storedPlan) {
-      const parsedPlan = JSON.parse(storedPlan);
-      setCurrentPlan(parsedPlan);
-      
-      if (storedSets) {
-        setSets(JSON.parse(storedSets));
-      } else {
-        setSets(parsedPlan.exercises.map(() => []));
-      }
-      
-      if (storedIndex !== null) {
-        setCurrentExerciseIndex(parseInt(storedIndex, 10));
-      }
+      try {
+        const parsedPlan = JSON.parse(storedPlan);
+        setCurrentPlan(parsedPlan);
+        
+        if (storedSets) {
+          setSets(JSON.parse(storedSets));
+        } else {
+          setSets(parsedPlan.exercises.map(() => []));
+        }
+        
+        if (storedIndex !== null) {
+          setCurrentExerciseIndex(parseInt(storedIndex, 10));
+        }
 
-      if (storedStartTime) {
-        setStartTime(new Date(storedStartTime));
-      } else {
-        const newStartTime = new Date();
-        setStartTime(newStartTime);
-        localStorage.setItem('workoutStartTime', newStartTime.toISOString());
+        if (storedStartTime) {
+          setStartTime(new Date(storedStartTime));
+        } else {
+          const newStartTime = new Date();
+          setStartTime(newStartTime);
+          localStorage.setItem('workoutStartTime', newStartTime.toISOString());
+        }
+
+        if (storedNotes) {
+          setNotes(JSON.parse(storedNotes));
+        } else {
+          setNotes(parsedPlan.exercises.map(() => ''));
+        }
+      } catch (error) {
+        console.error('Error parsing stored data:', error);
+        clearLocalStorage();
+        addNotification('Error loading workout data. Starting a new workout.', 'error');
       }
     }
-  }, []);
+  }, [addNotification]);
 
   useEffect(() => {
-    if (currentPlan) {
-      localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
-    }
-    if (sets.length > 0) {
-      localStorage.setItem('currentSets', JSON.stringify(sets));
-    }
-    localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
-  }, [currentPlan, sets, currentExerciseIndex]);
+    loadStoredData();
+  }, [loadStoredData]);
 
-  const handleSetComplete = (weight, reps) => {
+  useEffect(() => {
+    if (currentPlan && workoutHistory.length > 0) {
+      const fetchPreviousWorkout = async () => {
+        setIsPreviousWorkoutLoading(true);
+        try {
+          const lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
+          setPreviousWorkout(lastWorkout);
+        } catch (error) {
+          console.error('Error fetching previous workout:', error);
+        } finally {
+          setIsPreviousWorkoutLoading(false);
+        }
+      };
+      fetchPreviousWorkout();
+    } else {
+      setPreviousWorkout(null);
+      setIsPreviousWorkoutLoading(false);
+    }
+  }, [currentPlan, getLastWorkoutByPlan, workoutHistory.length]);
+
+  useEffect(() => {
+    const saveDataToLocalStorage = () => {
+      if (currentPlan) {
+        localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
+      }
+      if (sets.length > 0) {
+        localStorage.setItem('currentSets', JSON.stringify(sets));
+      }
+      localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
+      localStorage.setItem('workoutNotes', JSON.stringify(notes));
+    };
+
+    saveDataToLocalStorage();
+  }, [currentPlan, sets, currentExerciseIndex, notes]);
+
+  useEffect(() => {
+    let timer;
+    if (startTime) {
+      timer = setInterval(() => {
+        setElapsedTime(prevTime => prevTime + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [startTime]);
+
+  useEffect(() => {
+    let restTimer;
+    if (isResting && remainingRestTime > 0) {
+      restTimer = setInterval(() => {
+        setRemainingRestTime(prevTime => prevTime - 1);
+      }, 1000);
+    } else if (remainingRestTime === 0 && isResting) {
+      setIsResting(false);
+      addNotification('Rest time is over. Ready for the next set!', 'info');
+    }
+    return () => clearInterval(restTimer);
+  }, [isResting, remainingRestTime, addNotification]);
+
+  const handleSetComplete = () => {
+    if (!weight || !reps) {
+      addNotification('Please enter both weight and reps', 'error');
+      return;
+    }
+
     setSets(prevSets => {
       const newSets = [...prevSets];
       newSets[currentExerciseIndex] = [
         ...(newSets[currentExerciseIndex] || []),
-        { weight, reps, completedAt: new Date().toISOString() }
+        { weight: Number(weight), reps: Number(reps), completedAt: new Date().toISOString() }
       ];
       return newSets;
     });
+    setWeight('');
+    setReps('');
     addNotification('Set completed!', 'success');
+
+    if (isResting) {
+      const restartTimer = window.confirm("Do you want to restart the rest timer?");
+      if (restartTimer) {
+        startRestTimer();
+      }
+    } else {
+      startRestTimer();
+    }
   };
 
-  const isExerciseComplete = (index) => {
-    return sets[index] && sets[index].length >= 3;
+  const startRestTimer = () => {
+    setIsResting(true);
+    setRemainingRestTime(restTime);
   };
 
   const handleExerciseChange = (newIndex) => {
     setCurrentExerciseIndex(newIndex);
+  };
+
+  const handleNoteChange = (index, value) => {
+    setNotes(prevNotes => {
+      const newNotes = [...prevNotes];
+      newNotes[index] = value;
+      return newNotes;
+    });
   };
 
   const handleFinishWorkout = async () => {
@@ -559,120 +682,178 @@ function WorkoutTracker() {
         sets: sets[index] || [],
         completedAt: sets[index] && sets[index].length > 0 
           ? sets[index][sets[index].length - 1].completedAt 
-          : endTime.toISOString()
+          : endTime.toISOString(),
+        notes: notes[index]
       })),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString()
     };
     
-    console.log('Completed workout:', JSON.stringify(completedWorkout, null, 2));
-    
     try {
       await addWorkout(completedWorkout);
       addNotification('Workout completed and saved!', 'success');
-      localStorage.removeItem('currentPlan');
-      localStorage.removeItem('currentSets');
-      localStorage.removeItem('currentExerciseIndex');
-      localStorage.removeItem('workoutStartTime');
+      clearLocalStorage();
       navigate('/');
     } catch (error) {
       console.error('Error saving workout:', error);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-        console.error('Response headers:', error.response.headers);
-      }
       addNotification('Failed to save workout. Please try again.', 'error');
     }
   };
 
-  const renderCarouselIndicator = () => {
-    if (!currentPlan) return null;
+  const clearLocalStorage = () => {
+    localStorage.removeItem('currentPlan');
+    localStorage.removeItem('currentSets');
+    localStorage.removeItem('currentExerciseIndex');
+    localStorage.removeItem('workoutStartTime');
+    localStorage.removeItem('workoutNotes');
+  };
 
-    return (
-      <div className="flex justify-center items-center space-x-2 my-4">
-        {currentPlan.exercises.map((_, index) => (
-          <div
-            key={index}
-            className={`h-5 w-5 rounded-full cursor-pointer ${
-              index === currentExerciseIndex
-                ? 'bg-blue-500'  // Always blue when it's the current exercise
-                : isExerciseComplete(index)
-                  ? 'bg-green-500'
-                  : 'bg-gray-300'
-            }`}
-            title={`Exercise ${index + 1}: ${currentPlan.exercises[index].name}`}
-            onClick={() => handleExerciseChange(index)}
-          ></div>
-        ))}
-      </div>
-    );
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const calculateProgress = () => {
+    if (!currentPlan) return 0;
+    const totalExercises = currentPlan.exercises.length;
+    const completedExercises = sets.filter(exerciseSets => exerciseSets.length > 0).length;
+    return (completedExercises / totalExercises) * 100;
   };
 
   if (!currentPlan) {
-    return <div>Loading workout plan...</div>;
+    return <div className="text-center mt-8">Loading workout plan...</div>;
   }
 
   const currentExercise = currentPlan.exercises[currentExerciseIndex];
 
   return (
-    <div className="container mx-auto mt-8 relative">
-      <h2 className="text-2xl font-bold mb-4">Workout Tracker</h2>
+    <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
+      <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
       <h3 className="text-xl mb-4">{currentPlan.name}</h3>
       
-      {renderCarouselIndicator()}
-      
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
-        <p className="text-sm text-gray-600 mb-2">Exercise {currentExerciseIndex + 1} of {currentPlan.exercises.length}</p>
-        <div className="flex mb-4">
-          <img 
-            src={currentExercise.imageUrl} 
-            alt={currentExercise.name} 
-            className="w-1/3 h-auto object-cover rounded-lg mr-4"
-          />
-          <div>
-            <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
-            <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
-            <p className="mb-2">
-              <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / 3
-              {isExerciseComplete(currentExerciseIndex) && ' (Complete)'}
-            </p>
-          </div>
-        </div>
-        <div className="mb-4">
-          <input
-            type="number"
-            placeholder="Weight"
-            id="weight"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2 mb-2"
-          />
-          <input
-            type="number"
-            placeholder="Reps"
-            id="reps"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2"
-          />
-        </div>
-        <button
-          onClick={() => {
-            const weight = document.getElementById('weight').value;
-            const reps = document.getElementById('reps').value;
-            if (weight && reps) {
-              handleSetComplete(Number(weight), Number(reps));
-              document.getElementById('weight').value = '';
-              document.getElementById('reps').value = '';
-            } else {
-              addNotification('Please enter both weight and reps', 'error');
-            }
-          }}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-        >
-          Complete Set
-        </button>
+      <div className="mb-4 text-lg">
+        Elapsed Time: {formatTime(elapsedTime)}
       </div>
-      <div className="flex justify-between">
-        <button
+
+      <div className="mb-4">
+        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+          <div className="bg-blue-600 h-2.5 rounded-full" style={{width: `${calculateProgress()}%`}}></div>
+        </div>
+        <p className="text-sm mt-2">Overall Progress: {calculateProgress().toFixed(2)}%</p>
+      </div>
+
+      <div className="mb-4 flex flex-wrap">
+        {currentPlan.exercises.map((exercise, index) => (
+          <button
+            key={exercise._id}
+            onClick={() => handleExerciseChange(index)}
+            className={`mr-2 mb-2 px-3 py-1 rounded ${
+              index === currentExerciseIndex
+                ? 'bg-blue-500 text-white'
+                : sets[index] && sets[index].length > 0
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-300 text-gray-800'
+            }`}
+          >
+            {exercise.name}
+          </button>
+        ))}
+      </div>
+      
+      <TransitionGroup>
+        <CSSTransition
+          key={currentExerciseIndex}
+          nodeRef={nodeRef}
+          timeout={300}
+          classNames="fade"
+        >
+          <div ref={nodeRef} className={`bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Exercise {currentExerciseIndex + 1} of {currentPlan.exercises.length}</p>
+            <div className="flex flex-col md:flex-row mb-4">
+              <img 
+                src={currentExercise.imageUrl} 
+                alt={currentExercise.name} 
+                className="w-full md:w-1/3 h-48 object-cover rounded-lg mr-0 md:mr-4 mb-4 md:mb-0"
+              />
+              <div>
+                <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
+                <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+                <p className="mb-2">
+                  <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length}
+                </p>
+              </div>
+            </div>
+            <div className="mb-4 flex">
+              <input
+                type="number"
+                placeholder="Weight"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
+              />
+              <input
+                type="number"
+                placeholder="Reps"
+                value={reps}
+                onChange={(e) => setReps(e.target.value)}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+            </div>
+            <button
+              onClick={handleSetComplete}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+            >
+              Complete Set
+            </button>
+            {isResting && (
+              <div className="mb-4">
+                <p>Rest Time Remaining: {formatTime(remainingRestTime)}</p>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                  <div 
+                    className="bg-green-600 h-2.5 rounded-full" 
+                    style={{width: `${(remainingRestTime / restTime) * 100}%`}}
+                  ></div>
+                </div>
+                <button
+                  onClick={() => setIsResting(false)}
+                  className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+                >
+                  Skip Rest
+                </button>
+              </div>
+            )}
+            <div className="mb-4">
+              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
+                Rest Time (seconds):
+              </label>
+              <input
+                type="number"
+                id="restTime"
+                value={restTime}
+                onChange={(e) => setRestTime(Number(e.target.value))}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
+                Exercise Notes:
+              </label>
+              <textarea
+                id={`notes-${currentExerciseIndex}`}
+                value={notes[currentExerciseIndex] || ''}
+                onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+        </CSSTransition>
+      </TransitionGroup>
+
+      <div className="flex justify-between"><button
           onClick={() => handleExerciseChange(Math.max(0, currentExerciseIndex - 1))}
           className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
         >
@@ -695,12 +876,42 @@ function WorkoutTracker() {
         )}
       </div>
 
+      {/* Previous Workout Section */}
+      <div className={`mt-8 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
+        <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>Previous Workout Performance</h3>
+        {isPreviousWorkoutLoading ? (
+          <p>Loading previous workout data...</p>
+        ) : previousWorkout ? (
+          <div>
+            <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
+            <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
+            {previousWorkout.exercises.map((exercise, index) => (
+              <div key={index} className="mb-4">
+                <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>{exercise.exercise.name}</h4>
+                <ul className="list-disc pl-5">
+                  {exercise.sets.map((set, setIndex) => (
+                    <li key={setIndex}>
+                      Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
+                    </li>
+                  ))}
+                </ul>
+                {exercise.notes && (
+                  <p className="mt-2 italic">Notes: {exercise.notes}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>No previous workout data available for this plan.</p>
+        )}
+      </div>
+
       {/* Set Log */}
-      <div className="mt-8">
-        <h3 className="text-xl font-semibold mb-4">Set Log</h3>
+      <div className={`mt-8 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
+        <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Current Workout Set Log</h3>
         {currentPlan.exercises.map((exercise, index) => (
           <div key={exercise._id} className="mb-4">
-            <h4 className="text-lg font-medium">{exercise.name}</h4>
+            <h4 className={`text-lg font-medium ${darkMode ? 'text-green-200' : 'text-green-700'}`}>{exercise.name}</h4>
             {sets[index] && sets[index].length > 0 ? (
               <ul className="list-disc pl-5">
                 {sets[index].map((set, setIndex) => (
@@ -712,6 +923,9 @@ function WorkoutTracker() {
             ) : (
               <p>No sets completed yet</p>
             )}
+            {notes[index] && (
+              <p className="mt-2 italic">Notes: {notes[index]}</p>
+            )}
           </div>
         ))}
       </div>
@@ -720,6 +934,33 @@ function WorkoutTracker() {
 }
 
 export default WorkoutTracker;
+```
+
+# src/pages/WorkoutTracker.css
+
+```css
+/* src/pages/WorkoutTracker.css */
+
+.fade-enter {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  
+  .fade-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 300ms, transform 300ms;
+  }
+  
+  .fade-exit {
+    opacity: 1;
+  }
+  
+  .fade-exit-active {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 300ms, transform 300ms;
+  }
 ```
 
 # src/pages/WorkoutSummary.jsx
@@ -882,7 +1123,7 @@ function WorkoutPlans() {
   };
 
   return (
-    <div>
+    <div className="text-gray-900 dark:text-gray-100">
       <h1 className="text-3xl font-bold mb-4">Workout Plans</h1>
       {ongoingWorkout && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
@@ -966,7 +1207,7 @@ export default WorkoutPlans;
 // src/pages/Home.jsx
 function Home() {
   return (
-    <div className="container mx-auto px-4">
+    <div className="text-gray-900 dark:text-gray-100">
       <h1 className="text-3xl font-bold text-center my-8">Welcome to Your Gym App</h1>
       <p className="text-center">This is where your fitness journey begins!</p>
     </div>
@@ -985,6 +1226,7 @@ import React, { useState, useEffect } from 'react';
 import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
 import WorkoutPlanSelector from '../components/WorkoutPlanSelector';
+import ExerciseModal from '../components/ExerciseModal';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 
@@ -994,6 +1236,7 @@ function ExerciseLibrary() {
   const [editingExercise, setEditingExercise] = useState(null);
   const [showWorkoutPlanSelector, setShowWorkoutPlanSelector] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
+  const [exerciseToAddToPlan, setExerciseToAddToPlan] = useState(null);
   const [filterText, setFilterText] = useState('');
   const [filteredExercises, setFilteredExercises] = useState(exercises);
 
@@ -1002,39 +1245,38 @@ function ExerciseLibrary() {
     const filtered = exercises.filter(exercise => 
       exercise.name.toLowerCase().includes(lowercasedFilter) ||
       exercise.description.toLowerCase().includes(lowercasedFilter) ||
-      exercise.target.toLowerCase().includes(lowercasedFilter)
+      (Array.isArray(exercise.target) && exercise.target.some(t => t.toLowerCase().includes(lowercasedFilter)))
     );
     setFilteredExercises(filtered);
   }, [filterText, exercises]);
 
   const handleEdit = (exercise) => {
     setEditingExercise(exercise);
+    setSelectedExercise(null);
   };
 
-  const handleDelete = (id) => {
-    deleteExercise(id);
+  const handleDelete = (exercise) => {
+    deleteExercise(exercise._id);
+    setSelectedExercise(null);
+  };
+
+  const handleAddToPlan = (exercise) => {
+    setExerciseToAddToPlan(exercise);
+    setShowWorkoutPlanSelector(true);
   };
 
   const handleSave = (savedExercise) => {
     setEditingExercise(null);
-  };
-
-  const handleAddToPlan = (exercise) => {
-    setSelectedExercise(exercise);
-    setShowWorkoutPlanSelector(true);
+    // Optionally, you can refresh the exercise list here
   };
 
   const handleSelectWorkoutPlan = async (plan) => {
-    if (!selectedExercise || !selectedExercise._id) {
+    if (!exerciseToAddToPlan || !exerciseToAddToPlan._id) {
       addNotification('No exercise selected', 'error');
       return;
     }
     
-    console.log('Selected exercise:', selectedExercise);
-    console.log('Selected plan:', plan);
-    console.log(`Attempting to add exercise ${selectedExercise._id} to plan ${plan._id}`);
-    
-    const result = await addExerciseToPlan(plan._id, selectedExercise._id);
+    const result = await addExerciseToPlan(plan._id, exerciseToAddToPlan._id);
     
     if (result.success) {
       addNotification(`Exercise added to ${plan.name}`, 'success');
@@ -1045,37 +1287,58 @@ function ExerciseLibrary() {
     }
     
     setShowWorkoutPlanSelector(false);
-    setSelectedExercise(null);
+    setExerciseToAddToPlan(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingExercise(null);
   };
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-4">Exercise Library</h1>
-      <div className="mb-4">
+    <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8">
+      <h1 className="text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise Library</h1>
+      <div className="mb-6 lg:mb-8">
         <input
           type="text"
           placeholder="Filter exercises..."
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          className="w-full px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
         />
       </div>
-      <AddExerciseForm onSave={handleSave} initialExercise={editingExercise} />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <AddExerciseForm 
+        onSave={handleSave} 
+        initialExercise={editingExercise}
+        onCancel={handleCancelEdit}
+      />
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {filteredExercises.map((exercise) => (
           <ExerciseItem 
             key={exercise._id} 
             exercise={exercise}
-            onEdit={() => handleEdit(exercise)}
-            onDelete={() => handleDelete(exercise._id)}
-            onAddToPlan={() => handleAddToPlan(exercise)}
+            onClick={() => setSelectedExercise(exercise)}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onAddToPlan={handleAddToPlan}
           />
         ))}
       </div>
+      {selectedExercise && (
+        <ExerciseModal
+          exercise={selectedExercise}
+          onClose={() => setSelectedExercise(null)}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onAddToPlan={handleAddToPlan}
+        />
+      )}
       {showWorkoutPlanSelector && (
         <WorkoutPlanSelector
           onSelect={handleSelectWorkoutPlan}
-          onClose={() => setShowWorkoutPlanSelector(false)}
+          onClose={() => {
+            setShowWorkoutPlanSelector(false);
+            setExerciseToAddToPlan(null);
+          }}
         />
       )}
     </div>
@@ -1085,34 +1348,76 @@ function ExerciseLibrary() {
 export default ExerciseLibrary;
 ```
 
+# src/context/ThemeContext.jsx
+
+```jsx
+// src/context/ThemeContext.jsx
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+const ThemeContext = createContext();
+
+export const useTheme = () => useContext(ThemeContext);
+
+export const ThemeProvider = ({ children }) => {
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(isDarkMode);
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode);
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  return (
+    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+```
+
 # src/context/NotificationContext.jsx
 
 ```jsx
 // src/context/NotificationContext.jsx
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const NotificationContext = createContext();
 
-export function useNotification() {
-  return useContext(NotificationContext);
-}
+export const useNotification = () => useContext(NotificationContext);
 
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
 
-  const addNotification = (message, type = 'info', duration = 5000) => {
-    const id = Date.now() + Math.random(); // This should create a unique ID
+  const addNotification = useCallback((message, type = 'info', duration = 5000) => {
+    const id = Date.now() + Math.random();
     setNotifications(prev => [...prev, { id, message, type }]);
     setTimeout(() => removeNotification(id), duration);
-  };
+  }, []);
 
-  const removeNotification = (id) => {
+  const removeNotification = useCallback((id) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
-  };
+  }, []);
+
+  const contextValue = React.useMemo(() => ({
+    notifications,
+    addNotification,
+    removeNotification
+  }), [notifications, addNotification, removeNotification]);
 
   return (
-    <NotificationContext.Provider value={{ notifications, addNotification, removeNotification }}>
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );
@@ -1124,7 +1429,7 @@ export function NotificationProvider({ children }) {
 ```jsx
 // src/context/GymContext.jsx
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
@@ -1194,7 +1499,6 @@ export function GymProvider({ children }) {
       addNotification('Failed to fetch exercises', 'error');
     }
   }, [API_URL, getAuthConfig, addNotification]);
-  
 
   // Fetch workout plans
   const fetchWorkoutPlans = useCallback(async () => {
@@ -1230,7 +1534,7 @@ export function GymProvider({ children }) {
     }
   }, [user, fetchWorkoutHistory, fetchExercises, fetchWorkoutPlans]);
 
-  // Add a workout
+  // Add a workout (updated to include notes)
   const addWorkout = async (workout) => {
     try {
       console.log('Sending workout data:', JSON.stringify(workout, null, 2));
@@ -1350,7 +1654,6 @@ export function GymProvider({ children }) {
   // Add a workout plan
   const addWorkoutPlan = async (plan) => {
     try {
-      // Ensure the plan object doesn't include full exercise objects
       const planToSend = {
         ...plan,
         exercises: plan.exercises.map(exercise => 
@@ -1360,7 +1663,6 @@ export function GymProvider({ children }) {
 
       const response = await axios.post(`${API_URL}/workoutplans`, planToSend, getAuthConfig());
       
-      // If the response doesn't include full exercise details, populate them here
       const fullPlan = {
         ...response.data,
         exercises: await Promise.all(response.data.exercises.map(async (exerciseId) => {
@@ -1370,10 +1672,10 @@ export function GymProvider({ children }) {
               return exerciseResponse.data;
             } catch (error) {
               console.error(`Error fetching exercise ${exerciseId}:`, error);
-              return null; // or some placeholder data
+              return null;
             }
           }
-          return exerciseId; // if it's already a full exercise object
+          return exerciseId;
         }))
       };
 
@@ -1391,7 +1693,6 @@ export function GymProvider({ children }) {
   const updateWorkoutPlan = async (id, updatedPlan) => {
     try {
       if (!id) {
-        // If there's no id, it's a new plan
         return addWorkoutPlan(updatedPlan);
       }
       const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
@@ -1436,7 +1737,6 @@ export function GymProvider({ children }) {
     }
     console.log(`Attempting to add exercise ${exerciseId} to plan ${planId}`);
     
-    // Find the plan
     const plan = workoutPlans.find(p => p._id === planId);
     if (!plan) {
       console.error('Plan not found');
@@ -1444,7 +1744,6 @@ export function GymProvider({ children }) {
       return { success: false, error: 'Plan not found' };
     }
 
-    // Check if the exercise is already in the plan
     if (plan.exercises.some(e => e._id === exerciseId)) {
       console.log('Exercise is already in the workout plan');
       addNotification('This exercise is already in the workout plan', 'info');
@@ -1473,25 +1772,45 @@ export function GymProvider({ children }) {
     }
   };
 
+  // Get the last workout for a given plan
+const getLastWorkoutByPlan = useCallback(async (planId) => {
+  try {
+    const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      // No previous workout found, this is not an error
+      console.log('No previous workout found for this plan');
+      return null;
+    }
+    console.error('Error fetching last workout:', error);
+    addNotification('Failed to fetch last workout', 'error');
+    return null;
+  }
+}, [API_URL, getAuthConfig, addNotification]);
+
+  const contextValue = useMemo(() => ({
+    workouts,
+    exercises,
+    workoutPlans,
+    workoutHistory,
+    addWorkout,
+    updateWorkout,
+    deleteWorkout,
+    addExercise,
+    updateExercise,
+    deleteExercise,
+    addWorkoutPlan,
+    updateWorkoutPlan,
+    deleteWorkoutPlan,
+    fetchWorkoutHistory,
+    fetchWorkoutPlans,
+    addExerciseToPlan,
+    getLastWorkoutByPlan
+  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan]);
+
   return (
-    <GymContext.Provider value={{
-      workouts,
-      exercises,
-      workoutPlans,
-      workoutHistory,
-      addWorkout,
-      updateWorkout,
-      deleteWorkout,
-      addExercise,
-      updateExercise,
-      deleteExercise,
-      addWorkoutPlan,
-      updateWorkoutPlan,
-      deleteWorkoutPlan,
-      fetchWorkoutHistory,
-      fetchWorkoutPlans,
-      addExerciseToPlan
-    }}>
+    <GymContext.Provider value={contextValue}>
       {children}
     </GymContext.Provider>
   );
@@ -1582,6 +1901,10 @@ export function AuthProvider({ children }) {
 }
 ```
 
+# src/assets/react.svg
+
+This is a file of the type: SVG Image
+
 # src/components/WorkoutPlanSelector.jsx
 
 ```jsx
@@ -1620,17 +1943,17 @@ function WorkoutPlanSelector({ onSelect, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-      <div className="bg-white p-5 rounded-lg shadow-xl max-w-md w-full">
-        <h2 className="text-xl font-bold mb-4">Select Workout Plan</h2>
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-[60]">
+      <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-xl max-w-md w-full m-4">
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Select Workout Plan</h2>
         {workoutPlans.length === 0 ? (
-          <p>No workout plans available. Create a plan first.</p>
+          <p className="text-gray-700 dark:text-gray-300">No workout plans available. Create a plan first.</p>
         ) : (
           workoutPlans.map((plan) => (
             <button
               key={plan._id}
               onClick={() => handleSelect(plan)}
-              className="block w-full text-left p-2 hover:bg-gray-100 rounded mb-2"
+              className="block w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mb-2 text-gray-800 dark:text-gray-200"
             >
               {plan.name}
             </button>
@@ -1656,30 +1979,33 @@ export default WorkoutPlanSelector;
 // src/components/WorkoutPlanModal.jsx
 
 import React from 'react';
+import { useTheme } from '../context/ThemeContext'; // Import the useTheme hook
 
 function WorkoutPlanModal({ plan, onClose }) {
+  const { darkMode } = useTheme(); // Use the useTheme hook to get the current theme
+
   if (!plan) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="my-modal">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div className="mt-3 text-center">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">{plan.name}</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50" id="my-modal">
+      <div className={`relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+        <div className="mt-3">
+          <h3 className="text-lg leading-6 font-medium">{plan.name}</h3>
           <div className="mt-2 px-7 py-3">
-            <p className="text-sm text-gray-500">
+            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
               Type: {plan.type || 'Not specified'}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
               Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleString() : 'Not scheduled'}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
               Status: {plan.completed ? 'Completed' : 'Scheduled'}
             </p>
             <div className="mt-4">
-              <h4 className="text-md font-medium text-gray-900">Exercises:</h4>
+              <h4 className="text-md font-medium">Exercises:</h4>
               <ul className="list-disc list-inside">
                 {plan.exercises.map((exercise, index) => (
-                  <li key={index} className="text-sm text-gray-500">{exercise.name}</li>
+                  <li key={index} className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>{exercise.name}</li>
                 ))}
               </ul>
             </div>
@@ -1687,7 +2013,7 @@ function WorkoutPlanModal({ plan, onClose }) {
           <div className="items-center px-4 py-3">
             <button
               id="ok-btn"
-              className="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className={`px-4 py-2 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white text-base font-medium rounded-md w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300`}
               onClick={onClose}
             >
               Close
@@ -2041,17 +2367,19 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useGymContext } from '../context/GymContext';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
 import WorkoutPlanModal from './WorkoutPlanModal';
+import './WorkoutCalendar.css';
 
 const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop(Calendar);
 
 const workoutColors = {
-  strength: '#FF6B6B',
-  cardio: '#4ECDC4',
-  flexibility: '#45B7D1',
-  default: '#FFA07A',
-  completed: '#A9A9A9'
+  strength: '#4CAF50',
+  cardio: '#2196F3',
+  flexibility: '#FF9800',
+  default: '#9C27B0',
+  completed: '#607D8B'
 };
 
 function WorkoutCalendar() {
@@ -2060,6 +2388,7 @@ function WorkoutCalendar() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+  const { darkMode } = useTheme();
 
   const getEventColor = useCallback((event) => {
     if (event.resource === 'history' || event.resource === 'completed') {
@@ -2155,30 +2484,51 @@ function WorkoutCalendar() {
     return {
       style: {
         backgroundColor,
+        borderRadius: '5px',
         opacity: event.resource === 'history' || event.resource === 'completed' ? 0.7 : 1,
+        color: '#fff',
+        border: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '14px',
+        fontWeight: '500',
         cursor: event.resource === 'history' || event.resource === 'completed' ? 'not-allowed' : 'pointer'
       }
     };
   }, [getEventColor]);
 
   return (
-    <div className="h-screen p-4">
-      <h2 className="text-2xl font-bold mb-4">Workout Calendar</h2>
-      <DnDCalendar
-        localizer={localizer}
-        events={events}
-        startAccessor="start"
-        endAccessor="end"
-        style={{ height: 'calc(100% - 80px)' }}
-        onSelectSlot={handleSelectSlot}
-        onSelectEvent={handleSelectEvent}
-        onEventDrop={moveEvent}
-        onEventResize={resizeEvent}
-        selectable
-        resizable
-        eventPropGetter={eventPropGetter}
-        draggableAccessor={(event) => event.resource !== 'history' && event.resource !== 'completed'}
-      />
+    <div className={`h-screen p-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+      <h2 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Workout Calendar</h2>
+      <div className={`${darkMode ? 'bg-gray-700' : 'bg-white'} rounded-lg shadow-lg p-4`} style={{ height: 'calc(100% - 80px)' }}>
+        <DnDCalendar
+          localizer={localizer}
+          events={events}
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: '100%' }}
+          onSelectSlot={handleSelectSlot}
+          onSelectEvent={handleSelectEvent}
+          onEventDrop={moveEvent}
+          onEventResize={resizeEvent}
+          selectable
+          resizable
+          eventPropGetter={eventPropGetter}
+          draggableAccessor={(event) => event.resource !== 'history' && event.resource !== 'completed'}
+          views={['month', 'week', 'day']}
+          defaultView="month"
+          formats={{
+            monthHeaderFormat: (date, culture, localizer) =>
+              localizer.format(date, 'MMMM YYYY', culture),
+            dayHeaderFormat: (date, culture, localizer) =>
+              localizer.format(date, 'dddd, MMMM D', culture),
+          }}
+          components={{
+            toolbar: CustomToolbar,
+          }}
+        />
+      </div>
       {selectedPlan && (
         <WorkoutPlanModal
           plan={selectedPlan}
@@ -2189,7 +2539,146 @@ function WorkoutCalendar() {
   );
 }
 
+const CustomToolbar = (toolbar) => {
+  const goToBack = () => {
+    toolbar.date.setMonth(toolbar.date.getMonth() - 1);
+    toolbar.onNavigate('prev');
+  };
+
+  const goToNext = () => {
+    toolbar.date.setMonth(toolbar.date.getMonth() + 1);
+    toolbar.onNavigate('next');
+  };
+
+  const goToCurrent = () => {
+    const now = new Date();
+    toolbar.date.setMonth(now.getMonth());
+    toolbar.date.setYear(now.getFullYear());
+    toolbar.onNavigate('current');
+  };
+
+  const label = () => {
+    const date = moment(toolbar.date);
+    return (
+      <span className="text-lg font-semibold">{date.format('MMMM YYYY')}</span>
+    );
+  };
+
+  return (
+    <div className="flex justify-between items-center mb-4">
+      <div>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
+          onClick={goToBack}
+        >
+          &lt;
+        </button>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          onClick={goToNext}
+        >
+          &gt;
+        </button>
+      </div>
+      <div>{label()}</div>
+      <button
+        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        onClick={goToCurrent}
+      >
+        Today
+      </button>
+    </div>
+  );
+};
+
 export default WorkoutCalendar;
+```
+
+# src/components/WorkoutCalendar.css
+
+```css
+/* src/components/WorkoutCalendar.css */
+
+.rbc-calendar {
+  font-family: 'Arial', sans-serif;
+}
+
+.rbc-header {
+  padding: 10px 3px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.rbc-button-link {
+  color: #333;
+}
+
+.rbc-off-range-bg {
+  background-color: #f0f0f0;
+}
+
+.rbc-today {
+  background-color: #e6f7ff;
+}
+
+.rbc-event {
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rbc-event-content {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.rbc-toolbar button {
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px 10px;
+}
+
+.rbc-toolbar button:hover {
+  background-color: #f0f0f0;
+}
+
+.rbc-toolbar button:active,
+.rbc-toolbar button.rbc-active {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+/* Dark mode styles */
+.dark .rbc-calendar {
+  color: #fff;
+}
+
+.dark .rbc-off-range-bg {
+  background-color: #2a2a2a;
+}
+
+.dark .rbc-today {
+  background-color: #1a3a4a;
+}
+
+.dark .rbc-button-link {
+  color: #fff;
+}
+
+.dark .rbc-toolbar button {
+  color: #fff;
+  border-color: #666;
+}
+
+.dark .rbc-toolbar button:hover {
+  background-color: #444;
+}
+
+.dark .rbc-toolbar button:active,
+.dark .rbc-toolbar button.rbc-active {
+  background-color: #555;
+  border-color: #888;
+}
 ```
 
 # src/components/Register.jsx
@@ -2435,62 +2924,131 @@ export default IndividualWorkoutSummary;
 ```jsx
 // src/components/Header.jsx
 
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 function Header() {
   const { user, logout } = useAuth();
+  const { darkMode, toggleDarkMode } = useTheme();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
-    // You might want to redirect to the login page after logout
-    // If you're using react-router-dom v6, you can use the useNavigate hook for this
+    setIsMenuOpen(false);
   };
 
+  const menuItems = [
+    { to: "/dashboard", text: "Dashboard" },
+    { to: "/calendar", text: "Calendar" },
+    { to: "/tracker", text: "Workout Tracker" },
+    { to: "/exercises", text: "Exercise Library" },
+    { to: "/plans", text: "Workout Plans" },
+    { to: "/workout-summary", text: "Workout History" },
+  ];
+
+  const MenuItem = ({ to, text, onClick }) => (
+    <Link 
+      to={to} 
+      className="block py-2 px-4 text-sm hover:bg-gray-700 text-gray-300 hover:text-white"
+      onClick={() => {
+        setIsMenuOpen(false);
+        onClick && onClick();
+      }}
+    >
+      {text}
+    </Link>
+  );
+
+  const AuthButton = ({ to, text }) => (
+    <Link 
+      to={to} 
+      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
+    >
+      {text}
+    </Link>
+  );
+
   return (
-    <header className="bg-blue-600 text-white p-4">
-      <nav className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold">Gym App</Link>
-        <ul className="flex space-x-4 items-center">
-          {user ? (
-            <>
-              <li><Link to="/dashboard">Dashboard</Link></li>
-              <li><Link to="/calendar">Calendar</Link></li>
-              <li><Link to="/tracker">Workout Tracker</Link></li>
-              <li><Link to="/exercises">Exercise Library</Link></li>
-              <li><Link to="/plans">Workout Plans</Link></li>
-              <li><Link to="/workout-summary">Workout History</Link></li>
-              <li>
+    <header className="bg-gray-800 text-white">
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex justify-between items-center">
+          <Link to="/" className="text-2xl font-heading font-bold">Gym App</Link>
+          
+          {/* Desktop Menu */}
+          <div className="hidden md:flex space-x-4 items-center">
+            {user ? (
+              <>
+                {menuItems.map((item) => (
+                  <MenuItem key={item.to} to={item.to} text={item.text} />
+                ))}
                 <button 
                   onClick={handleLogout}
-                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
                 >
                   Logout
                 </button>
-              </li>
-            </>
-          ) : (
-            <>
-              <li>
-                <Link 
-                  to="/login"
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                >
-                  Login
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/register"
-                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                >
-                  Register
-                </Link>
-              </li>
-            </>
-          )}
-        </ul>
-      </nav>
+              </>
+            ) : (
+              <>
+                <AuthButton to="/login" text="Login" />
+                <AuthButton to="/register" text="Register" />
+              </>
+            )}
+            <button 
+              onClick={toggleDarkMode}
+              className="ml-4 p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition duration-300 ease-in-out"
+            >
+              {darkMode ? '🌞' : '🌙'}
+            </button>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button 
+            className="md:hidden text-white focus:outline-none"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? (
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden mt-4 bg-gray-700 rounded-lg shadow-lg">
+            {user ? (
+              <>
+                {menuItems.map((item) => (
+                  <MenuItem key={item.to} to={item.to} text={item.text} />
+                ))}
+                <MenuItem to="/" text="Logout" onClick={handleLogout} />
+              </>
+            ) : (
+              <>
+                <AuthButton to="/login" text="Login" />
+                <AuthButton to="/register" text="Register" />
+              </>
+            )}
+            <button 
+              onClick={() => {
+                toggleDarkMode();
+                setIsMenuOpen(false);
+              }}
+              className="block w-full text-left py-2 px-4 text-sm hover:bg-gray-600 text-gray-300 hover:text-white"
+            >
+              {darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            </button>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
@@ -2515,6 +3073,98 @@ function Footer() {
 export default Footer;
 ```
 
+# src/components/ExerciseModal.jsx
+
+```jsx
+// src/components/ExerciseModal.jsx
+
+import React, { useEffect, useCallback } from 'react';
+
+function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
+  const handleEscapeKey = useCallback((event) => {
+    if (event.key === 'Escape') {
+      onClose();
+    }
+  }, [onClose]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [handleEscapeKey]);
+
+  const handleOverlayClick = (event) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
+
+  if (!exercise) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50"
+      onClick={handleOverlayClick}
+    >
+      <div 
+        className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-4 p-6 lg:p-8 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <div className="flex-grow overflow-y-auto">
+          <div className="flex flex-col lg:flex-row">
+            <div className="lg:w-1/2 pr-0 lg:pr-8 mb-6 lg:mb-0">
+              <img 
+                src={exercise.imageUrl} 
+                alt={exercise.name} 
+                className="w-full h-64 md:h-96 lg:h-[500px] object-cover rounded-lg"
+              />
+            </div>
+            <div className="lg:w-1/2 pl-0 lg:pl-8">
+              <h3 className="text-3xl lg:text-4xl font-bold mb-6 text-gray-900 dark:text-gray-100">{exercise.name}</h3>
+              <p className="text-gray-700 dark:text-gray-300 mb-6 text-lg lg:text-xl">{exercise.description}</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg lg:text-xl">
+                Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end space-x-4 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button 
+            onClick={() => onEdit(exercise)}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm"
+          >
+            Edit
+          </button>
+          <button 
+            onClick={() => onDelete(exercise)}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm"
+          >
+            Delete
+          </button>
+          <button 
+            onClick={() => onAddToPlan(exercise)}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm"
+          >
+            Add to Plan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ExerciseModal;
+```
+
 # src/components/ExerciseItem.jsx
 
 ```jsx
@@ -2522,36 +3172,44 @@ export default Footer;
 
 import React from 'react';
 
-function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan }) {
+function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
+  const handleAction = (action, e) => {
+    e.stopPropagation();
+    action(exercise);
+  };
+
   return (
-    <div className="bg-white shadow-md rounded-lg overflow-hidden">
+    <div 
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer"
+      onClick={() => onClick(exercise)}
+    >
       <img 
         src={exercise.imageUrl} 
         alt={exercise.name} 
         className="w-full h-48 object-cover"
       />
       <div className="p-4">
-        <h3 className="font-bold text-xl mb-2">{exercise.name}</h3>
-        <p className="text-gray-700 text-base mb-2">{exercise.description}</p>
-        <p className="text-gray-600 text-sm mb-4">
+        <h3 className="font-heading text-xl font-bold mb-2 text-primary dark:text-blue-400">{exercise.name}</h3>
+        <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">{exercise.description}</p>
+        <p className="text-accent dark:text-yellow-300 text-xs mb-4">
           Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
         </p>
-        <div className="flex justify-between">
+        <div className="flex justify-between mt-4">
           <button 
-            onClick={() => onEdit(exercise)} 
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            onClick={(e) => handleAction(onEdit, e)}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs"
           >
             Edit
           </button>
           <button 
-            onClick={() => onDelete(exercise._id)} 
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            onClick={(e) => handleAction(onDelete, e)}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-xs"
           >
             Delete
           </button>
           <button 
-            onClick={() => onAddToPlan(exercise)} 
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+            onClick={(e) => handleAction(onAddToPlan, e)}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-xs"
           >
             Add to Plan
           </button>
@@ -2571,7 +3229,7 @@ export default ExerciseItem;
 
 import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 
 function Dashboard() {
   const { workoutHistory } = useGymContext();
@@ -2579,6 +3237,7 @@ function Dashboard() {
   const [averageWorkoutDuration, setAverageWorkoutDuration] = useState(0);
   const [workoutFrequencyData, setWorkoutFrequencyData] = useState([]);
   const [exerciseFrequencyData, setExerciseFrequencyData] = useState([]);
+  const [workoutTypeData, setWorkoutTypeData] = useState([]);
 
   useEffect(() => {
     if (workoutHistory.length > 0) {
@@ -2615,54 +3274,82 @@ function Dashboard() {
         .slice(0, 10); // Top 10 exercises
       setExerciseFrequencyData(exerciseData);
     }
+
+      // Calculate workout types
+    const typeCount = {};
+    workoutHistory.forEach(workout => {
+      const type = workout.plan ? workout.plan.type : 'other';
+      typeCount[type] = (typeCount[type] || 0) + 1;
+    });
+    const typeData = Object.entries(typeCount).map(([name, value]) => ({ name, value }));
+    setWorkoutTypeData(typeData);
+
   }, [workoutHistory]);
 
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Workout Dashboard</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="text-lg font-semibold mb-2">Total Workouts</h3>
-          <p className="text-3xl font-bold">{totalWorkouts}</p>
+    <div className="p-4 bg-background">
+      <h2 className="text-3xl font-heading font-bold mb-6 text-primary">Workout Dashboard</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-white p-4 rounded-lg shadow-md">
+          <h3 className="text-xl font-semibold mb-2 text-text">Total Workouts</h3>
+          <p className="text-4xl font-bold text-primary">{totalWorkouts}</p>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="text-lg font-semibold mb-2">Average Workout Duration</h3>
-          <p className="text-3xl font-bold">{averageWorkoutDuration.toFixed(1)} minutes</p>
+        <div className="bg-white p-4 rounded-lg shadow-md">
+          <h3 className="text-xl font-semibold mb-2 text-text">Average Workout Duration</h3>
+          <p className="text-4xl font-bold text-primary">{averageWorkoutDuration.toFixed(1)} minutes</p>
         </div>
-        </div>
+      </div>
       <div className="mb-8">
-        <h3 className="text-xl font-semibold mb-4">Workout Frequency</h3>
+        <h3 className="text-2xl font-semibold mb-4 text-text">Workout Frequency</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={workoutFrequencyData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
-            <YAxis 
-              allowDecimals={false}
-              domain={[0, 'dataMax + 1']}
-              tickCount={5}
-            />
+            <YAxis allowDecimals={false} domain={[0, 'dataMax + 1']} />
             <Tooltip />
             <Legend />
             <Line type="monotone" dataKey="count" stroke="#8884d8" activeDot={{ r: 8 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div>
-        <h3 className="text-xl font-semibold mb-4">Top 10 Exercises</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={exerciseFrequencyData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis 
-              allowDecimals={false}
-              domain={[0, 'dataMax + 1']}
-              tickCount={5}
-            />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="count" fill="#82ca9d" />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h3 className="text-2xl font-semibold mb-4 text-text">Top 10 Exercises</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={exerciseFrequencyData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#82ca9d" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div>
+          <h3 className="text-2xl font-semibold mb-4 text-text">Workout Types</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={workoutTypeData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {workoutTypeData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
@@ -2684,12 +3371,13 @@ const muscleGroups = [
   'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'
 ];
 
-function AddExerciseForm({ onSave, initialExercise }) {
+function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState([]);
   const [imageUrl, setImageUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const { addExercise, updateExercise } = useGymContext();
   const { addNotification } = useNotification();
 
@@ -2699,6 +3387,7 @@ function AddExerciseForm({ onSave, initialExercise }) {
       setDescription(initialExercise.description);
       setTarget(Array.isArray(initialExercise.target) ? initialExercise.target : [initialExercise.target]);
       setImageUrl(initialExercise.imageUrl);
+      setIsExpanded(true);
     } else {
       setName('');
       setDescription('');
@@ -2721,12 +3410,11 @@ function AddExerciseForm({ onSave, initialExercise }) {
         savedExercise = await addExercise(exercise);
         addNotification('Exercise added successfully', 'success');
       }
-      // Reset form
       setName('');
       setDescription('');
       setTarget([]);
       setImageUrl('');
-      // Call onSave with the saved exercise from the server
+      setIsExpanded(false);
       onSave(savedExercise);
     } catch (error) {
       addNotification('Failed to save exercise', 'error');
@@ -2743,89 +3431,123 @@ function AddExerciseForm({ onSave, initialExercise }) {
     );
   };
 
+  const handleCancel = () => {
+    setName('');
+    setDescription('');
+    setTarget([]);
+    setImageUrl('');
+    setIsExpanded(false);
+    if (typeof onCancel === 'function') {
+      onCancel();
+    }
+  };
+
+  const toggleForm = () => {
+    setIsExpanded(!isExpanded);
+    if (!isExpanded) {
+      setName('');
+      setDescription('');
+      setTarget([]);
+      setImageUrl('');
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-      <h2 className="text-2xl font-bold mb-4">
-        {initialExercise ? 'Edit Exercise' : 'Add New Exercise'}
-      </h2>
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
-          Exercise Name
-        </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="name"
-          type="text"
-          placeholder="Exercise Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
-          Description
-        </label>
-        <textarea
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="description"
-          placeholder="Exercise Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
-          Target Muscle Groups
-        </label>
-        <div className="flex flex-wrap -mx-1">
-          {muscleGroups.map(group => (
-            <div key={group} className="px-1 mb-2">
-              <button
-                type="button"
-                onClick={() => handleTargetChange(group)}
-                className={`py-1 px-2 rounded ${
-                  target.includes(group)
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                {group}
-              </button>
+    <div className="mb-8">
+      <button
+        onClick={toggleForm}
+        className="mb-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+      >
+        {isExpanded ? 'Hide Form' : 'Add New Exercise'}
+      </button>
+      {isExpanded && (
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
+            {initialExercise ? 'Edit Exercise' : 'Add New Exercise'}
+          </h2>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="name">
+              Exercise Name
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+              id="name"
+              type="text"
+              placeholder="Exercise Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="description">
+              Description
+            </label>
+            <textarea
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+              id="description"
+              placeholder="Exercise Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
+              Target Muscle Groups
+            </label>
+            <div className="flex flex-wrap -mx-1">
+              {muscleGroups.map(group => (
+                <div key={group} className="px-1 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => handleTargetChange(group)}
+                    className={`py-1 px-2 rounded ${
+                      target.includes(group)
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
+                    }`}
+                  >
+                    {group}
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imageUrl">
-          Image URL
-        </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="imageUrl"
-          type="text"
-          placeholder="Image URL"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          type="submit"
-        >
-          {initialExercise ? 'Update Exercise' : 'Add Exercise'}
-        </button>
-      </div>
-    </form>
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="imageUrl">
+              Image URL
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+              id="imageUrl"
+              type="text"
+              placeholder="Image URL"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <button
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              type="submit"
+            >
+              {initialExercise ? 'Update Exercise' : 'Add Exercise'}
+            </button>
+            <button
+              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              type="button"
+              onClick={handleCancel}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }
 
 export default AddExerciseForm;
 ```
-
-# src/assets/react.svg
-
-This is a file of the type: SVG Image
 
