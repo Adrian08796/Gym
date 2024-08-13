@@ -25,6 +25,9 @@ function WorkoutTracker() {
   const [totalPauseTime, setTotalPauseTime] = useState(0);
   const [skippedPauses, setSkippedPauses] = useState(0);
   const [progression, setProgression] = useState(0);
+  const [lastSetValues, setLastSetValues] = useState({});
+  const [requiredSets, setRequiredSets] = useState({});
+
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
@@ -37,12 +40,20 @@ function WorkoutTracker() {
     const storedIndex = localStorage.getItem('currentExerciseIndex');
     const storedStartTime = localStorage.getItem('workoutStartTime');
     const storedNotes = localStorage.getItem('workoutNotes');
+    const storedLastSetValues = localStorage.getItem('lastSetValues');
 
     if (storedPlan) {
       try {
         const parsedPlan = JSON.parse(storedPlan);
         setCurrentPlan(parsedPlan);
         
+        // Initialize requiredSets based on the plan
+        const initialRequiredSets = {};
+        parsedPlan.exercises.forEach(exercise => {
+          initialRequiredSets[exercise._id] = exercise.requiredSets || 3; // Default to 3 if not specified
+        });
+        setRequiredSets(initialRequiredSets);
+
         if (storedSets) {
           setSets(JSON.parse(storedSets));
         } else {
@@ -66,6 +77,10 @@ function WorkoutTracker() {
         } else {
           setNotes(parsedPlan.exercises.map(() => ''));
         }
+
+        if (storedLastSetValues) {
+          setLastSetValues(JSON.parse(storedLastSetValues));
+        }
       } catch (error) {
         console.error('Error parsing stored data:', error);
         clearLocalStorage();
@@ -88,7 +103,6 @@ function WorkoutTracker() {
             lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
           }
           if (!lastWorkout) {
-            // If no workout found for the current plan ID, search by exercise IDs
             lastWorkout = workoutHistory.find(workout => 
               workout.exercises.some(ex => 
                 currentPlan.exercises.some(planEx => 
@@ -121,10 +135,11 @@ function WorkoutTracker() {
       }
       localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
       localStorage.setItem('workoutNotes', JSON.stringify(notes));
+      localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
     };
 
     saveDataToLocalStorage();
-  }, [currentPlan, sets, currentExerciseIndex, notes]);
+  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
 
   useEffect(() => {
     let timer;
@@ -168,8 +183,13 @@ function WorkoutTracker() {
       ];
       return newSets;
     });
-    setWeight('');
-    setReps('');
+
+    // Store the last set values for the current exercise only
+    setLastSetValues(prev => ({
+      ...prev,
+      [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
+    }));
+
     addNotification('Set completed!', 'success');
 
     // Always start a new rest timer after completing a set
@@ -192,7 +212,9 @@ function WorkoutTracker() {
 
   const updateProgression = () => {
     const totalExercises = currentPlan.exercises.length;
-    const completedExercises = sets.filter(exerciseSets => exerciseSets.length > 0).length;
+    const completedExercises = currentPlan.exercises.filter((exercise, index) => 
+      isExerciseComplete(exercise._id, sets[index] || [])
+    ).length;
     const newProgression = (completedExercises / totalExercises) * 100;
     setProgression(newProgression);
   };
@@ -236,6 +258,7 @@ function WorkoutTracker() {
       setNotes([]);
       setStartTime(null);
       setElapsedTime(0);
+      setLastSetValues({});
       addNotification('Workout cancelled', 'info');
     }
   };
@@ -246,6 +269,7 @@ function WorkoutTracker() {
     localStorage.removeItem('currentExerciseIndex');
     localStorage.removeItem('workoutStartTime');
     localStorage.removeItem('workoutNotes');
+    localStorage.removeItem('lastSetValues');
   };
 
   const formatTime = (seconds) => {
@@ -255,10 +279,16 @@ function WorkoutTracker() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const isExerciseComplete = (exerciseId, exerciseSets) => {
+    return exerciseSets.length >= requiredSets[exerciseId];
+  };
+
   const calculateProgress = () => {
     if (!currentPlan) return 0;
     const totalExercises = currentPlan.exercises.length;
-    const completedExercises = sets.filter(exerciseSets => exerciseSets.length > 0).length;
+    const completedExercises = currentPlan.exercises.filter((exercise, index) => 
+      isExerciseComplete(exercise._id, sets[index] || [])
+    ).length;
     return (completedExercises / totalExercises) * 100;
   };
 
@@ -272,6 +302,16 @@ function WorkoutTracker() {
 
   const handleExerciseChange = (newIndex) => {
     setCurrentExerciseIndex(newIndex);
+    
+    const newExercise = currentPlan.exercises[newIndex];
+    const lastValues = lastSetValues[newExercise._id];
+    if (lastValues) {
+      setWeight(lastValues.weight);
+      setReps(lastValues.reps);
+    } else {
+      setWeight('');
+      setReps('');
+    }
   };
 
   if (!currentPlan) {
@@ -317,7 +357,7 @@ function WorkoutTracker() {
               className={`mr-2 mb-2 px-3 py-1 rounded ${
                 index === currentExerciseIndex
                   ? 'bg-blue-500 text-white'
-                  : sets[index] && sets[index].length > 0
+                  : isExerciseComplete(exercise._id, sets[index] || [])
                   ? 'bg-green-500 text-white'
                   : 'bg-gray-300 text-gray-800'
               }`}
@@ -354,14 +394,14 @@ function WorkoutTracker() {
                 <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
                 <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
                 <p className="mb-2">
-                  <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length}
-                  </p>
+                  <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id]}
+                </p>
               </div>
             </div>
             <div className="mb-4 flex">
               <input
                 type="number"
-                placeholder="Weight"
+                placeholder="Weight (kg)"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
@@ -398,17 +438,17 @@ function WorkoutTracker() {
               </div>
             )}
             <div className="mb-4">
-        <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
-          Rest Time (seconds):
-        </label>
-        <input
-          type="number"
-          id="restTime"
-          value={restTime}
-          onChange={(e) => setRestTime(Number(e.target.value))}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-        />
-      </div>
+              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
+                Rest Time (seconds):
+              </label>
+              <input
+                type="number"
+                id="restTime"
+                value={restTime}
+                onChange={(e) => setRestTime(Number(e.target.value))}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+            </div>
             <div className="mb-4">
               <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
                 Exercise Notes:
@@ -466,7 +506,7 @@ function WorkoutTracker() {
                 <ul className="list-disc pl-5">
                   {exercise.sets.map((set, setIndex) => (
                     <li key={setIndex}>
-                      Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
+                      Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
                     </li>
                   ))}
                 </ul>
@@ -486,18 +526,24 @@ function WorkoutTracker() {
         <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Current Workout Set Log</h3>
         {currentPlan.exercises.map((exercise, index) => (
           <div key={exercise._id} className="mb-4">
-            <h4 className={`text-lg font-medium ${darkMode ? 'text-green-200' : 'text-green-700'}`}>{exercise.name}</h4>
+            <h4 className={`text-lg font-medium ${darkMode ? 'text-green-200' : 'text-green-700'}`}>
+              {exercise.name}
+              {isExerciseComplete(exercise._id, sets[index] || []) && ' (Complete)'}
+            </h4>
             {sets[index] && sets[index].length > 0 ? (
               <ul className="list-disc pl-5">
                 {sets[index].map((set, setIndex) => (
                   <li key={setIndex}>
-                    Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
+                    Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
                   </li>
                 ))}
               </ul>
             ) : (
               <p>No sets completed yet</p>
             )}
+            <p>
+              {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id]} sets completed
+            </p>
             {notes[index] && (
               <p className="mt-2 italic">Notes: {notes[index]}</p>
             )}

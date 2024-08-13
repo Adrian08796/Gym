@@ -89,6 +89,7 @@ export default {
     "react": "^18.3.1",
     "react-big-calendar": "^1.13.2",
     "react-dom": "^18.3.1",
+    "react-icons": "^5.3.0",
     "react-router-dom": "^6.25.1",
     "react-transition-group": "^4.4.5",
     "recharts": "^2.13.0-alpha.4"
@@ -373,7 +374,6 @@ import Footer from './components/Footer';
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
-import WorkoutCalendar from './components/WorkoutCalendar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -407,7 +407,6 @@ function AppContent() {
               <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
               <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
               <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-              <Route path="/calendar" element={<PrivateRoute><WorkoutCalendar /></PrivateRoute>} />
               <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
               <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
               <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
@@ -516,6 +515,9 @@ function WorkoutTracker() {
   const [notes, setNotes] = useState([]);
   const [previousWorkout, setPreviousWorkout] = useState(null);
   const [isPreviousWorkoutLoading, setIsPreviousWorkoutLoading] = useState(false);
+  const [totalPauseTime, setTotalPauseTime] = useState(0);
+  const [skippedPauses, setSkippedPauses] = useState(0);
+  const [progression, setProgression] = useState(0);
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
@@ -570,11 +572,24 @@ function WorkoutTracker() {
   }, [loadStoredData]);
 
   useEffect(() => {
-    if (currentPlan && workoutHistory.length > 0) {
+    if (currentPlan) {
       const fetchPreviousWorkout = async () => {
         setIsPreviousWorkoutLoading(true);
         try {
-          const lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
+          let lastWorkout;
+          if (currentPlan._id) {
+            lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
+          }
+          if (!lastWorkout) {
+            // If no workout found for the current plan ID, search by exercise IDs
+            lastWorkout = workoutHistory.find(workout => 
+              workout.exercises.some(ex => 
+                currentPlan.exercises.some(planEx => 
+                  planEx._id === ex.exercise._id
+                )
+              )
+            );
+          }
           setPreviousWorkout(lastWorkout);
         } catch (error) {
           console.error('Error fetching previous workout:', error);
@@ -587,7 +602,7 @@ function WorkoutTracker() {
       setPreviousWorkout(null);
       setIsPreviousWorkoutLoading(false);
     }
-  }, [currentPlan, getLastWorkoutByPlan, workoutHistory.length]);
+  }, [currentPlan, getLastWorkoutByPlan, workoutHistory]);
 
   useEffect(() => {
     const saveDataToLocalStorage = () => {
@@ -637,7 +652,12 @@ function WorkoutTracker() {
       const newSets = [...prevSets];
       newSets[currentExerciseIndex] = [
         ...(newSets[currentExerciseIndex] || []),
-        { weight: Number(weight), reps: Number(reps), completedAt: new Date().toISOString() }
+        { 
+          weight: Number(weight), 
+          reps: Number(reps), 
+          completedAt: new Date().toISOString(),
+          skippedRest: isResting
+        }
       ];
       return newSets;
     });
@@ -645,14 +665,10 @@ function WorkoutTracker() {
     setReps('');
     addNotification('Set completed!', 'success');
 
-    if (isResting) {
-      const restartTimer = window.confirm("Do you want to restart the rest timer?");
-      if (restartTimer) {
-        startRestTimer();
-      }
-    } else {
-      startRestTimer();
-    }
+    // Always start a new rest timer after completing a set
+    startRestTimer();
+
+    updateProgression();
   };
 
   const startRestTimer = () => {
@@ -660,16 +676,18 @@ function WorkoutTracker() {
     setRemainingRestTime(restTime);
   };
 
-  const handleExerciseChange = (newIndex) => {
-    setCurrentExerciseIndex(newIndex);
+  const skipRestTimer = () => {
+    setIsResting(false);
+    setRemainingRestTime(0);
+    setSkippedPauses(prevSkipped => prevSkipped + 1);
+    addNotification('Rest timer skipped', 'info');
   };
 
-  const handleNoteChange = (index, value) => {
-    setNotes(prevNotes => {
-      const newNotes = [...prevNotes];
-      newNotes[index] = value;
-      return newNotes;
-    });
+  const updateProgression = () => {
+    const totalExercises = currentPlan.exercises.length;
+    const completedExercises = sets.filter(exerciseSets => exerciseSets.length > 0).length;
+    const newProgression = (completedExercises / totalExercises) * 100;
+    setProgression(newProgression);
   };
 
   const handleFinishWorkout = async () => {
@@ -686,7 +704,10 @@ function WorkoutTracker() {
         notes: notes[index]
       })),
       startTime: startTime.toISOString(),
-      endTime: endTime.toISOString()
+      endTime: endTime.toISOString(),
+      totalPauseTime,
+      skippedPauses,
+      progression
     };
     
     try {
@@ -697,6 +718,18 @@ function WorkoutTracker() {
     } catch (error) {
       console.error('Error saving workout:', error);
       addNotification('Failed to save workout. Please try again.', 'error');
+    }
+  };
+
+  const handleCancelWorkout = () => {
+    if (window.confirm("Are you sure you want to cancel this workout? All progress will be lost.")) {
+      clearLocalStorage();
+      setCurrentPlan(null);
+      setSets([]);
+      setNotes([]);
+      setStartTime(null);
+      setElapsedTime(0);
+      addNotification('Workout cancelled', 'info');
     }
   };
 
@@ -722,8 +755,32 @@ function WorkoutTracker() {
     return (completedExercises / totalExercises) * 100;
   };
 
+  const handleNoteChange = (index, value) => {
+    setNotes(prevNotes => {
+      const newNotes = [...prevNotes];
+      newNotes[index] = value;
+      return newNotes;
+    });
+  };
+
+  const handleExerciseChange = (newIndex) => {
+    setCurrentExerciseIndex(newIndex);
+  };
+
   if (!currentPlan) {
-    return <div className="text-center mt-8">Loading workout plan...</div>;
+    return (
+      <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
+        <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
+        <p className="text-xl mb-4">No active workout</p>
+        <p className="mb-4">To start a new workout, please select a workout plan from the Workout Plans page.</p>
+        <button
+          onClick={() => navigate('/plans')}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Go to Workout Plans
+        </button>
+      </div>
+    );
   }
 
   const currentExercise = currentPlan.exercises[currentExerciseIndex];
@@ -744,22 +801,30 @@ function WorkoutTracker() {
         <p className="text-sm mt-2">Overall Progress: {calculateProgress().toFixed(2)}%</p>
       </div>
 
-      <div className="mb-4 flex flex-wrap">
-        {currentPlan.exercises.map((exercise, index) => (
-          <button
-            key={exercise._id}
-            onClick={() => handleExerciseChange(index)}
-            className={`mr-2 mb-2 px-3 py-1 rounded ${
-              index === currentExerciseIndex
-                ? 'bg-blue-500 text-white'
-                : sets[index] && sets[index].length > 0
-                ? 'bg-green-500 text-white'
-                : 'bg-gray-300 text-gray-800'
-            }`}
-          >
-            {exercise.name}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap justify-between items-center">
+        <div className="flex flex-wrap">
+          {currentPlan.exercises.map((exercise, index) => (
+            <button
+              key={exercise._id}
+              onClick={() => handleExerciseChange(index)}
+              className={`mr-2 mb-2 px-3 py-1 rounded ${
+                index === currentExerciseIndex
+                  ? 'bg-blue-500 text-white'
+                  : sets[index] && sets[index].length > 0
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-300 text-gray-800'
+              }`}
+            >
+              {exercise.name}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={handleCancelWorkout}
+          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Cancel Workout
+        </button>
       </div>
       
       <TransitionGroup>
@@ -783,7 +848,7 @@ function WorkoutTracker() {
                 <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
                 <p className="mb-2">
                   <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length}
-                </p>
+                  </p>
               </div>
             </div>
             <div className="mb-4 flex">
@@ -818,7 +883,7 @@ function WorkoutTracker() {
                   ></div>
                 </div>
                 <button
-                  onClick={() => setIsResting(false)}
+                  onClick={skipRestTimer}
                   className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
                 >
                   Skip Rest
@@ -826,17 +891,17 @@ function WorkoutTracker() {
               </div>
             )}
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
-                Rest Time (seconds):
-              </label>
-              <input
-                type="number"
-                id="restTime"
-                value={restTime}
-                onChange={(e) => setRestTime(Number(e.target.value))}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              />
-            </div>
+        <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
+          Rest Time (seconds):
+        </label>
+        <input
+          type="number"
+          id="restTime"
+          value={restTime}
+          onChange={(e) => setRestTime(Number(e.target.value))}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
             <div className="mb-4">
               <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
                 Exercise Notes:
@@ -853,7 +918,8 @@ function WorkoutTracker() {
         </CSSTransition>
       </TransitionGroup>
 
-      <div className="flex justify-between"><button
+      <div className="flex justify-between">
+        <button
           onClick={() => handleExerciseChange(Math.max(0, currentExerciseIndex - 1))}
           className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
         >
@@ -887,7 +953,9 @@ function WorkoutTracker() {
             <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
             {previousWorkout.exercises.map((exercise, index) => (
               <div key={index} className="mb-4">
-                <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>{exercise.exercise.name}</h4>
+                <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                  {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
+                </h4>
                 <ul className="list-disc pl-5">
                   {exercise.sets.map((set, setIndex) => (
                     <li key={setIndex}>
@@ -1023,7 +1091,9 @@ function WorkoutSummary() {
           <p className="mb-2">Date: {formatDate(workout.date || workout.startTime)}</p>
           <p className="mb-2">Start Time: {formatTime(workout.startTime)}</p>
           <p className="mb-2">End Time: {formatTime(workout.endTime)}</p>
-          <p className="mb-4">Duration: {formatDuration(workout.startTime, workout.endTime)}</p>
+          <p className="mb-2">Duration: {formatDuration(workout.startTime, workout.endTime)}</p>
+          <p className="mb-2">Progression: {workout.progression ? `${workout.progression.toFixed(2)}%` : 'N/A'}</p>
+          <p className="mb-4">Total Pause Time: {workout.totalPauseTime ? `${workout.totalPauseTime} seconds` : 'N/A'}</p>
 
           {workout.exercises.map((exercise, index) => (
             <div key={index} className={`mb-4 p-3 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
@@ -1042,6 +1112,9 @@ function WorkoutSummary() {
                         <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>
                           (at {formatTime(set.completedAt)})
                         </span>
+                      )}
+                      {set.skippedRest && (
+                        <span className="text-yellow-500 ml-2">(Rest Skipped)</span>
                       )}
                     </li>
                   ))}
@@ -1076,17 +1149,50 @@ export default WorkoutSummary;
 ```jsx
 // src/pages/WorkoutPlans.jsx
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useGymContext } from '../context/GymContext';
+import { useNotification } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
+import WorkoutPlanCard from '../components/WorkoutPlanCard';
+import WorkoutPlanModal from '../components/WorkoutPlanModal';
+
+const localizer = momentLocalizer(moment);
+const DnDCalendar = withDragAndDrop(Calendar);
+
+const workoutColors = {
+  strength: '#4CAF50',
+  cardio: '#2196F3',
+  flexibility: '#FF9800',
+  default: '#9C27B0',
+  completed: '#607D8B'
+};
 
 function WorkoutPlans() {
-  const { workoutPlans, deleteWorkoutPlan, addWorkoutPlan, updateWorkoutPlan } = useGymContext();
+  const { 
+    workoutPlans, 
+    workoutHistory, 
+    deleteWorkoutPlan, 
+    addWorkoutPlan, 
+    updateWorkoutPlan, 
+    fetchWorkoutPlans
+  } = useGymContext();
   const [showForm, setShowForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
+  const [viewMode, setViewMode] = useState('grid');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [selectedPlan, setSelectedPlan] = useState(null);
   const navigate = useNavigate();
+  const { addNotification } = useNotification();
+  const { darkMode } = useTheme();
 
   useEffect(() => {
     const storedPlan = localStorage.getItem('currentPlan');
@@ -1104,23 +1210,27 @@ function WorkoutPlans() {
     navigate('/tracker');
   };
 
-  cconst handleAddWorkoutPlan = async (plan) => {
+  const handleAddWorkoutPlan = async (plan) => {
     try {
       await addWorkoutPlan(plan);
-      setShowForm(false);
-      setEditingPlan(null);
+      handleCancelForm();
+      await fetchWorkoutPlans();
+      addNotification('Workout plan added successfully', 'success');
     } catch (error) {
       console.error('Error adding workout plan:', error);
+      addNotification('Failed to add workout plan', 'error');
     }
   };
 
   const handleEditWorkoutPlan = async (plan) => {
     try {
       await updateWorkoutPlan(plan._id, plan);
-      setShowForm(false);
-      setEditingPlan(null);
+      handleCancelForm();
+      await fetchWorkoutPlans();
+      addNotification('Workout plan updated successfully', 'success');
     } catch (error) {
       console.error('Error updating workout plan:', error);
+      addNotification('Failed to update workout plan', 'error');
     }
   };
 
@@ -1134,726 +1244,32 @@ function WorkoutPlans() {
     setShowForm(true);
   };
 
-  return (
-    <div className="text-gray-900 dark:text-gray-100">
-      <h1 className="text-3xl font-bold mb-4">Workout Plans</h1>
-      {ongoingWorkout && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-          <p className="font-bold">Ongoing Workout</p>
-          <p>You have an unfinished workout: {ongoingWorkout.name}</p>
-          <button
-            onClick={handleResumeWorkout}
-            className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Resume Workout
-          </button>
-        </div>
-      )}
-      <button
-        onClick={() => {
-          setShowForm(!showForm);
-          setEditingPlan(null);
-        }}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
-      >
-        {showForm ? 'Hide Form' : 'Create New Plan'}
-      </button>
-      {showForm && (
-        <WorkoutPlanForm
-          onSubmit={editingPlan ? handleEditWorkoutPlan : handleAddWorkoutPlan}
-          initialPlan={editingPlan}
-        />
-      )}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {workoutPlans.map((plan) => (
-          <div key={plan._id} className="border rounded-lg p-4 mb-4 shadow-sm">
-            <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
-            <p className="text-sm text-gray-600 mb-2">
-              Type: {plan.type || 'Not specified'}
-            </p>
-            <p className="text-sm text-gray-600 mb-2">
-              Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
-            </p>
-            <ul className="list-disc list-inside mb-4">
-              {plan.exercises.map((exercise) => (
-                <li key={exercise._id} className="mb-2">
-                  <span className="font-medium">{exercise.name}</span>
-                  <p className="text-sm text-gray-600 ml-4">{exercise.description}</p>
-                  <p className="text-sm text-gray-500 ml-4">Target: {exercise.target}</p>
-                </li>
-              ))}
-            </ul>
-            <div className="flex justify-between">
-              <button
-                onClick={() => handleStartWorkout(plan)}
-                className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
-              >
-                Start Workout
-              </button>
-              <button
-                onClick={() => handleEdit(plan)}
-                className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mx-2"
-              >
-                Edit Plan
-              </button>
-              <button
-                onClick={() => deleteWorkoutPlan(plan._id)}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-              >
-                Delete Plan
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default WorkoutPlans;
-```
-
-# src/pages/Home.jsx
-
-```jsx
-// src/pages/Home.jsx
-function Home() {
-  return (
-    <div className="text-gray-900 dark:text-gray-100">
-      <h1 className="text-3xl font-bold text-center my-8">Welcome to Your Gym App</h1>
-      <p className="text-center">This is where your fitness journey begins!</p>
-    </div>
-  );
-}
-
-export default Home;
-```
-
-# src/pages/ExerciseLibrary.jsx
-
-```jsx
-// src/pages/ExerciseLibrary.jsx
-
-import React, { useState, useEffect } from 'react';
-import ExerciseItem from '../components/ExerciseItem';
-import AddExerciseForm from '../components/AddExerciseForm';
-import WorkoutPlanSelector from '../components/WorkoutPlanSelector';
-import ExerciseModal from '../components/ExerciseModal';
-import { useGymContext } from '../context/GymContext';
-import { useNotification } from '../context/NotificationContext';
-
-function ExerciseLibrary() {
-  const { exercises, updateExercise, deleteExercise, addExerciseToPlan } = useGymContext();
-  const { addNotification } = useNotification();
-  const [editingExercise, setEditingExercise] = useState(null);
-  const [showWorkoutPlanSelector, setShowWorkoutPlanSelector] = useState(false);
-  const [selectedExercise, setSelectedExercise] = useState(null);
-  const [exerciseToAddToPlan, setExerciseToAddToPlan] = useState(null);
-  const [filterText, setFilterText] = useState('');
-  const [filteredExercises, setFilteredExercises] = useState(exercises);
-
-  useEffect(() => {
-    const lowercasedFilter = filterText.toLowerCase();
-    const filtered = exercises.filter(exercise => 
-      exercise.name.toLowerCase().includes(lowercasedFilter) ||
-      exercise.description.toLowerCase().includes(lowercasedFilter) ||
-      (Array.isArray(exercise.target) && exercise.target.some(t => t.toLowerCase().includes(lowercasedFilter)))
-    );
-    setFilteredExercises(filtered);
-  }, [filterText, exercises]);
-
-  const handleEdit = (exercise) => {
-    setEditingExercise(exercise);
-    setSelectedExercise(null);
-  };
-
-  const handleDelete = (exercise) => {
-    deleteExercise(exercise._id);
-    setSelectedExercise(null);
-  };
-
-  const handleAddToPlan = (exercise) => {
-    setExerciseToAddToPlan(exercise);
-    setShowWorkoutPlanSelector(true);
-  };
-
-  const handleSave = (savedExercise) => {
-    setEditingExercise(null);
-    // Optionally, you can refresh the exercise list here
-  };
-
-  const handleSelectWorkoutPlan = async (plan) => {
-    if (!exerciseToAddToPlan || !exerciseToAddToPlan._id) {
-      addNotification('No exercise selected', 'error');
-      return;
-    }
-    
-    const result = await addExerciseToPlan(plan._id, exerciseToAddToPlan._id);
-    
-    if (result.success) {
-      addNotification(`Exercise added to ${plan.name}`, 'success');
-    } else if (result.alreadyInPlan) {
-      // The notification is already handled in the GymContext
-    } else {
-      // The error notification is already handled in the GymContext
-    }
-    
-    setShowWorkoutPlanSelector(false);
-    setExerciseToAddToPlan(null);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingExercise(null);
-  };
-
-  return (
-    <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8">
-      <h1 className="text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise Library</h1>
-      <div className="mb-6 lg:mb-8">
-        <input
-          type="text"
-          placeholder="Filter exercises..."
-          value={filterText}
-          onChange={(e) => setFilterText(e.target.value)}
-          className="w-full px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
-        />
-      </div>
-      <AddExerciseForm 
-        onSave={handleSave} 
-        initialExercise={editingExercise}
-        onCancel={handleCancelEdit}
-      />
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-        {filteredExercises.map((exercise) => (
-          <ExerciseItem 
-            key={exercise._id} 
-            exercise={exercise}
-            onClick={() => setSelectedExercise(exercise)}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onAddToPlan={handleAddToPlan}
-          />
-        ))}
-      </div>
-      {selectedExercise && (
-        <ExerciseModal
-          exercise={selectedExercise}
-          onClose={() => setSelectedExercise(null)}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onAddToPlan={handleAddToPlan}
-        />
-      )}
-      {showWorkoutPlanSelector && (
-        <WorkoutPlanSelector
-          onSelect={handleSelectWorkoutPlan}
-          onClose={() => {
-            setShowWorkoutPlanSelector(false);
-            setExerciseToAddToPlan(null);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-export default ExerciseLibrary;
-```
-
-# src/components/WorkoutPlanSelector.jsx
-
-```jsx
-// src/components/WorkoutPlanSelector.jsx
-
-import React, { useState, useEffect } from 'react';
-import { useGymContext } from '../context/GymContext';
-
-function WorkoutPlanSelector({ onSelect, onClose }) {
-  const [workoutPlans, setWorkoutPlans] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { fetchWorkoutPlans } = useGymContext();
-
-  useEffect(() => {
-    const getWorkoutPlans = async () => {
-      try {
-        setIsLoading(true);
-        const plans = await fetchWorkoutPlans();
-        setWorkoutPlans(plans || []);
-      } catch (error) {
-        console.error('Error fetching workout plans:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    getWorkoutPlans();
-  }, [fetchWorkoutPlans]);
-
-  const handleSelect = async (plan) => {
-    await onSelect(plan);
-    onClose();
-  };
-
-  if (isLoading) {
-    return <div>Loading workout plans...</div>;
-  }
-
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-[60]">
-      <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-xl max-w-md w-full m-4">
-        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Select Workout Plan</h2>
-        {workoutPlans.length === 0 ? (
-          <p className="text-gray-700 dark:text-gray-300">No workout plans available. Create a plan first.</p>
-        ) : (
-          workoutPlans.map((plan) => (
-            <button
-              key={plan._id}
-              onClick={() => handleSelect(plan)}
-              className="block w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mb-2 text-gray-800 dark:text-gray-200"
-            >
-              {plan.name}
-            </button>
-          ))
-        )}
-        <button
-          onClick={onClose}
-          className="mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export default WorkoutPlanSelector;
-```
-
-# src/components/WorkoutPlanModal.jsx
-
-```jsx
-// src/components/WorkoutPlanModal.jsx
-
-import React from 'react';
-import { useTheme } from '../context/ThemeContext'; // Import the useTheme hook
-
-function WorkoutPlanModal({ plan, onClose }) {
-  const { darkMode } = useTheme(); // Use the useTheme hook to get the current theme
-
-  if (!plan) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50" id="my-modal">
-      <div className={`relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
-        <div className="mt-3">
-          <h3 className="text-lg leading-6 font-medium">{plan.name}</h3>
-          <div className="mt-2 px-7 py-3">
-            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-              Type: {plan.type || 'Not specified'}
-            </p>
-            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-              Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleString() : 'Not scheduled'}
-            </p>
-            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-              Status: {plan.completed ? 'Completed' : 'Scheduled'}
-            </p>
-            <div className="mt-4">
-              <h4 className="text-md font-medium">Exercises:</h4>
-              <ul className="list-disc list-inside">
-                {plan.exercises.map((exercise, index) => (
-                  <li key={index} className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>{exercise.name}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <div className="items-center px-4 py-3">
-            <button
-              id="ok-btn"
-              className={`px-4 py-2 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white text-base font-medium rounded-md w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300`}
-              onClick={onClose}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default WorkoutPlanModal;
-```
-
-# src/components/WorkoutPlanForm.jsx
-
-```jsx
-// src/components/WorkoutPlanForm.jsx
-
-import { useState, useEffect } from 'react';
-import { useGymContext } from '../context/GymContext';
-
-function WorkoutPlanForm({ onSubmit, initialPlan }) {
-  const [planName, setPlanName] = useState('');
-  const [selectedExercises, setSelectedExercises] = useState([]);
-  const [workoutType, setWorkoutType] = useState('');
-  const [scheduledDate, setScheduledDate] = useState('');
-  const { exercises } = useGymContext();
-
-  useEffect(() => {
-    if (initialPlan) {
-      setPlanName(initialPlan.name);
-      setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id));
-      setWorkoutType(initialPlan.type || '');
-      setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
-    } else {
-      // Reset form when not editing
-      setPlanName('');
-      setSelectedExercises([]);
-      setWorkoutType('');
-      setScheduledDate('');
-    }
-  }, [initialPlan]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleDelete = async (planId) => {
     try {
-      const workoutPlan = {
-        name: planName,
-        exercises: selectedExercises,
-        type: workoutType,
-        scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null
-      };
-      
-      if (initialPlan) {
-        workoutPlan._id = initialPlan._id;  // Include the ID when updating
-      }
-
-      await onSubmit(workoutPlan);
-      
-      // Reset form if it's not editing
-      if (!initialPlan) {
-        setPlanName('');
-        setSelectedExercises([]);
-        setWorkoutType('');
-        setScheduledDate('');
-      }
+      await deleteWorkoutPlan(planId);
+      addNotification('Workout plan deleted successfully', 'success');
+      fetchWorkoutPlans(); // Refresh the workout plans after deleting
     } catch (error) {
-      console.error('Error submitting workout plan:', error);
+      console.error('Error deleting workout plan:', error);
+      addNotification('Failed to delete workout plan', 'error');
     }
   };
-  
-  const handleExerciseToggle = (exerciseId) => {
-    setSelectedExercises(prevSelected =>
-      prevSelected.includes(exerciseId)
-        ? prevSelected.filter(id => id !== exerciseId)
-        : [...prevSelected, exerciseId]
-    );
-  };   
 
-  return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <label htmlFor="planName" className="block text-gray-700 font-bold mb-2">
-          Workout Plan Name
-        </label>
-        <input
-          type="text"
-          id="planName"
-          value={planName}
-          onChange={(e) => setPlanName(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label htmlFor="workoutType" className="block text-gray-700 font-bold mb-2">
-          Workout Type
-        </label>
-        <select
-          id="workoutType"
-          value={workoutType}
-          onChange={(e) => setWorkoutType(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        >
-          <option value="">Select a type</option>
-          <option value="strength">Strength</option>
-          <option value="cardio">Cardio</option>
-          <option value="flexibility">Flexibility</option>
-        </select>
-      </div>
-      <div className="mb-4">
-        <label htmlFor="scheduledDate" className="block text-gray-700 font-bold mb-2">
-          Scheduled Date
-        </label>
-        <input
-          type="date"
-          id="scheduledDate"
-          value={scheduledDate}
-          onChange={(e) => setScheduledDate(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-gray-700 font-bold mb-2">
-          Select Exercises
-        </label>
-        {exercises.map((exercise) => (
-          <div key={exercise._id} className="flex items-center mb-2">
-            <input
-              type="checkbox"
-              id={`exercise-${exercise._id}`}
-              checked={selectedExercises.includes(exercise._id)}
-              onChange={() => handleExerciseToggle(exercise._id)}
-              className="mr-2"
-            />
-            <label htmlFor={`exercise-${exercise._id}`}>{exercise.name}</label>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          {initialPlan ? 'Update Workout Plan' : 'Create Workout Plan'}
-        </button>
-      </div>
-    </form>
+  const filteredPlans = workoutPlans.filter(plan => 
+    plan.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (filterType === 'all' || plan.type === filterType)
   );
-}
 
-export default WorkoutPlanForm;
-```
-
-# src/components/WorkoutPlanDetails.jsx
-
-```jsx
-// src/components/WorkoutPlanDetails.jsx
-
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useGymContext } from '../context/GymContext';
-
-function WorkoutPlanDetails() {
-  const { id } = useParams();
-  const { workoutPlans, updateWorkoutPlan, deleteWorkoutPlan } = useGymContext();
-  const [plan, setPlan] = useState(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const foundPlan = workoutPlans.find(p => p._id === id);
-    setPlan(foundPlan);
-  }, [id, workoutPlans]);
-
-  const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this workout plan?')) {
-      await deleteWorkoutPlan(id);
-      navigate('/plans');
-    }
-  };
-
-  const handleReschedule = () => {
-    const newDate = prompt('Enter new date (YYYY-MM-DD):', plan.scheduledDate ? new Date(plan.scheduledDate).toISOString().split('T')[0] : '');
-    if (newDate) {
-      const updatedPlan = { ...plan, scheduledDate: new Date(newDate) };
-      updateWorkoutPlan(id, updatedPlan);
-    }
-  };
-
-  if (!plan) {
-    return <div>Loading workout plan...</div>;
-  }
-
-  return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">{plan.name}</h2>
-      <p><strong>Type:</strong> {plan.type || 'Not specified'}</p>
-      <p><strong>Scheduled Date:</strong> {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}</p>
-      
-      <h3 className="text-xl font-semibold mt-4 mb-2">Exercises:</h3>
-      <ul className="list-disc list-inside">
-        {plan.exercises.map((exercise, index) => (
-          <li key={index}>{exercise.name}</li>
-        ))}
-      </ul>
-
-      <div className="mt-4">
-        <button onClick={handleReschedule} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
-          Reschedule
-        </button>
-        <button onClick={handleDelete} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-          Delete Plan
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export default WorkoutPlanDetails;
-```
-
-# src/components/WorkoutForm.jsx
-
-```jsx
-// src/components/WorkoutForm.jsx
-import { useState, useEffect } from 'react';
-import { useGymContext } from '../context/GymContext';
-
-function WorkoutForm({ onSave, initialWorkout }) {
-  const [selectedExercise, setSelectedExercise] = useState('');
-  const [sets, setSets] = useState('');
-  const [reps, setReps] = useState('');
-  const [weight, setWeight] = useState('');
-  const { exercises } = useGymContext();
-
-  useEffect(() => {
-    if (initialWorkout) {
-      setSelectedExercise(initialWorkout.exercise);
-      setSets(initialWorkout.sets.toString());
-      setReps(initialWorkout.reps.toString());
-      setWeight(initialWorkout.weight.toString());
-    }
-  }, [initialWorkout]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const workout = {
-      exercise: selectedExercise,
-      sets: parseInt(sets),
-      reps: parseInt(reps),
-      weight: parseFloat(weight),
-      date: new Date().toISOString()
-    };
-    onSave(workout);
-    // Reset form
-    setSelectedExercise('');
-    setSets('');
-    setReps('');
-    setWeight('');
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <label htmlFor="exercise" className="block text-gray-700 font-bold mb-2">
-          Exercise
-        </label>
-        <select
-          id="exercise"
-          value={selectedExercise}
-          onChange={(e) => setSelectedExercise(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        >
-          <option value="">Select an exercise</option>
-          {exercises.map((exercise) => (
-            <option key={exercise._id} value={exercise.name}>
-              {exercise.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="mb-4">
-        <label htmlFor="sets" className="block text-gray-700 font-bold mb-2">
-          Sets
-        </label>
-        <input
-          type="number"
-          id="sets"
-          value={sets}
-          onChange={(e) => setSets(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label htmlFor="reps" className="block text-gray-700 font-bold mb-2">
-          Reps
-        </label>
-        <input
-          type="number"
-          id="reps"
-          value={reps}
-          onChange={(e) => setReps(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-6">
-        <label htmlFor="weight" className="block text-gray-700 font-bold mb-2">
-          Weight (kg)
-        </label>
-        <input
-          type="number"
-          id="weight"
-          value={weight}
-          onChange={(e) => setWeight(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          step="0.1"
-          required
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          {initialWorkout ? 'Update Workout' : 'Log Workout'}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export default WorkoutForm;
-```
-
-# src/components/WorkoutCalendar.jsx
-
-```jsx
-// src/components/WorkoutCalendar.jsx
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
-import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
-import { useGymContext } from '../context/GymContext';
-import { useNavigate } from 'react-router-dom';
-import { useNotification } from '../context/NotificationContext';
-import { useTheme } from '../context/ThemeContext';
-import WorkoutPlanModal from './WorkoutPlanModal';
-import './WorkoutCalendar.css';
-
-const localizer = momentLocalizer(moment);
-const DnDCalendar = withDragAndDrop(Calendar);
-
-const workoutColors = {
-  strength: '#4CAF50',
-  cardio: '#2196F3',
-  flexibility: '#FF9800',
-  default: '#9C27B0',
-  completed: '#607D8B'
-};
-
-function WorkoutCalendar() {
-  const { workoutHistory, workoutPlans, updateWorkoutPlan } = useGymContext();
-  const [events, setEvents] = useState([]);
-  const [selectedPlan, setSelectedPlan] = useState(null);
-  const navigate = useNavigate();
-  const { addNotification } = useNotification();
-  const { darkMode } = useTheme();
-
+  // Calendar-related functions
   const getEventColor = useCallback((event) => {
     if (event.resource === 'history' || event.resource === 'completed') {
       return workoutColors.completed;
     }
-    const plan = workoutPlans.find(p => p._id === event.id);
+    const plan = filteredPlans.find(p => p._id === event.id);
     return plan && plan.type ? workoutColors[plan.type] : workoutColors.default;
-  }, [workoutPlans]);
+  }, [filteredPlans]);
 
-  useEffect(() => {
+  const events = useMemo(() => {
     const historyEvents = workoutHistory.map(workout => ({
       id: workout._id,
       title: `${workout.planName} (Completed)`,
@@ -1863,7 +1279,7 @@ function WorkoutCalendar() {
       resource: 'history'
     }));
 
-    const planEvents = workoutPlans
+    const planEvents = filteredPlans
       .filter(plan => plan.scheduledDate)
       .map(plan => ({
         id: plan._id,
@@ -1874,19 +1290,19 @@ function WorkoutCalendar() {
         resource: plan.completed ? 'completed' : 'scheduled'
       }));
 
-    setEvents([...historyEvents, ...planEvents]);
-  }, [workoutHistory, workoutPlans]);
+    return [...historyEvents, ...planEvents];
+  }, [workoutHistory, filteredPlans]);
 
-  const handleSelectEvent = (event) => {
+  const handleSelectEvent = useCallback((event) => {
     if (event.resource === 'history') {
       navigate(`/workout-summary/${event.id}`);
     } else {
-      const plan = workoutPlans.find(p => p._id === event.id);
+      const plan = filteredPlans.find(p => p._id === event.id);
       setSelectedPlan(plan);
     }
-  };
+  }, [filteredPlans, navigate]);
 
-  const handleSelectSlot = ({ start }) => {
+  const handleSelectSlot = useCallback(({ start }) => {
     const planName = prompt('Enter workout plan name:');
     if (planName) {
       const workoutType = prompt('Enter workout type (strength, cardio, flexibility):');
@@ -1896,43 +1312,37 @@ function WorkoutCalendar() {
         scheduledDate: start,
         type: workoutType
       };
-      updateWorkoutPlan(null, newPlan);
+      addWorkoutPlan(newPlan);
     }
-  };
+  }, [addWorkoutPlan]);
 
-  const moveEvent = useCallback(
-    ({ event, start, end }) => {
-      if (event.resource === 'history' || event.resource === 'completed') {
-        addNotification('Cannot reschedule completed workouts', 'error');
-        return;
-      }
+  const moveEvent = useCallback(({ event, start, end }) => {
+    if (event.resource === 'history' || event.resource === 'completed') {
+      addNotification('Cannot reschedule completed workouts', 'error');
+      return;
+    }
 
-      const updatedPlan = workoutPlans.find(plan => plan._id === event.id);
-      if (updatedPlan) {
-        updatedPlan.scheduledDate = start;
-        updateWorkoutPlan(event.id, updatedPlan);
-        addNotification('Workout rescheduled successfully', 'success');
-      }
-    },
-    [workoutPlans, updateWorkoutPlan, addNotification]
-  );
+    const updatedPlan = filteredPlans.find(plan => plan._id === event.id);
+    if (updatedPlan) {
+      updatedPlan.scheduledDate = start;
+      updateWorkoutPlan(updatedPlan._id, updatedPlan);
+      addNotification('Workout rescheduled successfully', 'success');
+    }
+  }, [filteredPlans, updateWorkoutPlan, addNotification]);
 
-  const resizeEvent = useCallback(
-    ({ event, start, end }) => {
-      if (event.resource === 'history' || event.resource === 'completed') {
-        addNotification('Cannot modify completed workouts', 'error');
-        return;
-      }
+  const resizeEvent = useCallback(({ event, start, end }) => {
+    if (event.resource === 'history' || event.resource === 'completed') {
+      addNotification('Cannot modify completed workouts', 'error');
+      return;
+    }
 
-      const updatedPlan = workoutPlans.find(plan => plan._id === event.id);
-      if (updatedPlan) {
-        updatedPlan.scheduledDate = start;
-        updateWorkoutPlan(event.id, updatedPlan);
-        addNotification('Workout duration updated successfully', 'success');
-      }
-    },
-    [workoutPlans, updateWorkoutPlan, addNotification]
-  );
+    const updatedPlan = filteredPlans.find(plan => plan._id === event.id);
+    if (updatedPlan) {
+      updatedPlan.scheduledDate = start;
+      updateWorkoutPlan(updatedPlan._id, updatedPlan);
+      addNotification('Workout duration updated successfully', 'success');
+    }
+  }, [filteredPlans, updateWorkoutPlan, addNotification]);
 
   const eventPropGetter = useCallback((event) => {
     const backgroundColor = getEventColor(event);
@@ -1954,46 +1364,124 @@ function WorkoutCalendar() {
   }, [getEventColor]);
 
   return (
-    <div className={`h-screen p-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-      <h2 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Workout Calendar</h2>
-      <div className={`${darkMode ? 'bg-gray-700' : 'bg-white'} rounded-lg shadow-lg p-4`} style={{ height: 'calc(100% - 80px)' }}>
-        <DnDCalendar
-          localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: '100%' }}
-          onSelectSlot={handleSelectSlot}
-          onSelectEvent={handleSelectEvent}
-          onEventDrop={moveEvent}
-          onEventResize={resizeEvent}
-          selectable
-          resizable
-          eventPropGetter={eventPropGetter}
-          draggableAccessor={(event) => event.resource !== 'history' && event.resource !== 'completed'}
-          views={['month', 'week', 'day']}
-          defaultView="month"
-          formats={{
-            monthHeaderFormat: (date, culture, localizer) =>
-              localizer.format(date, 'MMMM YYYY', culture),
-            dayHeaderFormat: (date, culture, localizer) =>
-              localizer.format(date, 'dddd, MMMM D', culture),
+    <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'}`}>
+      <h1 className="text-3xl font-bold mb-4">Workout Plans</h1>
+      
+      {ongoingWorkout && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
+          <p className="font-bold">Ongoing Workout</p>
+          <p>You have an unfinished workout: {ongoingWorkout.name}</p>
+          <button
+            onClick={handleResumeWorkout}
+            className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Resume Workout
+          </button>
+        </div>
+      )}
+
+<div className="mb-4 flex flex-wrap items-center justify-between">
+        <button
+          onClick={() => {
+            setShowForm(!showForm);
+            setEditingPlan(null);
           }}
-          components={{
-            toolbar: CustomToolbar,
-          }}
-        />
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-2 sm:mb-0"
+        >
+          {showForm ? 'Hide Form' : 'Create New Plan'}
+        </button>
+        
+        <div className="flex items-center space-x-2">
+          <input
+            type="text"
+            placeholder="Search plans..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border rounded py-1 px-2 text-gray-700"
+          />
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="border rounded py-1 px-2 text-gray-700"
+          >
+            <option value="all">All Types</option>
+            <option value="strength">Strength</option>
+            <option value="cardio">Cardio</option>
+            <option value="flexibility">Flexibility</option>
+            <option value="other">Other</option>
+          </select>
+          <button
+            onClick={() => setViewMode(viewMode === 'grid' ? 'calendar' : 'grid')}
+            className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-1 px-2 rounded"
+          >
+            {viewMode === 'grid' ? 'Calendar View' : 'Grid View'}
+          </button>
+        </div>
       </div>
+
+      {showForm && (
+        <WorkoutPlanForm
+          onSubmit={editingPlan ? handleEditWorkoutPlan : handleAddWorkoutPlan}
+          initialPlan={editingPlan}
+          onCancel={handleCancelForm}
+        />
+      )}
+
+      {viewMode === 'grid' ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredPlans.map((plan) => (
+            <WorkoutPlanCard
+              key={plan._id}
+              plan={plan}
+              onStart={handleStartWorkout}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="h-[600px]">
+          <DnDCalendar
+            localizer={localizer}
+            events={events}
+            startAccessor="start"
+            endAccessor="end"
+            style={{ height: '100%' }}
+            onSelectSlot={handleSelectSlot}
+            onSelectEvent={handleSelectEvent}
+            onEventDrop={moveEvent}
+            onEventResize={resizeEvent}
+            selectable
+            resizable
+            eventPropGetter={eventPropGetter}
+            draggableAccessor={(event) => event.resource !== 'history' && event.resource !== 'completed'}
+            views={['month', 'week', 'day']}
+            defaultView="month"
+            formats={{
+              monthHeaderFormat: (date, culture, localizer) =>
+                localizer.format(date, 'MMMM YYYY', culture),
+              dayHeaderFormat: (date, culture, localizer) =>
+                localizer.format(date, 'dddd, MMMM D', culture),
+            }}
+            components={{
+              toolbar: CustomToolbar,
+            }}
+          />
+        </div>
+      )}
       {selectedPlan && (
         <WorkoutPlanModal
           plan={selectedPlan}
           onClose={() => setSelectedPlan(null)}
+          onEdit={handleEdit}
+          onStart={handleStartWorkout}
         />
       )}
     </div>
   );
 }
 
+// Custom toolbar component for the calendar
 const CustomToolbar = (toolbar) => {
   const goToBack = () => {
     toolbar.date.setMonth(toolbar.date.getMonth() - 1);
@@ -2046,964 +1534,224 @@ const CustomToolbar = (toolbar) => {
   );
 };
 
-export default WorkoutCalendar;
+export default WorkoutPlans;
 ```
 
-# src/components/WorkoutCalendar.css
-
-```css
-/* src/components/WorkoutCalendar.css */
-
-.rbc-calendar {
-  font-family: 'Arial', sans-serif;
-}
-
-.rbc-header {
-  padding: 10px 3px;
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.rbc-button-link {
-  color: #333;
-}
-
-.rbc-off-range-bg {
-  background-color: #f0f0f0;
-}
-
-.rbc-today {
-  background-color: #e6f7ff;
-}
-
-.rbc-event {
-  border: none !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.rbc-event-content {
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.rbc-toolbar button {
-  color: #333;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 5px 10px;
-}
-
-.rbc-toolbar button:hover {
-  background-color: #f0f0f0;
-}
-
-.rbc-toolbar button:active,
-.rbc-toolbar button.rbc-active {
-  background-color: #e0e0e0;
-  border-color: #999;
-}
-
-/* Dark mode styles */
-.dark .rbc-calendar {
-  color: #fff;
-}
-
-.dark .rbc-off-range-bg {
-  background-color: #2a2a2a;
-}
-
-.dark .rbc-today {
-  background-color: #1a3a4a;
-}
-
-.dark .rbc-button-link {
-  color: #fff;
-}
-
-.dark .rbc-toolbar button {
-  color: #fff;
-  border-color: #666;
-}
-
-.dark .rbc-toolbar button:hover {
-  background-color: #444;
-}
-
-.dark .rbc-toolbar button:active,
-.dark .rbc-toolbar button.rbc-active {
-  background-color: #555;
-  border-color: #888;
-}
-```
-
-# src/components/Register.jsx
+# src/pages/Home.jsx
 
 ```jsx
-// src/components/Register.jsx
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-
-function Register() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { register } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await register(username, email, password);
-      navigate('/login');
-    } catch (error) {
-      console.error('Registration failed:', error);
-      // Handle error (e.g., show error message to user)
-    }
-  };
-
+// src/pages/Home.jsx
+function Home() {
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">Username</label>
-        <input
-          type="text"
-          id="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <label htmlFor="email" className="block text-gray-700 font-bold mb-2">Email</label>
-        <input
-          type="email"
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-6">
-        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">Password</label>
-        <input
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          Register
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export default Register;
-```
-
-# src/components/NotificationToast.jsx
-
-```jsx
-// src/components/NotificationToast.jsx
-
-import React from 'react';
-import { useNotification } from '../context/NotificationContext';
-
-function NotificationToast() {
-  const { notifications, removeNotification } = useNotification();
-
-  return (
-    <div className="fixed top-4 right-4 z-50">
-      {notifications.map((notification) => (
-        <div
-          key={notification.id}
-          className={`mb-2 p-4 rounded shadow-md ${
-            notification.type === 'error' ? 'bg-red-500' : 
-            notification.type === 'success' ? 'bg-green-500' : 
-            notification.type === 'info' ? 'bg-blue-500' : 'bg-yellow-500'
-          } text-white`}
-        >
-          {notification.message}
-          <button
-            onClick={() => removeNotification(notification.id)}
-            className="ml-2 text-white font-bold"
-          >
-            &times;
-          </button>
-        </div>
-      ))}
+    <div className="text-gray-900 dark:text-gray-100">
+      <h1 className="text-3xl font-bold text-center my-8">Welcome to Your Gym App</h1>
+      <p className="text-center">This is where your fitness journey begins!</p>
     </div>
   );
 }
 
-export default NotificationToast;
+export default Home;
 ```
 
-# src/components/Login.jsx
+# src/pages/ExerciseLibrary.jsx
 
 ```jsx
-// src/components/Login.jsx
+// src/pages/ExerciseLibrary.jsx
 
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { useNotification } from '../context/NotificationContext';
-
-function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const { addNotification } = useNotification();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await login(username, password);
-      addNotification('Logged in successfully', 'success');
-      navigate('/'); // Redirect to home page after successful login
-    } catch (err) {
-      addNotification('Failed to log in', 'error');
-      console.error(err);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">
-          Username
-        </label>
-        <input
-          type="text"
-          id="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-          autoComplete="username"
-        />
-      </div>
-      <div className="mb-6">
-        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">
-          Password
-        </label>
-        <input
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-          autoComplete="current-password"
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          Log In
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export default Login;
-```
-
-# src/components/IndividualWorkoutSummary.jsx
-
-```jsx
-// src/components/IndividualWorkoutSummary.jsx
-
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import ExerciseItem from '../components/ExerciseItem';
+import AddExerciseForm from '../components/AddExerciseForm';
+import WorkoutPlanSelector from '../components/WorkoutPlanSelector';
+import ExerciseModal from '../components/ExerciseModal';
 import { useGymContext } from '../context/GymContext';
-
-function IndividualWorkoutSummary() {
-  const { id } = useParams();
-  const { workoutHistory } = useGymContext();
-  const [workout, setWorkout] = useState(null);
-
-  useEffect(() => {
-    const foundWorkout = workoutHistory.find(w => w._id === id);
-    setWorkout(foundWorkout);
-  }, [id, workoutHistory]);
-
-  if (!workout) {
-    return <div>Loading workout summary...</div>;
-  }
-
-  return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Workout Summary</h2>
-      <p><strong>Date:</strong> {new Date(workout.startTime).toLocaleDateString()}</p>
-      <p><strong>Duration:</strong> {((new Date(workout.endTime) - new Date(workout.startTime)) / (1000 * 60)).toFixed(0)} minutes</p>
-      <p><strong>Plan:</strong> {workout.planName}</p>
-      
-      <h3 className="text-xl font-semibold mt-4 mb-2">Exercises:</h3>
-      {workout.exercises.map((exercise, index) => (
-        <div key={index} className="mb-4">
-          <h4 className="text-lg font-medium">{exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}</h4>
-          <ul className="list-disc list-inside">
-            {exercise.sets.map((set, setIndex) => (
-              <li key={setIndex}>
-                Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export default IndividualWorkoutSummary;
-```
-
-# src/components/Header.jsx
-
-```jsx
-// src/components/Header.jsx
-
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 
-function Header() {
-  const { user, logout } = useAuth();
-  const { darkMode, toggleDarkMode } = useTheme();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+const categories = ['Strength', 'Cardio', 'Flexibility'];
 
-  const handleLogout = () => {
-    logout();
-    setIsMenuOpen(false);
-  };
+const categoryColors = {
+  Strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  Cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+  Flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+};
 
-  const menuItems = [
-    { to: "/dashboard", text: "Dashboard" },
-    { to: "/calendar", text: "Calendar" },
-    { to: "/tracker", text: "Workout Tracker" },
-    { to: "/exercises", text: "Exercise Library" },
-    { to: "/plans", text: "Workout Plans" },
-    { to: "/workout-summary", text: "Workout History" },
-  ];
-
-  const MenuItem = ({ to, text, onClick }) => (
-    <Link 
-      to={to} 
-      className="block py-2 px-4 text-sm hover:bg-gray-700 text-gray-300 hover:text-white"
-      onClick={() => {
-        setIsMenuOpen(false);
-        onClick && onClick();
-      }}
-    >
-      {text}
-    </Link>
-  );
-
-  const AuthButton = ({ to, text }) => (
-    <Link 
-      to={to} 
-      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
-    >
-      {text}
-    </Link>
-  );
-
-  return (
-    <header className="bg-gray-800 text-white">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex justify-between items-center">
-          <Link to="/" className="text-2xl font-heading font-bold">Gym App</Link>
-          
-          {/* Desktop Menu */}
-          <div className="hidden md:flex space-x-4 items-center">
-            {user ? (
-              <>
-                {menuItems.map((item) => (
-                  <MenuItem key={item.to} to={item.to} text={item.text} />
-                ))}
-                <button 
-                  onClick={handleLogout}
-                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <AuthButton to="/login" text="Login" />
-                <AuthButton to="/register" text="Register" />
-              </>
-            )}
-            <button 
-              onClick={toggleDarkMode}
-              className="ml-4 p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition duration-300 ease-in-out"
-            >
-              {darkMode ? '🌞' : '🌙'}
-            </button>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button 
-            className="md:hidden text-white focus:outline-none"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? (
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-              </svg>
-            )}
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden mt-4 bg-gray-700 rounded-lg shadow-lg">
-            {user ? (
-              <>
-                {menuItems.map((item) => (
-                  <MenuItem key={item.to} to={item.to} text={item.text} />
-                ))}
-                <MenuItem to="/" text="Logout" onClick={handleLogout} />
-              </>
-            ) : (
-              <>
-                <AuthButton to="/login" text="Login" />
-                <AuthButton to="/register" text="Register" />
-              </>
-            )}
-            <button 
-              onClick={() => {
-                toggleDarkMode();
-                setIsMenuOpen(false);
-              }}
-              className="block w-full text-left py-2 px-4 text-sm hover:bg-gray-600 text-gray-300 hover:text-white"
-            >
-              {darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            </button>
-          </div>
-        )}
-      </div>
-    </header>
-  );
-}
-
-export default Header;
-```
-
-# src/components/Footer.jsx
-
-```jsx
-// src/components/Footer.jsx
-function Footer() {
-  return (
-    <footer className="bg-gray-200 p-4 mt-8">
-      <div className="container mx-auto text-center">
-        <p>&copy; 2024 Gym App. All rights reserved.</p>
-      </div>
-    </footer>
-  );
-}
-
-export default Footer;
-```
-
-# src/components/ExerciseModal.jsx
-
-```jsx
-// src/components/ExerciseModal.jsx
-
-import React, { useEffect, useCallback } from 'react';
-
-function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
-  const handleEscapeKey = useCallback((event) => {
-    if (event.key === 'Escape') {
-      onClose();
-    }
-  }, [onClose]);
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleEscapeKey);
-    return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
-  }, [handleEscapeKey]);
-
-  const handleOverlayClick = (event) => {
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  };
-
-  if (!exercise) return null;
-
-  return (
-    <div 
-      className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50"
-      onClick={handleOverlayClick}
-    >
-      <div 
-        className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-4 p-6 lg:p-8 flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-        >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <div className="flex-grow overflow-y-auto">
-          <div className="flex flex-col lg:flex-row">
-            <div className="lg:w-1/2 pr-0 lg:pr-8 mb-6 lg:mb-0">
-              <img 
-                src={exercise.imageUrl} 
-                alt={exercise.name} 
-                className="w-full h-64 md:h-96 lg:h-[500px] object-cover rounded-lg"
-              />
-            </div>
-            <div className="lg:w-1/2 pl-0 lg:pl-8">
-              <h3 className="text-3xl lg:text-4xl font-bold mb-6 text-gray-900 dark:text-gray-100">{exercise.name}</h3>
-              <p className="text-gray-700 dark:text-gray-300 mb-6 text-lg lg:text-xl">{exercise.description}</p>
-              <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg lg:text-xl">
-                Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-end space-x-4 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <button 
-            onClick={() => onEdit(exercise)}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm"
-          >
-            Edit
-          </button>
-          <button 
-            onClick={() => onDelete(exercise)}
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm"
-          >
-            Delete
-          </button>
-          <button 
-            onClick={() => onAddToPlan(exercise)}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm"
-          >
-            Add to Plan
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default ExerciseModal;
-```
-
-# src/components/ExerciseItem.jsx
-
-```jsx
-// src/components/ExerciseItem.jsx
-
-import React from 'react';
-
-function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
-  const handleAction = (action, e) => {
-    e.stopPropagation();
-    action(exercise);
-  };
-
-  return (
-    <div 
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer"
-      onClick={() => onClick(exercise)}
-    >
-      <img 
-        src={exercise.imageUrl} 
-        alt={exercise.name} 
-        className="w-full h-48 object-cover"
-      />
-      <div className="p-4">
-        <h3 className="font-heading text-xl font-bold mb-2 text-primary dark:text-blue-400">{exercise.name}</h3>
-        <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">{exercise.description}</p>
-        <p className="text-accent dark:text-yellow-300 text-xs mb-4">
-          Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
-        </p>
-        <div className="flex justify-between mt-4">
-          <button 
-            onClick={(e) => handleAction(onEdit, e)}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs"
-          >
-            Edit
-          </button>
-          <button 
-            onClick={(e) => handleAction(onDelete, e)}
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-xs"
-          >
-            Delete
-          </button>
-          <button 
-            onClick={(e) => handleAction(onAddToPlan, e)}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-xs"
-          >
-            Add to Plan
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default ExerciseItem;
-```
-
-# src/components/Dashboard.jsx
-
-```jsx
-// src/components/Dashboard.jsx
-
-import React, { useState, useEffect } from 'react';
-import { useGymContext } from '../context/GymContext';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-
-function Dashboard() {
-  const { workoutHistory } = useGymContext();
-  const [totalWorkouts, setTotalWorkouts] = useState(0);
-  const [averageWorkoutDuration, setAverageWorkoutDuration] = useState(0);
-  const [workoutFrequencyData, setWorkoutFrequencyData] = useState([]);
-  const [exerciseFrequencyData, setExerciseFrequencyData] = useState([]);
-  const [workoutTypeData, setWorkoutTypeData] = useState([]);
-
-  useEffect(() => {
-    if (workoutHistory.length > 0) {
-      // Calculate total workouts
-      setTotalWorkouts(workoutHistory.length);
-
-      // Calculate average workout duration
-      const totalDuration = workoutHistory.reduce((sum, workout) => {
-        const duration = new Date(workout.endTime) - new Date(workout.startTime);
-        return sum + duration;
-      }, 0);
-      setAverageWorkoutDuration(totalDuration / workoutHistory.length / (1000 * 60)); // Convert to minutes
-
-      // Prepare data for workout frequency chart
-      const frequencyMap = {};
-      workoutHistory.forEach(workout => {
-        const date = new Date(workout.startTime).toLocaleDateString();
-        frequencyMap[date] = (frequencyMap[date] || 0) + 1;
-      });
-      const frequencyData = Object.entries(frequencyMap).map(([date, count]) => ({ date, count }));
-      setWorkoutFrequencyData(frequencyData);
-
-      // Prepare data for exercise frequency chart
-      const exerciseMap = {};
-      workoutHistory.forEach(workout => {
-        workout.exercises.forEach(exercise => {
-          const exerciseName = exercise.exercise ? exercise.exercise.name : 'Unknown';
-          exerciseMap[exerciseName] = (exerciseMap[exerciseName] || 0) + 1;
-        });
-      });
-      const exerciseData = Object.entries(exerciseMap)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10); // Top 10 exercises
-      setExerciseFrequencyData(exerciseData);
-    }
-
-      // Calculate workout types
-    const typeCount = {};
-    workoutHistory.forEach(workout => {
-      const type = workout.plan ? workout.plan.type : 'other';
-      typeCount[type] = (typeCount[type] || 0) + 1;
-    });
-    const typeData = Object.entries(typeCount).map(([name, value]) => ({ name, value }));
-    setWorkoutTypeData(typeData);
-
-  }, [workoutHistory]);
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
-
-  return (
-    <div className="p-4 bg-background">
-      <h2 className="text-3xl font-heading font-bold mb-6 text-primary">Workout Dashboard</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold mb-2 text-text">Total Workouts</h3>
-          <p className="text-4xl font-bold text-primary">{totalWorkouts}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold mb-2 text-text">Average Workout Duration</h3>
-          <p className="text-4xl font-bold text-primary">{averageWorkoutDuration.toFixed(1)} minutes</p>
-        </div>
-      </div>
-      <div className="mb-8">
-        <h3 className="text-2xl font-semibold mb-4 text-text">Workout Frequency</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={workoutFrequencyData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis allowDecimals={false} domain={[0, 'dataMax + 1']} />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="count" stroke="#8884d8" activeDot={{ r: 8 }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <h3 className="text-2xl font-semibold mb-4 text-text">Top 10 Exercises</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={exerciseFrequencyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="count" fill="#82ca9d" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div>
-          <h3 className="text-2xl font-semibold mb-4 text-text">Workout Types</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={workoutTypeData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-              >
-                {workoutTypeData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default Dashboard;
-```
-
-# src/components/AddExerciseForm.jsx
-
-```jsx
-// src/components/AddExerciseForm.jsx
-
-import { useState, useEffect } from 'react';
-import { useGymContext } from '../context/GymContext';
-import { useNotification } from '../context/NotificationContext';
-
-const muscleGroups = [
-  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'
-];
-
-function AddExerciseForm({ onSave, initialExercise, onCancel }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [target, setTarget] = useState([]);
-  const [imageUrl, setImageUrl] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const { addExercise, updateExercise } = useGymContext();
+function ExerciseLibrary() {
+  const { exercises, updateExercise, deleteExercise, addExerciseToPlan } = useGymContext();
   const { addNotification } = useNotification();
+  const { darkMode } = useTheme();
+  const [editingExercise, setEditingExercise] = useState(null);
+  const [showWorkoutPlanSelector, setShowWorkoutPlanSelector] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState(null);
+  const [exerciseToAddToPlan, setExerciseToAddToPlan] = useState(null);
+  const [filterText, setFilterText] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [viewMode, setViewMode] = useState('grid');
 
-  useEffect(() => {
-    if (initialExercise) {
-      setName(initialExercise.name);
-      setDescription(initialExercise.description);
-      setTarget(Array.isArray(initialExercise.target) ? initialExercise.target : [initialExercise.target]);
-      setImageUrl(initialExercise.imageUrl);
-      setIsExpanded(true);
-    } else {
-      setName('');
-      setDescription('');
-      setTarget([]);
-      setImageUrl('');
-    }
-  }, [initialExercise]);
+  const filteredExercises = useMemo(() => {
+    return exercises.filter(exercise => 
+      (exercise.name.toLowerCase().includes(filterText.toLowerCase()) ||
+       exercise.description.toLowerCase().includes(filterText.toLowerCase()) ||
+       (Array.isArray(exercise.target) && exercise.target.some(t => t.toLowerCase().includes(filterText.toLowerCase())))) &&
+      (selectedCategories.length === 0 || selectedCategories.includes(exercise.category))
+    );
+  }, [exercises, filterText, selectedCategories]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    const exercise = { name, description, target, imageUrl };
-    try {
-      let savedExercise;
-      if (initialExercise) {
-        savedExercise = await updateExercise(initialExercise._id, exercise);
-        addNotification('Exercise updated successfully', 'success');
-      } else {
-        savedExercise = await addExercise(exercise);
-        addNotification('Exercise added successfully', 'success');
-      }
-      setName('');
-      setDescription('');
-      setTarget([]);
-      setImageUrl('');
-      setIsExpanded(false);
-      onSave(savedExercise);
-    } catch (error) {
-      addNotification('Failed to save exercise', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleEdit = (exercise) => {
+    setEditingExercise(exercise);
+    setSelectedExercise(null);
   };
 
-  const handleTargetChange = (group) => {
-    setTarget(prev => 
-      prev.includes(group) 
-        ? prev.filter(item => item !== group)
-        : [...prev, group]
+  const handleDelete = (exercise) => {
+    deleteExercise(exercise._id);
+    setSelectedExercise(null);
+  };
+
+  const handleAddToPlan = (exercise) => {
+    setExerciseToAddToPlan(exercise);
+    setShowWorkoutPlanSelector(true);
+  };
+
+  const handleSave = (savedExercise) => {
+    setEditingExercise(null);
+    // Optionally, you can refresh the exercise list here
+  };
+
+  const handleSelectWorkoutPlan = async (plan) => {
+    if (!exerciseToAddToPlan || !exerciseToAddToPlan._id) {
+      addNotification('No exercise selected', 'error');
+      return;
+    }
+    
+    const result = await addExerciseToPlan(plan._id, exerciseToAddToPlan._id);
+    
+    if (result.success) {
+      addNotification(`Exercise added to ${plan.name}`, 'success');
+    } else if (result.alreadyInPlan) {
+      // The notification is already handled in the GymContext
+    } else {
+      // The error notification is already handled in the GymContext
+    }
+    
+    setShowWorkoutPlanSelector(false);
+    setExerciseToAddToPlan(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingExercise(null);
+  };
+
+  const toggleViewMode = () => {
+    setViewMode(viewMode === 'grid' ? 'list' : 'grid');
+  };
+
+  const toggleCategory = (category) => {
+    setSelectedCategories(prev => 
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
     );
   };
 
-  const handleCancel = () => {
-    setName('');
-    setDescription('');
-    setTarget([]);
-    setImageUrl('');
-    setIsExpanded(false);
-    if (typeof onCancel === 'function') {
-      onCancel();
-    }
-  };
-
-  const toggleForm = () => {
-    setIsExpanded(!isExpanded);
-    if (!isExpanded) {
-      setName('');
-      setDescription('');
-      setTarget([]);
-      setImageUrl('');
-    }
-  };
-
   return (
-    <div className="mb-8">
-      <button
-        onClick={toggleForm}
-        className="mb-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-      >
-        {isExpanded ? 'Hide Form' : 'Add New Exercise'}
-      </button>
-      {isExpanded && (
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
-          <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
-            {initialExercise ? 'Edit Exercise' : 'Add New Exercise'}
-          </h2>
-          <div className="mb-4">
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="name">
-              Exercise Name
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
-              id="name"
-              type="text"
-              placeholder="Exercise Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="description">
-              Description
-            </label>
-            <textarea
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
-              id="description"
-              placeholder="Exercise Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
-              Target Muscle Groups
-            </label>
-            <div className="flex flex-wrap -mx-1">
-              {muscleGroups.map(group => (
-                <div key={group} className="px-1 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => handleTargetChange(group)}
-                    className={`py-1 px-2 rounded ${
-                      target.includes(group)
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
-                    }`}
-                  >
-                    {group}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="imageUrl">
-              Image URL
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
-              id="imageUrl"
-              type="text"
-              placeholder="Image URL"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center justify-between">
+    <div className={`bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
+      <h1 className="text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise Library</h1>
+      
+      <div className="mb-6 lg:mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex-grow">
+          <input
+            type="text"
+            placeholder="Search exercises..."
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            className="w-full px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
+          />
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <button
+            onClick={toggleViewMode}
+            className="px-4 py-2 lg:py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200"
+          >
+            {viewMode === 'grid' ? 'List View' : 'Grid View'}
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-2">Categories</h2>
+        <div className="flex flex-wrap gap-2">
+          {categories.map(category => (
             <button
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              type="submit"
+              key={category}
+              onClick={() => toggleCategory(category)}
+              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                selectedCategories.includes(category)
+                  ? categoryColors[category]
+                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+              }`}
             >
-              {initialExercise ? 'Update Exercise' : 'Add Exercise'}
+              {category}
             </button>
-            <button
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              type="button"
-              onClick={handleCancel}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+          ))}
+        </div>
+      </div>
+      
+      <AddExerciseForm 
+        onSave={handleSave} 
+        initialExercise={editingExercise}
+        onCancel={handleCancelEdit}
+      />
+      
+      <div className={`${viewMode === 'grid' ? 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5' : 'space-y-4'}`}>
+        {filteredExercises.map((exercise) => (
+          <ExerciseItem 
+            key={exercise._id} 
+            exercise={exercise}
+            onClick={() => setSelectedExercise(exercise)}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onAddToPlan={handleAddToPlan}
+            viewMode={viewMode}
+          />
+        ))}
+      </div>
+      
+      {selectedExercise && (
+        <ExerciseModal
+          exercise={selectedExercise}
+          onClose={() => setSelectedExercise(null)}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onAddToPlan={handleAddToPlan}
+        />
       )}
+      
+      {showWorkoutPlanSelector && (
+        <WorkoutPlanSelector
+          onSelect={handleSelectWorkoutPlan}
+          onClose={() => {
+            setShowWorkoutPlanSelector(false);
+            setExerciseToAddToPlan(null);
+          }}
+        />
+      )}
+
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-2">Category Legend</h2>
+        <div className="flex flex-wrap gap-4">
+          {categories.map(category => (
+            <div key={category} className="flex items-center">
+              <span className={`w-4 h-4 rounded-full mr-2 ${categoryColors[category]}`}></span>
+              <span>{category}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
-export default AddExerciseForm;
+export default ExerciseLibrary;
 ```
 
 # src/context/ThemeContext.jsx
@@ -3373,10 +2121,11 @@ export function GymProvider({ children }) {
     try {
       await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
       setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
+      // Update workouts to mark the plan as deleted instead of removing the association
       setWorkoutHistory(prevHistory => 
         prevHistory.map(workout => 
           workout.plan && workout.plan._id === id 
-            ? { ...workout, plan: null, planDeleted: true } 
+            ? { ...workout, planDeleted: true, planName: workout.planName || 'Deleted Plan' } 
             : workout
         )
       );
@@ -3431,21 +2180,21 @@ export function GymProvider({ children }) {
   };
 
   // Get the last workout for a given plan
-const getLastWorkoutByPlan = useCallback(async (planId) => {
-  try {
-    const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
-    return response.data;
-  } catch (error) {
-    if (error.response && error.response.status === 404) {
-      // No previous workout found, this is not an error
-      console.log('No previous workout found for this plan');
+  const getLastWorkoutByPlan = useCallback(async (planId) => {
+    try {
+      const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        // No previous workout found, this is not an error
+        console.log('No previous workout found for this plan');
+        return null;
+      }
+      console.error('Error fetching last workout:', error);
+      addNotification('Failed to fetch last workout', 'error');
       return null;
     }
-    console.error('Error fetching last workout:', error);
-    addNotification('Failed to fetch last workout', 'error');
-    return null;
-  }
-}, [API_URL, getAuthConfig, addNotification]);
+  }, [API_URL, getAuthConfig, addNotification]);
 
   const contextValue = useMemo(() => ({
     workouts,
@@ -3465,7 +2214,7 @@ const getLastWorkoutByPlan = useCallback(async (planId) => {
     fetchWorkoutPlans,
     addExerciseToPlan,
     getLastWorkoutByPlan
-  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan]);
+  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan, fetchWorkoutPlans, fetchWorkoutHistory]);
 
   return (
     <GymContext.Provider value={contextValue}>
@@ -3557,6 +2306,1968 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+```
+
+# src/components/WorkoutPlanSelector.jsx
+
+```jsx
+// src/components/WorkoutPlanSelector.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+
+function WorkoutPlanSelector({ onSelect, onClose }) {
+  const [workoutPlans, setWorkoutPlans] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { fetchWorkoutPlans } = useGymContext();
+
+  useEffect(() => {
+    const getWorkoutPlans = async () => {
+      try {
+        setIsLoading(true);
+        const plans = await fetchWorkoutPlans();
+        setWorkoutPlans(plans || []);
+      } catch (error) {
+        console.error('Error fetching workout plans:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    getWorkoutPlans();
+  }, [fetchWorkoutPlans]);
+
+  const handleSelect = async (plan) => {
+    await onSelect(plan);
+    onClose();
+  };
+
+  if (isLoading) {
+    return <div>Loading workout plans...</div>;
+  }
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-[60]">
+      <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-xl max-w-md w-full m-4">
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Select Workout Plan</h2>
+        {workoutPlans.length === 0 ? (
+          <p className="text-gray-700 dark:text-gray-300">No workout plans available. Create a plan first.</p>
+        ) : (
+          workoutPlans.map((plan) => (
+            <button
+              key={plan._id}
+              onClick={() => handleSelect(plan)}
+              className="block w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mb-2 text-gray-800 dark:text-gray-200"
+            >
+              {plan.name}
+            </button>
+          ))
+        )}
+        <button
+          onClick={onClose}
+          className="mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default WorkoutPlanSelector;
+```
+
+# src/components/WorkoutPlanModal.jsx
+
+```jsx
+// src/components/WorkoutPlanModal.jsx
+
+import React from 'react';
+import { useTheme } from '../context/ThemeContext';
+
+function WorkoutPlanModal({ plan, onClose, onEdit, onStart }) {
+  const { darkMode } = useTheme();
+
+  if (!plan) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50" id="my-modal">
+      <div className={`relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+        <div className="mt-3">
+          <h3 className="text-lg leading-6 font-medium">{plan.name}</h3>
+          <div className="mt-2 px-7 py-3">
+            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+              Type: {plan.type || 'Not specified'}
+            </p>
+            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+              Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleString() : 'Not scheduled'}
+            </p>
+            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+              Status: {plan.completed ? 'Completed' : 'Scheduled'}
+            </p>
+            <div className="mt-4">
+              <h4 className="text-md font-medium">Exercises:</h4>
+              <ul className="list-disc list-inside">
+                {plan.exercises.map((exercise, index) => (
+                  <li key={index} className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>{exercise.name}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="flex justify-between items-center px-4 py-3">
+            <button
+              className={`px-4 py-2 ${darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-300`}
+              onClick={() => {
+                onEdit(plan);
+                onClose();
+              }}
+            >
+              Edit
+            </button>
+            <button
+              className={`px-4 py-2 ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300`}
+              onClick={() => {
+                onStart(plan);
+                onClose();
+              }}
+            >
+              Start Workout
+            </button>
+            <button
+              className={`px-4 py-2 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300`}
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default WorkoutPlanModal;
+```
+
+# src/components/WorkoutPlanForm.jsx
+
+```jsx
+// src/components/WorkoutPlanForm.jsx
+
+import { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+import { useTheme } from '../context/ThemeContext';
+
+function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
+  const [planName, setPlanName] = useState('');
+  const [selectedExercises, setSelectedExercises] = useState([]);
+  const [workoutType, setWorkoutType] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const { exercises } = useGymContext();
+  const { darkMode } = useTheme();
+
+  useEffect(() => {
+    if (initialPlan) {
+      setPlanName(initialPlan.name);
+      setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id));
+      setWorkoutType(initialPlan.type || '');
+      setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
+    } else {
+      setPlanName('');
+      setSelectedExercises([]);
+      setWorkoutType('');
+      setScheduledDate('');
+    }
+  }, [initialPlan]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const workoutPlan = {
+      name: planName,
+      exercises: selectedExercises,
+      type: workoutType,
+      scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null
+    };
+    
+    if (initialPlan) {
+      workoutPlan._id = initialPlan._id;
+    }
+
+    await onSubmit(workoutPlan);
+  };
+
+  const handleCancel = (e) => {
+    e.preventDefault();
+    onCancel();
+  };
+
+  const handleExerciseToggle = (exerciseId) => {
+    setSelectedExercises(prevSelected =>
+      prevSelected.includes(exerciseId)
+        ? prevSelected.filter(id => id !== exerciseId)
+        : [...prevSelected, exerciseId]
+    );
+  };
+
+  const filteredExercises = exercises.filter(exercise =>
+    exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    exercise.target.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const groupedExercises = filteredExercises.reduce((acc, exercise) => {
+    exercise.target.forEach(target => {
+      if (!acc[target]) {
+        acc[target] = [];
+      }
+      acc[target].push(exercise);
+    });
+    return acc;
+  }, {});
+
+  return (
+    <form onSubmit={handleSubmit} className={`max-w-4xl mx-auto mt-8 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} shadow-md rounded px-8 pt-6 pb-8 mb-4`}>
+      <div className="mb-4">
+        <label htmlFor="planName" className="block text-sm font-bold mb-2">
+          Workout Plan Name
+        </label>
+        <input
+          type="text"
+          id="planName"
+          value={planName}
+          onChange={(e) => setPlanName(e.target.value)}
+          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline`}
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="workoutType" className="block text-sm font-bold mb-2">
+          Workout Type
+        </label>
+        <select
+          id="workoutType"
+          value={workoutType}
+          onChange={(e) => setWorkoutType(e.target.value)}
+          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline`}
+          required
+        >
+          <option value="">Select a type</option>
+          <option value="strength">Strength</option>
+          <option value="cardio">Cardio</option>
+          <option value="flexibility">Flexibility</option>
+        </select>
+      </div>
+      <div className="mb-4">
+        <label htmlFor="scheduledDate" className="block text-sm font-bold mb-2">
+          Scheduled Date
+        </label>
+        <input
+          type="date"
+          id="scheduledDate"
+          value={scheduledDate}
+          onChange={(e) => setScheduledDate(e.target.value)}
+          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline`}
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-bold mb-2">
+          Select Exercises
+        </label>
+        <input
+          type="text"
+          placeholder="Search exercises..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline mb-4`}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={`border rounded p-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} overflow-y-auto h-96`}>
+            {Object.entries(groupedExercises).map(([target, targetExercises]) => (
+              <div key={target} className="mb-4">
+                <h3 className="font-bold mb-2">{target}</h3>
+                {targetExercises.map(exercise => (
+                  <div key={exercise._id} className="flex items-center mb-2">
+                    <input
+                      type="checkbox"
+                      id={`exercise-${exercise._id}`}
+                      checked={selectedExercises.includes(exercise._id)}
+                      onChange={() => handleExerciseToggle(exercise._id)}
+                      className="mr-2"
+                    />
+                    <label htmlFor={`exercise-${exercise._id}`} className="text-sm">
+                      {exercise.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div className={`border rounded p-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} overflow-y-auto h-96`}>
+            <h3 className="font-bold mb-2">Selected Exercises</h3>
+            {selectedExercises.map(exerciseId => {
+              const exercise = exercises.find(e => e._id === exerciseId);
+              return (
+                <div key={exerciseId} className="flex items-center justify-between mb-2">
+                  <span className="text-sm">{exercise.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleExerciseToggle(exerciseId)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between mt-6">
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          {initialPlan ? 'Update Workout Plan' : 'Create Workout Plan'}
+        </button>
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default WorkoutPlanForm;
+```
+
+# src/components/WorkoutPlanDetails.jsx
+
+```jsx
+// src/components/WorkoutPlanDetails.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useGymContext } from '../context/GymContext';
+
+function WorkoutPlanDetails() {
+  const { id } = useParams();
+  const { workoutPlans, updateWorkoutPlan, deleteWorkoutPlan } = useGymContext();
+  const [plan, setPlan] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const foundPlan = workoutPlans.find(p => p._id === id);
+    setPlan(foundPlan);
+  }, [id, workoutPlans]);
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this workout plan?')) {
+      await deleteWorkoutPlan(id);
+      navigate('/plans');
+    }
+  };
+
+  const handleReschedule = () => {
+    const newDate = prompt('Enter new date (YYYY-MM-DD):', plan.scheduledDate ? new Date(plan.scheduledDate).toISOString().split('T')[0] : '');
+    if (newDate) {
+      const updatedPlan = { ...plan, scheduledDate: new Date(newDate) };
+      updateWorkoutPlan(id, updatedPlan);
+    }
+  };
+
+  if (!plan) {
+    return <div>Loading workout plan...</div>;
+  }
+
+  return (
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">{plan.name}</h2>
+      <p><strong>Type:</strong> {plan.type || 'Not specified'}</p>
+      <p><strong>Scheduled Date:</strong> {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}</p>
+      
+      <h3 className="text-xl font-semibold mt-4 mb-2">Exercises:</h3>
+      <ul className="list-disc list-inside">
+        {plan.exercises.map((exercise, index) => (
+          <li key={index}>{exercise.name}</li>
+        ))}
+      </ul>
+
+      <div className="mt-4">
+        <button onClick={handleReschedule} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
+          Reschedule
+        </button>
+        <button onClick={handleDelete} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+          Delete Plan
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default WorkoutPlanDetails;
+```
+
+# src/components/WorkoutPlanCard.jsx
+
+```jsx
+// src/components/WorkoutPlanCard.jsx
+
+import React, { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
+// Import icons from react-icons
+import { FiPlay, FiEdit, FiTrash2 } from 'react-icons/fi';
+
+function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
+  const { darkMode } = useTheme();
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+  const handleAction = (action, e) => {
+    e.stopPropagation();
+    if (action === onDelete) {
+      setIsDeleteConfirmOpen(true);
+    } else {
+      action(plan);
+    }
+  };
+
+  const confirmDelete = (e) => {
+    e.stopPropagation();
+    onDelete(plan._id);
+    setIsDeleteConfirmOpen(false);
+  };
+
+  const cancelDelete = (e) => {
+    e.stopPropagation();
+    setIsDeleteConfirmOpen(false);
+  };
+
+  const typeColors = {
+    strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    other: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+  };
+
+  const buttonStyles = {
+    base: 'text-xs font-semibold py-1 px-2 rounded transition-all duration-200 flex items-center justify-center',
+    start: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md',
+    edit: 'bg-indigo-500 text-white hover:bg-indigo-600 dark:bg-indigo-600 dark:hover:bg-indigo-700 hover:shadow-md',
+    delete: 'bg-rose-500 text-white hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700 hover:shadow-md'
+  };
+
+  const TypeBadge = () => (
+    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${typeColors[plan.type] || typeColors.other}`}>
+      {plan.type || 'Other'}
+    </span>
+  );
+
+  const ActionButton = ({ action, style, icon, text }) => (
+    <button 
+      onClick={(e) => handleAction(action, e)}
+      className={`${buttonStyles.base} ${style}`}
+    >
+      {icon}
+      <span className="ml-1">{text}</span>
+    </button>
+  );
+
+  const DeleteConfirmation = () => (
+    <div className="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center rounded-lg z-10">
+      <div className="bg-white dark:bg-gray-700 p-4 rounded-lg text-center">
+        <p className="mb-4 text-sm">Are you sure you want to delete this workout plan?</p>
+        <div className="flex justify-center space-x-2">
+          <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>
+            <FiTrash2 className="mr-1" />
+            Yes, Delete
+          </button>
+          <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={`relative border rounded-lg p-4 mb-4 shadow-sm ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} transition-transform duration-300 hover:scale-105`}>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-xl font-semibold">{plan.name}</h3>
+        <TypeBadge />
+      </div>
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+        Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
+      </p>
+      <div className="mb-4 max-h-40 overflow-y-auto">
+        <h4 className="font-semibold mb-1">Exercises:</h4>
+        <ul className="list-disc list-inside">
+          {plan.exercises.map((exercise) => (
+            <li key={exercise._id} className="mb-1">
+              <span className="font-medium">{exercise.name}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="flex justify-between">
+        <ActionButton action={onStart} style={buttonStyles.start} icon={<FiPlay className="mr-1" />} text="Start Workout" />
+        <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit className="mr-1" />} text="Edit Plan" />
+        <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 className="mr-1" />} text="Delete Plan" />
+      </div>
+      {isDeleteConfirmOpen && <DeleteConfirmation />}
+    </div>
+  );
+}
+
+export default WorkoutPlanCard;
+```
+
+# src/components/WorkoutForm.jsx
+
+```jsx
+// src/components/WorkoutForm.jsx
+import { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+
+function WorkoutForm({ onSave, initialWorkout }) {
+  const [selectedExercise, setSelectedExercise] = useState('');
+  const [sets, setSets] = useState('');
+  const [reps, setReps] = useState('');
+  const [weight, setWeight] = useState('');
+  const { exercises } = useGymContext();
+
+  useEffect(() => {
+    if (initialWorkout) {
+      setSelectedExercise(initialWorkout.exercise);
+      setSets(initialWorkout.sets.toString());
+      setReps(initialWorkout.reps.toString());
+      setWeight(initialWorkout.weight.toString());
+    }
+  }, [initialWorkout]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const workout = {
+      exercise: selectedExercise,
+      sets: parseInt(sets),
+      reps: parseInt(reps),
+      weight: parseFloat(weight),
+      date: new Date().toISOString()
+    };
+    onSave(workout);
+    // Reset form
+    setSelectedExercise('');
+    setSets('');
+    setReps('');
+    setWeight('');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
+      <div className="mb-4">
+        <label htmlFor="exercise" className="block text-gray-700 font-bold mb-2">
+          Exercise
+        </label>
+        <select
+          id="exercise"
+          value={selectedExercise}
+          onChange={(e) => setSelectedExercise(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        >
+          <option value="">Select an exercise</option>
+          {exercises.map((exercise) => (
+            <option key={exercise._id} value={exercise.name}>
+              {exercise.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="mb-4">
+        <label htmlFor="sets" className="block text-gray-700 font-bold mb-2">
+          Sets
+        </label>
+        <input
+          type="number"
+          id="sets"
+          value={sets}
+          onChange={(e) => setSets(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="reps" className="block text-gray-700 font-bold mb-2">
+          Reps
+        </label>
+        <input
+          type="number"
+          id="reps"
+          value={reps}
+          onChange={(e) => setReps(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="mb-6">
+        <label htmlFor="weight" className="block text-gray-700 font-bold mb-2">
+          Weight (kg)
+        </label>
+        <input
+          type="number"
+          id="weight"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          step="0.1"
+          required
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          {initialWorkout ? 'Update Workout' : 'Log Workout'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default WorkoutForm;
+```
+
+# src/components/WorkoutCalendar.jsx
+
+```jsx
+// src/components/WorkoutCalendar.jsx
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import { useGymContext } from '../context/GymContext';
+import { useNavigate } from 'react-router-dom';
+import { useNotification } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
+import WorkoutPlanModal from './WorkoutPlanModal';
+import './WorkoutCalendar.css';
+
+const localizer = momentLocalizer(moment);
+const DnDCalendar = withDragAndDrop(Calendar);
+
+const workoutColors = {
+  strength: '#4CAF50',
+  cardio: '#2196F3',
+  flexibility: '#FF9800',
+  default: '#9C27B0',
+  completed: '#607D8B'
+};
+
+function WorkoutCalendar({ filteredPlans = [], onEditPlan, onStartWorkout }) {
+  const { workoutHistory, updateWorkoutPlan } = useGymContext();
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const navigate = useNavigate();
+  const { addNotification } = useNotification();
+  const { darkMode } = useTheme();
+
+  const getEventColor = useCallback((event) => {
+    if (event.resource === 'history' || event.resource === 'completed') {
+      return workoutColors.completed;
+    }
+    const plan = filteredPlans.find(p => p._id === event.id);
+    return plan && plan.type ? workoutColors[plan.type] : workoutColors.default;
+  }, [filteredPlans]);
+
+  const events = useMemo(() => {
+    const historyEvents = workoutHistory.map(workout => ({
+      id: workout._id,
+      title: `${workout.planName} (Completed)`,
+      start: new Date(workout.startTime),
+      end: new Date(workout.endTime),
+      allDay: false,
+      resource: 'history'
+    }));
+
+    const planEvents = filteredPlans
+      .filter(plan => plan.scheduledDate)
+      .map(plan => ({
+        id: plan._id,
+        title: plan.name,
+        start: new Date(plan.scheduledDate),
+        end: new Date(new Date(plan.scheduledDate).setHours(new Date(plan.scheduledDate).getHours() + 1)),
+        allDay: false,
+        resource: plan.completed ? 'completed' : 'scheduled'
+      }));
+
+    return [...historyEvents, ...planEvents];
+  }, [workoutHistory, filteredPlans]);
+
+  const handleSelectEvent = useCallback((event) => {
+    if (event.resource === 'history') {
+      navigate(`/workout-summary/${event.id}`);
+    } else {
+      const plan = filteredPlans.find(p => p._id === event.id);
+      setSelectedPlan(plan);
+    }
+  }, [filteredPlans, navigate]);
+
+  const handleSelectSlot = useCallback(({ start }) => {
+    const planName = prompt('Enter workout plan name:');
+    if (planName) {
+      const workoutType = prompt('Enter workout type (strength, cardio, flexibility):');
+      const newPlan = {
+        name: planName,
+        exercises: [],
+        scheduledDate: start,
+        type: workoutType
+      };
+      updateWorkoutPlan(null, newPlan);
+    }
+  }, [updateWorkoutPlan]);
+
+  const moveEvent = useCallback(({ event, start, end }) => {
+    if (event.resource === 'history' || event.resource === 'completed') {
+      addNotification('Cannot reschedule completed workouts', 'error');
+      return;
+    }
+
+    const updatedPlan = filteredPlans.find(plan => plan._id === event.id);
+    if (updatedPlan) {
+      updatedPlan.scheduledDate = start;
+      updateWorkoutPlan(event.id, updatedPlan);
+      addNotification('Workout rescheduled successfully', 'success');
+    }
+  }, [filteredPlans, updateWorkoutPlan, addNotification]);
+
+  const resizeEvent = useCallback(({ event, start, end }) => {
+    if (event.resource === 'history' || event.resource === 'completed') {
+      addNotification('Cannot modify completed workouts', 'error');
+      return;
+    }
+
+    const updatedPlan = filteredPlans.find(plan => plan._id === event.id);
+    if (updatedPlan) {
+      updatedPlan.scheduledDate = start;
+      updateWorkoutPlan(event.id, updatedPlan);
+      addNotification('Workout duration updated successfully', 'success');
+    }
+  }, [filteredPlans, updateWorkoutPlan, addNotification]);
+
+  const eventPropGetter = useCallback((event) => {
+    const backgroundColor = getEventColor(event);
+    return {
+      style: {
+        backgroundColor,
+        borderRadius: '5px',
+        opacity: event.resource === 'history' || event.resource === 'completed' ? 0.7 : 1,
+        color: '#fff',
+        border: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '14px',
+        fontWeight: '500',
+        cursor: event.resource === 'history' || event.resource === 'completed' ? 'not-allowed' : 'pointer'
+      }
+    };
+  }, [getEventColor]);
+
+  return (
+    <div className={`h-full ${darkMode ? 'bg-gray-700' : 'bg-white'} rounded-lg shadow-lg p-4`}>
+      <DnDCalendar
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        style={{ height: '100%' }}
+        onSelectSlot={handleSelectSlot}
+        onSelectEvent={handleSelectEvent}
+        onEventDrop={moveEvent}
+        onEventResize={resizeEvent}
+        selectable
+        resizable
+        eventPropGetter={eventPropGetter}
+        draggableAccessor={(event) => event.resource !== 'history' && event.resource !== 'completed'}
+        views={['month', 'week', 'day']}
+        defaultView="month"
+        formats={{
+          monthHeaderFormat: (date, culture, localizer) =>
+            localizer.format(date, 'MMMM YYYY', culture),
+          dayHeaderFormat: (date, culture, localizer) =>
+            localizer.format(date, 'dddd, MMMM D', culture),
+        }}
+        components={{
+          toolbar: CustomToolbar,
+        }}
+      />
+      {selectedPlan && (
+        <WorkoutPlanModal
+          plan={selectedPlan}
+          onClose={() => setSelectedPlan(null)}
+          onEdit={onEditPlan}
+          onStart={onStartWorkout}
+        />
+      )}
+    </div>
+  );
+}
+
+const CustomToolbar = (toolbar) => {
+  const goToBack = () => {
+    toolbar.date.setMonth(toolbar.date.getMonth() - 1);
+    toolbar.onNavigate('prev');
+  };
+
+  const goToNext = () => {
+    toolbar.date.setMonth(toolbar.date.getMonth() + 1);
+    toolbar.onNavigate('next');
+  };
+
+  const goToCurrent = () => {
+    const now = new Date();
+    toolbar.date.setMonth(now.getMonth());
+    toolbar.date.setYear(now.getFullYear());
+    toolbar.onNavigate('current');
+  };
+
+  const label = () => {
+    const date = moment(toolbar.date);
+    return (
+      <span className="text-lg font-semibold">{date.format('MMMM YYYY')}</span>
+    );
+  };
+
+  return (
+    <div className="flex justify-between items-center mb-4">
+      <div>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
+          onClick={goToBack}
+        >
+          &lt;
+        </button>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          onClick={goToNext}
+        >
+          &gt;
+        </button>
+      </div>
+      <div>{label()}</div>
+      <button
+        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        onClick={goToCurrent}
+      >
+        Today
+      </button>
+    </div>
+  );
+};
+
+export default WorkoutCalendar;
+```
+
+# src/components/WorkoutCalendar.css
+
+```css
+/* src/components/WorkoutCalendar.css */
+
+.rbc-calendar {
+  font-family: 'Arial', sans-serif;
+}
+
+.rbc-header {
+  padding: 10px 3px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.rbc-button-link {
+  color: #333;
+}
+
+.rbc-off-range-bg {
+  background-color: #f0f0f0;
+}
+
+.rbc-today {
+  background-color: #e6f7ff;
+}
+
+.rbc-event {
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rbc-event-content {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.rbc-toolbar button {
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px 10px;
+}
+
+.rbc-toolbar button:hover {
+  background-color: #f0f0f0;
+}
+
+.rbc-toolbar button:active,
+.rbc-toolbar button.rbc-active {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+/* Dark mode styles */
+.dark .rbc-calendar {
+  color: #fff;
+}
+
+.dark .rbc-off-range-bg {
+  background-color: #2a2a2a;
+}
+
+.dark .rbc-today {
+  background-color: #1a3a4a;
+}
+
+.dark .rbc-button-link {
+  color: #fff;
+}
+
+.dark .rbc-toolbar button {
+  color: #fff;
+  border-color: #666;
+}
+
+.dark .rbc-toolbar button:hover {
+  background-color: #444;
+}
+
+.dark .rbc-toolbar button:active,
+.dark .rbc-toolbar button.rbc-active {
+  background-color: #555;
+  border-color: #888;
+}
+```
+
+# src/components/Register.jsx
+
+```jsx
+// src/components/Register.jsx
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
+function Register() {
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await register(username, email, password);
+      navigate('/login');
+    } catch (error) {
+      console.error('Registration failed:', error);
+      // Handle error (e.g., show error message to user)
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
+      <div className="mb-4">
+        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">Username</label>
+        <input
+          type="text"
+          id="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="email" className="block text-gray-700 font-bold mb-2">Email</label>
+        <input
+          type="email"
+          id="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="mb-6">
+        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">Password</label>
+        <input
+          type="password"
+          id="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Register
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default Register;
+```
+
+# src/components/NotificationToast.jsx
+
+```jsx
+// src/components/NotificationToast.jsx
+
+import React from 'react';
+import { useNotification } from '../context/NotificationContext';
+
+function NotificationToast() {
+  const { notifications, removeNotification } = useNotification();
+
+  return (
+    <div className="fixed top-4 right-4 z-50">
+      {notifications.map((notification) => (
+        <div
+          key={notification.id}
+          className={`mb-2 p-4 rounded shadow-md ${
+            notification.type === 'error' ? 'bg-red-500' : 
+            notification.type === 'success' ? 'bg-green-500' : 
+            notification.type === 'info' ? 'bg-blue-500' : 'bg-yellow-500'
+          } text-white`}
+        >
+          {notification.message}
+          <button
+            onClick={() => removeNotification(notification.id)}
+            className="ml-2 text-white font-bold"
+          >
+            &times;
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default NotificationToast;
+```
+
+# src/components/Login.jsx
+
+```jsx
+// src/components/Login.jsx
+
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useNotification } from '../context/NotificationContext';
+
+function Login() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const { addNotification } = useNotification();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await login(username, password);
+      addNotification('Logged in successfully', 'success');
+      navigate('/'); // Redirect to home page after successful login
+    } catch (err) {
+      addNotification('Failed to log in', 'error');
+      console.error(err);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
+      <div className="mb-4">
+        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">
+          Username
+        </label>
+        <input
+          type="text"
+          id="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+          autoComplete="username"
+        />
+      </div>
+      <div className="mb-6">
+        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">
+          Password
+        </label>
+        <input
+          type="password"
+          id="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+          autoComplete="current-password"
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          Log In
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default Login;
+```
+
+# src/components/IndividualWorkoutSummary.jsx
+
+```jsx
+// src/components/IndividualWorkoutSummary.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { useGymContext } from '../context/GymContext';
+import { useTheme } from '../context/ThemeContext';
+
+function IndividualWorkoutSummary() {
+  const { id } = useParams();
+  const { workoutHistory } = useGymContext();
+  const [workout, setWorkout] = useState(null);
+  const { darkMode } = useTheme();
+
+  useEffect(() => {
+    const foundWorkout = workoutHistory.find(w => w._id === id);
+    setWorkout(foundWorkout);
+  }, [id, workoutHistory]);
+
+  if (!workout) {
+    return <div>Loading workout summary...</div>;
+  }
+
+  const formatDuration = (start, end) => {
+    const duration = new Date(end) - new Date(start);
+    const hours = Math.floor(duration / 3600000);
+    const minutes = Math.floor((duration % 3600000) / 60000);
+    return `${hours}h ${minutes}m`;
+  };
+
+  return (
+    <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
+      <h2 className="text-2xl font-bold mb-4">Workout Summary</h2>
+      <p><strong>Date:</strong> {new Date(workout.startTime).toLocaleDateString()}</p>
+      <p><strong>Duration:</strong> {formatDuration(workout.startTime, workout.endTime)}</p>
+      <p><strong>Plan:</strong> {workout.planName}</p>
+      <p><strong>Progression:</strong> {workout.progression ? `${workout.progression.toFixed(2)}%` : 'N/A'}</p>
+      <p><strong>Total Pause Time:</strong> {workout.totalPauseTime ? `${workout.totalPauseTime} seconds` : 'N/A'}</p>
+      <p><strong>Skipped Pauses:</strong> {workout.skippedPauses || 0}</p>
+      
+      <h3 className="text-xl font-semibold mt-4 mb-2">Exercises:</h3>
+      {workout.exercises.map((exercise, index) => (
+        <div key={index} className={`mb-4 p-3 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+          <h4 className="text-lg font-medium">{exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}</h4>
+          <ul className="list-disc list-inside">
+            {exercise.sets.map((set, setIndex) => (
+              <li key={setIndex}>
+                Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
+                {set.skippedRest && <span className="text-yellow-500 ml-2">(Rest Skipped)</span>}
+              </li>
+            ))}
+          </ul>
+          {exercise.notes && (
+            <p className="mt-2 italic">Notes: {exercise.notes}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default IndividualWorkoutSummary;
+```
+
+# src/components/Header.jsx
+
+```jsx
+// src/components/Header.jsx
+
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+
+function Header() {
+  const { user, logout } = useAuth();
+  const { darkMode, toggleDarkMode } = useTheme();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    setIsMenuOpen(false);
+  };
+
+  const menuItems = [
+    { to: "/dashboard", text: "Dashboard" },
+    { to: "/tracker", text: "Workout Tracker" },
+    { to: "/exercises", text: "Exercise Library" },
+    { to: "/plans", text: "Workout Plans" },
+    { to: "/workout-summary", text: "Workout History" },
+  ];
+
+  const MenuItem = ({ to, text, onClick }) => (
+    <Link 
+      to={to} 
+      className="block py-2 px-4 text-sm hover:bg-gray-700 text-gray-300 hover:text-white"
+      onClick={() => {
+        setIsMenuOpen(false);
+        onClick && onClick();
+      }}
+    >
+      {text}
+    </Link>
+  );
+
+  const AuthButton = ({ to, text }) => (
+    <Link 
+      to={to} 
+      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
+    >
+      {text}
+    </Link>
+  );
+
+  return (
+    <header className="bg-gray-800 text-white">
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex justify-between items-center">
+          <Link to="/" className="text-2xl font-heading font-bold">Gym App</Link>
+          
+          {/* Desktop Menu */}
+          <div className="hidden md:flex space-x-4 items-center">
+            {user ? (
+              <>
+                {menuItems.map((item) => (
+                  <MenuItem key={item.to} to={item.to} text={item.text} />
+                ))}
+                <button 
+                  onClick={handleLogout}
+                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <AuthButton to="/login" text="Login" />
+                <AuthButton to="/register" text="Register" />
+              </>
+            )}
+            <button 
+              onClick={toggleDarkMode}
+              className="ml-4 p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition duration-300 ease-in-out"
+            >
+              {darkMode ? '🌞' : '🌙'}
+            </button>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button 
+            className="md:hidden text-white focus:outline-none"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? (
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden mt-4 bg-gray-700 rounded-lg shadow-lg">
+            {user ? (
+              <>
+                {menuItems.map((item) => (
+                  <MenuItem key={item.to} to={item.to} text={item.text} />
+                ))}
+                <MenuItem to="/" text="Logout" onClick={handleLogout} />
+              </>
+            ) : (
+              <>
+                <AuthButton to="/login" text="Login" />
+                <AuthButton to="/register" text="Register" />
+              </>
+            )}
+            <button 
+              onClick={() => {
+                toggleDarkMode();
+                setIsMenuOpen(false);
+              }}
+              className="block w-full text-left py-2 px-4 text-sm hover:bg-gray-600 text-gray-300 hover:text-white"
+            >
+              {darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            </button>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
+
+export default Header;
+```
+
+# src/components/Footer.jsx
+
+```jsx
+// src/components/Footer.jsx
+function Footer() {
+  return (
+    <footer className="bg-gray-200 p-4 mt-8">
+      <div className="container mx-auto text-center">
+        <p>&copy; 2024 Gym App. All rights reserved.</p>
+      </div>
+    </footer>
+  );
+}
+
+export default Footer;
+```
+
+# src/components/ExerciseModal.jsx
+
+```jsx
+// src/components/ExerciseModal.jsx
+
+import React, { useEffect, useCallback } from 'react';
+import { useTheme } from '../context/ThemeContext';
+
+function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
+  const { darkMode } = useTheme();
+
+  const handleEscapeKey = useCallback((event) => {
+    if (event.key === 'Escape') {
+      onClose();
+    }
+  }, [onClose]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [handleEscapeKey]);
+
+  const handleOverlayClick = (event) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
+
+  if (!exercise) return null;
+
+  const categoryColors = {
+    Strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    Cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    Flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50"
+      onClick={handleOverlayClick}
+    >
+      <div 
+        className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-4 p-6 lg:p-8 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <div className="flex-grow overflow-y-auto">
+          <div className="flex flex-col lg:flex-row">
+            <div className="lg:w-1/2 pr-0 lg:pr-8 mb-6 lg:mb-0">
+              <img 
+                src={exercise.imageUrl} 
+                alt={exercise.name} 
+                className="w-full h-64 md:h-96 lg:h-[500px] object-cover rounded-lg"
+              />
+            </div>
+            <div className="lg:w-1/2 pl-0 lg:pl-8">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">{exercise.name}</h3>
+                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${categoryColors[exercise.category] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
+                  {exercise.category}
+                </span>
+              </div>
+              <p className="text-gray-700 dark:text-gray-300 mb-6 text-lg lg:text-xl">{exercise.description}</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg lg:text-xl">
+                Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end space-x-4 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button 
+            onClick={() => onEdit(exercise)}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm"
+          >
+            Edit
+          </button>
+          <button 
+            onClick={() => onDelete(exercise)}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm"
+          >
+            Delete
+          </button>
+          <button 
+            onClick={() => onAddToPlan(exercise)}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm"
+          >
+            Add to Plan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ExerciseModal;
+```
+
+# src/components/ExerciseItem.jsx
+
+```jsx
+// src/components/ExerciseItem.jsx
+
+import React, { useState } from 'react';
+import { FiEdit, FiTrash2, FiPlus } from 'react-icons/fi';
+
+function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, viewMode }) {
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+  const handleAction = (action, e) => {
+    e.stopPropagation();
+    if (action === onDelete) {
+      setIsDeleteConfirmOpen(true);
+    } else {
+      action(exercise);
+    }
+  };
+
+  const confirmDelete = (e) => {
+    e.stopPropagation();
+    onDelete(exercise);
+    setIsDeleteConfirmOpen(false);
+  };
+
+  const cancelDelete = (e) => {
+    e.stopPropagation();
+    setIsDeleteConfirmOpen(false);
+  };
+
+  const categoryColors = {
+    Strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    Cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    Flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+  };
+
+  const buttonStyles = {
+    base: 'text-xs font-semibold py-1 px-2 rounded transition-all duration-200 flex items-center justify-center',
+    edit: 'bg-indigo-500 text-white hover:bg-indigo-600 dark:bg-indigo-600 dark:hover:bg-indigo-700 hover:shadow-md',
+    delete: 'bg-rose-500 text-white hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700 hover:shadow-md',
+    addToPlan: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'
+  };
+
+  const CategoryBadge = () => (
+    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${categoryColors[exercise.category] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
+      {exercise.category}
+    </span>
+  );
+
+  const ActionButton = ({ action, style, icon, text }) => (
+    <button 
+      onClick={(e) => handleAction(action, e)}
+      className={`${buttonStyles.base} ${style}`}
+    >
+      <span className="mr-1">{icon}</span>
+      {text}
+    </button>
+  );
+
+  const DeleteConfirmation = () => (
+    <div className="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center rounded-lg">
+      <div className="bg-white dark:bg-gray-700 p-4 rounded-lg text-center">
+        <p className="mb-4 text-sm">Are you sure you want to delete this exercise?</p>
+        <div className="flex justify-center space-x-2">
+          <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>Yes, Delete</button>
+          <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const Content = () => (
+    <>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-heading text-xl font-bold text-primary dark:text-blue-400">{exercise.name}</h3>
+        <CategoryBadge />
+      </div>
+      <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">{exercise.description}</p>
+      <p className="text-accent dark:text-yellow-300 text-xs mb-4">
+        Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
+      </p>
+      <div className="flex justify-between mt-4">
+        <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} text="Edit" />
+        <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} text="Delete" />
+        <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} text="Add to Plan" />
+      </div>
+    </>
+  );
+
+  if (viewMode === 'list') {
+    return (
+      <div 
+        className="relative bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer flex items-center"
+        onClick={() => onClick(exercise)}
+      >
+        <img 
+          src={exercise.imageUrl} 
+          alt={exercise.name} 
+          className="w-24 h-24 object-cover"
+        />
+        <div className="flex-grow p-4">
+          <Content />
+        </div>
+        {isDeleteConfirmOpen && <DeleteConfirmation />}
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="relative bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer"
+      onClick={() => onClick(exercise)}
+    >
+      <img 
+        src={exercise.imageUrl} 
+        alt={exercise.name} 
+        className="w-full h-48 object-cover"
+      />
+      <div className="p-4">
+        <Content />
+      </div>
+      {isDeleteConfirmOpen && <DeleteConfirmation />}
+    </div>
+  );
+}
+
+export default ExerciseItem;
+```
+
+# src/components/Dashboard.jsx
+
+```jsx
+// src/components/Dashboard.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+
+function Dashboard() {
+  const { workoutHistory } = useGymContext();
+  const [totalWorkouts, setTotalWorkouts] = useState(0);
+  const [averageWorkoutDuration, setAverageWorkoutDuration] = useState(0);
+  const [workoutFrequencyData, setWorkoutFrequencyData] = useState([]);
+  const [exerciseFrequencyData, setExerciseFrequencyData] = useState([]);
+  const [workoutTypeData, setWorkoutTypeData] = useState([]);
+
+  useEffect(() => {
+    if (workoutHistory.length > 0) {
+      // Calculate total workouts
+      setTotalWorkouts(workoutHistory.length);
+
+      // Calculate average workout duration
+      const totalDuration = workoutHistory.reduce((sum, workout) => {
+        const duration = new Date(workout.endTime) - new Date(workout.startTime);
+        return sum + duration;
+      }, 0);
+      setAverageWorkoutDuration(totalDuration / workoutHistory.length / (1000 * 60)); // Convert to minutes
+
+      // Prepare data for workout frequency chart
+      const frequencyMap = {};
+      workoutHistory.forEach(workout => {
+        const date = new Date(workout.startTime).toLocaleDateString();
+        frequencyMap[date] = (frequencyMap[date] || 0) + 1;
+      });
+      const frequencyData = Object.entries(frequencyMap).map(([date, count]) => ({ date, count }));
+      setWorkoutFrequencyData(frequencyData);
+
+      // Prepare data for exercise frequency chart
+      const exerciseMap = {};
+      workoutHistory.forEach(workout => {
+        workout.exercises.forEach(exercise => {
+          const exerciseName = exercise.exercise ? exercise.exercise.name : 'Unknown';
+          exerciseMap[exerciseName] = (exerciseMap[exerciseName] || 0) + 1;
+        });
+      });
+      const exerciseData = Object.entries(exerciseMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10); // Top 10 exercises
+      setExerciseFrequencyData(exerciseData);
+    }
+
+      // Calculate workout types
+    const typeCount = {};
+    workoutHistory.forEach(workout => {
+      const type = workout.plan ? workout.plan.type : 'other';
+      typeCount[type] = (typeCount[type] || 0) + 1;
+    });
+    const typeData = Object.entries(typeCount).map(([name, value]) => ({ name, value }));
+    setWorkoutTypeData(typeData);
+
+  }, [workoutHistory]);
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+
+  return (
+    <div className="p-4 bg-background">
+      <h2 className="text-3xl font-heading font-bold mb-6 text-primary">Workout Dashboard</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-white p-4 rounded-lg shadow-md">
+          <h3 className="text-xl font-semibold mb-2 text-text">Total Workouts</h3>
+          <p className="text-4xl font-bold text-primary">{totalWorkouts}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-md">
+          <h3 className="text-xl font-semibold mb-2 text-text">Average Workout Duration</h3>
+          <p className="text-4xl font-bold text-primary">{averageWorkoutDuration.toFixed(1)} minutes</p>
+        </div>
+      </div>
+      <div className="mb-8">
+        <h3 className="text-2xl font-semibold mb-4 text-text">Workout Frequency</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={workoutFrequencyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis allowDecimals={false} domain={[0, 'dataMax + 1']} />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="count" stroke="#8884d8" activeDot={{ r: 8 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h3 className="text-2xl font-semibold mb-4 text-text">Top 10 Exercises</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={exerciseFrequencyData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#82ca9d" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div>
+          <h3 className="text-2xl font-semibold mb-4 text-text">Workout Types</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={workoutTypeData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {workoutTypeData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Dashboard;
+```
+
+# src/components/AddExerciseForm.jsx
+
+```jsx
+// src/components/AddExerciseForm.jsx
+
+import { useState, useEffect } from 'react';
+import { useGymContext } from '../context/GymContext';
+import { useNotification } from '../context/NotificationContext';
+
+const muscleGroups = [
+  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'
+];
+
+const categories = ['Strength', 'Cardio', 'Flexibility'];
+
+function AddExerciseForm({ onSave, initialExercise, onCancel }) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [target, setTarget] = useState([]);
+  const [imageUrl, setImageUrl] = useState('');
+  const [category, setCategory] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const { addExercise, updateExercise } = useGymContext();
+  const { addNotification } = useNotification();
+
+  useEffect(() => {
+    if (initialExercise) {
+      setName(initialExercise.name);
+      setDescription(initialExercise.description);
+      setTarget(Array.isArray(initialExercise.target) ? initialExercise.target : [initialExercise.target]);
+      setImageUrl(initialExercise.imageUrl);
+      setCategory(initialExercise.category || '');
+      setIsExpanded(true);
+    } else {
+      setName('');
+      setDescription('');
+      setTarget([]);
+      setImageUrl('');
+      setCategory('');
+    }
+  }, [initialExercise]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    if (target.length === 0) {
+      addNotification('Please select at least one target muscle group', 'error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!category) {
+      addNotification('Please select a category', 'error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const exercise = { name, description, target, imageUrl, category };
+    try {
+      let savedExercise;
+      if (initialExercise) {
+        savedExercise = await updateExercise(initialExercise._id, exercise);
+        addNotification('Exercise updated successfully', 'success');
+      } else {
+        savedExercise = await addExercise(exercise);
+        addNotification('Exercise added successfully', 'success');
+      }
+      setName('');
+      setDescription('');
+      setTarget([]);
+      setImageUrl('');
+      setCategory('');
+      setIsExpanded(false);
+      onSave(savedExercise);
+    } catch (error) {
+      addNotification('Failed to save exercise. Please try again.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTargetChange = (group) => {
+    setTarget(prev => 
+      prev.includes(group) 
+        ? prev.filter(item => item !== group)
+        : [...prev, group]
+    );
+  };
+
+  const handleCancel = () => {
+    setName('');
+    setDescription('');
+    setTarget([]);
+    setImageUrl('');
+    setCategory('');
+    setIsExpanded(false);
+    if (typeof onCancel === 'function') {
+      onCancel();
+    }
+  };
+
+  const toggleForm = () => {
+    setIsExpanded(!isExpanded);
+    if (!isExpanded) {
+      setName('');
+      setDescription('');
+      setTarget([]);
+      setImageUrl('');
+      setCategory('');
+    }
+  };
+
+  return (
+    <div className="mb-8">
+      <button
+        onClick={toggleForm}
+        className="mb-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+      >
+        {isExpanded ? 'Hide Form' : 'Add New Exercise'}
+      </button>
+      {isExpanded && (
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
+            {initialExercise ? 'Edit Exercise' : 'Add New Exercise'}
+          </h2>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="name">
+              Exercise Name
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+              id="name"
+              type="text"
+              placeholder="Exercise Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="description">
+              Description
+            </label>
+            <textarea
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+              id="description"
+              placeholder="Exercise Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
+              Target Muscle Groups
+            </label>
+            <div className="flex flex-wrap -mx-1">
+              {muscleGroups.map(group => (
+                <div key={group} className="px-1 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => handleTargetChange(group)}
+                    className={`py-1 px-2 rounded ${
+                      target.includes(group)
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
+                    }`}
+                  >
+                    {group}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="category">
+              Category
+            </label>
+            <select
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            >
+              <option value="">Select a category</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="imageUrl">
+              Image URL
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+              id="imageUrl"
+              type="text"
+              placeholder="Image URL"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <button
+              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving...' : (initialExercise ? 'Update Exercise' : 'Add Exercise')}
+            </button>
+            <button
+              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              type="button"
+              onClick={handleCancel}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+export default AddExerciseForm;
 ```
 
 # src/assets/react.svg
