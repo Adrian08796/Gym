@@ -1,8 +1,11 @@
 // src/components/ExerciseModal.jsx
 
 import React, { useEffect, useCallback } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
+  const { darkMode } = useTheme();
+
   const handleEscapeKey = useCallback((event) => {
     if (event.key === 'Escape') {
       onClose();
@@ -23,6 +26,12 @@ function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
   };
 
   if (!exercise) return null;
+
+  const categoryColors = {
+    Strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    Cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    Flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+  };
 
   return (
     <div 
@@ -51,7 +60,12 @@ function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
               />
             </div>
             <div className="lg:w-1/2 pl-0 lg:pl-8">
-              <h3 className="text-3xl lg:text-4xl font-bold mb-6 text-gray-900 dark:text-gray-100">{exercise.name}</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100">{exercise.name}</h3>
+                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${categoryColors[exercise.category] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
+                  {exercise.category}
+                </span>
+              </div>
               <p className="text-gray-700 dark:text-gray-300 mb-6 text-lg lg:text-xl">{exercise.description}</p>
               <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg lg:text-xl">
                 Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
