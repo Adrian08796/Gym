@@ -163,7 +163,7 @@ function WorkoutTracker() {
           weight: Number(weight), 
           reps: Number(reps), 
           completedAt: new Date().toISOString(),
-          skippedRest: !isResting && remainingRestTime === 0
+          skippedRest: isResting
         }
       ];
       return newSets;
@@ -172,16 +172,8 @@ function WorkoutTracker() {
     setReps('');
     addNotification('Set completed!', 'success');
 
-    if (isResting) {
-      const restartTimer = window.confirm("Do you want to restart the rest timer?");
-      if (restartTimer) {
-        startRestTimer();
-      } else {
-        setSkippedPauses(prevSkipped => prevSkipped + 1);
-      }
-    } else {
-      startRestTimer();
-    }
+    // Always start a new rest timer after completing a set
+    startRestTimer();
 
     updateProgression();
   };
@@ -406,17 +398,17 @@ function WorkoutTracker() {
               </div>
             )}
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
-                Rest Time (seconds):
-              </label>
-              <input
-                type="number"
-                id="restTime"
-                value={restTime}
-                onChange={(e) => setRestTime(Number(e.target.value))}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              />
-            </div>
+        <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
+          Rest Time (seconds):
+        </label>
+        <input
+          type="number"
+          id="restTime"
+          value={restTime}
+          onChange={(e) => setRestTime(Number(e.target.value))}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
             <div className="mb-4">
               <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
                 Exercise Notes:
