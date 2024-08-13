@@ -79,11 +79,24 @@ function WorkoutTracker() {
   }, [loadStoredData]);
 
   useEffect(() => {
-    if (currentPlan && workoutHistory.length > 0) {
+    if (currentPlan) {
       const fetchPreviousWorkout = async () => {
         setIsPreviousWorkoutLoading(true);
         try {
-          const lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
+          let lastWorkout;
+          if (currentPlan._id) {
+            lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
+          }
+          if (!lastWorkout) {
+            // If no workout found for the current plan ID, search by exercise IDs
+            lastWorkout = workoutHistory.find(workout => 
+              workout.exercises.some(ex => 
+                currentPlan.exercises.some(planEx => 
+                  planEx._id === ex.exercise._id
+                )
+              )
+            );
+          }
           setPreviousWorkout(lastWorkout);
         } catch (error) {
           console.error('Error fetching previous workout:', error);
@@ -96,7 +109,7 @@ function WorkoutTracker() {
       setPreviousWorkout(null);
       setIsPreviousWorkoutLoading(false);
     }
-  }, [currentPlan, getLastWorkoutByPlan, workoutHistory.length]);
+  }, [currentPlan, getLastWorkoutByPlan, workoutHistory]);
 
   useEffect(() => {
     const saveDataToLocalStorage = () => {
@@ -455,7 +468,9 @@ function WorkoutTracker() {
             <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
             {previousWorkout.exercises.map((exercise, index) => (
               <div key={index} className="mb-4">
-                <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>{exercise.exercise.name}</h4>
+                <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                  {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
+                </h4>
                 <ul className="list-disc pl-5">
                   {exercise.sets.map((set, setIndex) => (
                     <li key={setIndex}>

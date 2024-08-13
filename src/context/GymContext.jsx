@@ -286,10 +286,11 @@ export function GymProvider({ children }) {
     try {
       await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
       setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
+      // Update workouts to mark the plan as deleted instead of removing the association
       setWorkoutHistory(prevHistory => 
         prevHistory.map(workout => 
           workout.plan && workout.plan._id === id 
-            ? { ...workout, plan: null, planDeleted: true } 
+            ? { ...workout, planDeleted: true, planName: workout.planName || 'Deleted Plan' } 
             : workout
         )
       );
@@ -344,47 +345,47 @@ export function GymProvider({ children }) {
   };
 
   // Get the last workout for a given plan
-const getLastWorkoutByPlan = useCallback(async (planId) => {
-  try {
-    const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
-    return response.data;
-  } catch (error) {
-    if (error.response && error.response.status === 404) {
-      // No previous workout found, this is not an error
-      console.log('No previous workout found for this plan');
+  const getLastWorkoutByPlan = useCallback(async (planId) => {
+    try {
+      const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        // No previous workout found, this is not an error
+        console.log('No previous workout found for this plan');
+        return null;
+      }
+      console.error('Error fetching last workout:', error);
+      addNotification('Failed to fetch last workout', 'error');
       return null;
     }
-    console.error('Error fetching last workout:', error);
-    addNotification('Failed to fetch last workout', 'error');
-    return null;
-  }
-}, [API_URL, getAuthConfig, addNotification]);
+  }, [API_URL, getAuthConfig, addNotification]);
 
-const contextValue = useMemo(() => ({
-  workouts,
-  exercises,
-  workoutPlans,
-  workoutHistory,
-  addWorkout,
-  updateWorkout,
-  deleteWorkout,
-  addExercise,
-  updateExercise,
-  deleteExercise,
-  addWorkoutPlan,
-  updateWorkoutPlan,
-  deleteWorkoutPlan,
-  fetchWorkoutHistory,
-  fetchWorkoutPlans,
-  addExerciseToPlan,
-  getLastWorkoutByPlan
-}), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan]);
+  const contextValue = useMemo(() => ({
+    workouts,
+    exercises,
+    workoutPlans,
+    workoutHistory,
+    addWorkout,
+    updateWorkout,
+    deleteWorkout,
+    addExercise,
+    updateExercise,
+    deleteExercise,
+    addWorkoutPlan,
+    updateWorkoutPlan,
+    deleteWorkoutPlan,
+    fetchWorkoutHistory,
+    fetchWorkoutPlans,
+    addExerciseToPlan,
+    getLastWorkoutByPlan
+  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan, fetchWorkoutPlans, fetchWorkoutHistory]);
 
-return (
-  <GymContext.Provider value={contextValue}>
-    {children}
-  </GymContext.Provider>
-);
+  return (
+    <GymContext.Provider value={contextValue}>
+      {children}
+    </GymContext.Provider>
+  );
 }
 
 export default GymProvider;

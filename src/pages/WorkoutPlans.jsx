@@ -26,7 +26,7 @@ const workoutColors = {
 };
 
 function WorkoutPlans() {
-  const { workoutPlans, workoutHistory, deleteWorkoutPlan, addWorkoutPlan, updateWorkoutPlan } = useGymContext();
+  const { workoutPlans, workoutHistory, deleteWorkoutPlan, addWorkoutPlan, updateWorkoutPlan, fetchWorkoutPlans } = useGymContext();
   const [showForm, setShowForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
@@ -59,6 +59,7 @@ function WorkoutPlans() {
       await addWorkoutPlan(plan);
       setShowForm(false);
       setEditingPlan(null);
+      fetchWorkoutPlans(); // Refresh the workout plans after adding
     } catch (error) {
       console.error('Error adding workout plan:', error);
     }
@@ -69,6 +70,7 @@ function WorkoutPlans() {
       await updateWorkoutPlan(plan._id, plan);
       setShowForm(false);
       setEditingPlan(null);
+      fetchWorkoutPlans(); // Refresh the workout plans after updating
     } catch (error) {
       console.error('Error updating workout plan:', error);
     }
@@ -77,6 +79,17 @@ function WorkoutPlans() {
   const handleEdit = (plan) => {
     setEditingPlan(plan);
     setShowForm(true);
+  };
+
+  const handleDelete = async (planId) => {
+    try {
+      await deleteWorkoutPlan(planId);
+      addNotification('Workout plan deleted successfully', 'success');
+      fetchWorkoutPlans(); // Refresh the workout plans after deleting
+    } catch (error) {
+      console.error('Error deleting workout plan:', error);
+      addNotification('Failed to delete workout plan', 'error');
+    }
   };
 
   const filteredPlans = workoutPlans.filter(plan => 
@@ -258,7 +271,7 @@ function WorkoutPlans() {
               plan={plan}
               onStart={handleStartWorkout}
               onEdit={handleEdit}
-              onDelete={deleteWorkoutPlan}
+              onDelete={handleDelete}
             />
           ))}
         </div>
