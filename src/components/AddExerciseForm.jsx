@@ -8,11 +8,14 @@ const muscleGroups = [
   'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'
 ];
 
+const categories = ['Strength', 'Cardio', 'Flexibility'];
+
 function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState([]);
   const [imageUrl, setImageUrl] = useState('');
+  const [category, setCategory] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const { addExercise, updateExercise } = useGymContext();
@@ -24,12 +27,14 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       setDescription(initialExercise.description);
       setTarget(Array.isArray(initialExercise.target) ? initialExercise.target : [initialExercise.target]);
       setImageUrl(initialExercise.imageUrl);
+      setCategory(initialExercise.category || '');
       setIsExpanded(true);
     } else {
       setName('');
       setDescription('');
       setTarget([]);
       setImageUrl('');
+      setCategory('');
     }
   }, [initialExercise]);
 
@@ -44,7 +49,13 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       return;
     }
 
-    const exercise = { name, description, target, imageUrl };
+    if (!category) {
+      addNotification('Please select a category', 'error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const exercise = { name, description, target, imageUrl, category };
     try {
       let savedExercise;
       if (initialExercise) {
@@ -58,6 +69,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       setDescription('');
       setTarget([]);
       setImageUrl('');
+      setCategory('');
       setIsExpanded(false);
       onSave(savedExercise);
     } catch (error) {
@@ -80,6 +92,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     setDescription('');
     setTarget([]);
     setImageUrl('');
+    setCategory('');
     setIsExpanded(false);
     if (typeof onCancel === 'function') {
       onCancel();
@@ -93,6 +106,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       setDescription('');
       setTarget([]);
       setImageUrl('');
+      setCategory('');
     }
   };
 
@@ -157,6 +171,23 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                 </div>
               ))}
             </div>
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="category">
+              Category
+            </label>
+            <select
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            >
+              <option value="">Select a category</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
           </div>
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="imageUrl">
