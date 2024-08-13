@@ -43,6 +43,11 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
     await onSubmit(workoutPlan);
   };
 
+  const handleCancel = (e) => {
+    e.preventDefault();
+    onCancel();
+  };
+
   const handleExerciseToggle = (exerciseId) => {
     setSelectedExercises(prevSelected =>
       prevSelected.includes(exerciseId)
@@ -163,7 +168,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mt-6">
         <button
           type="submit"
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
@@ -172,7 +177,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
         </button>
         <button
           type="button"
-          onClick={onCancel}
+          onClick={handleCancel}
           className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         >
           Cancel

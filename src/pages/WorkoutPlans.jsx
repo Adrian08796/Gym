@@ -26,7 +26,14 @@ const workoutColors = {
 };
 
 function WorkoutPlans() {
-  const { workoutPlans, workoutHistory, deleteWorkoutPlan, addWorkoutPlan, updateWorkoutPlan, fetchWorkoutPlans } = useGymContext();
+  const { 
+    workoutPlans, 
+    workoutHistory, 
+    deleteWorkoutPlan, 
+    addWorkoutPlan, 
+    updateWorkoutPlan, 
+    fetchWorkoutPlans
+  } = useGymContext();
   const [showForm, setShowForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
@@ -57,23 +64,30 @@ function WorkoutPlans() {
   const handleAddWorkoutPlan = async (plan) => {
     try {
       await addWorkoutPlan(plan);
-      setShowForm(false);
-      setEditingPlan(null);
-      fetchWorkoutPlans(); // Refresh the workout plans after adding
+      handleCancelForm();
+      await fetchWorkoutPlans();
+      addNotification('Workout plan added successfully', 'success');
     } catch (error) {
       console.error('Error adding workout plan:', error);
+      addNotification('Failed to add workout plan', 'error');
     }
   };
 
   const handleEditWorkoutPlan = async (plan) => {
     try {
       await updateWorkoutPlan(plan._id, plan);
-      setShowForm(false);
-      setEditingPlan(null);
-      fetchWorkoutPlans(); // Refresh the workout plans after updating
+      handleCancelForm();
+      await fetchWorkoutPlans();
+      addNotification('Workout plan updated successfully', 'success');
     } catch (error) {
       console.error('Error updating workout plan:', error);
+      addNotification('Failed to update workout plan', 'error');
     }
+  };
+
+  const handleCancelForm = () => {
+    setShowForm(false);
+    setEditingPlan(null);
   };
 
   const handleEdit = (plan) => {
@@ -217,7 +231,7 @@ function WorkoutPlans() {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center justify-between">
+<div className="mb-4 flex flex-wrap items-center justify-between">
         <button
           onClick={() => {
             setShowForm(!showForm);
@@ -260,6 +274,7 @@ function WorkoutPlans() {
         <WorkoutPlanForm
           onSubmit={editingPlan ? handleEditWorkoutPlan : handleAddWorkoutPlan}
           initialPlan={editingPlan}
+          onCancel={handleCancelForm}
         />
       )}
 

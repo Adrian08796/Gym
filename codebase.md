@@ -1104,7 +1104,7 @@ function WorkoutPlans() {
     navigate('/tracker');
   };
 
-  const handleAddWorkoutPlan = async (plan) => {
+  cconst handleAddWorkoutPlan = async (plan) => {
     try {
       await addWorkoutPlan(plan);
       setShowForm(false);
@@ -1122,6 +1122,11 @@ function WorkoutPlans() {
     } catch (error) {
       console.error('Error updating workout plan:', error);
     }
+  };
+
+  const handleCancelForm = () => {
+    setShowForm(false);
+    setEditingPlan(null);
   };
 
   const handleEdit = (plan) => {
