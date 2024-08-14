@@ -1,5 +1,7 @@
 // src/pages/WorkoutTracker.jsx
 
+// src/pages/WorkoutTracker.jsx
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
@@ -340,38 +342,59 @@ function WorkoutTracker() {
       <div className="mb-4 text-lg">
         Elapsed Time: {formatTime(elapsedTime)}
       </div>
-
+  
       <div className="mb-4">
         <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
           <div className="bg-blue-600 h-2.5 rounded-full" style={{width: `${calculateProgress()}%`}}></div>
         </div>
         <p className="text-sm mt-2">Overall Progress: {calculateProgress().toFixed(2)}%</p>
       </div>
-
-      <div className="mb-4 flex flex-wrap justify-between items-center">
-        <div className="flex flex-wrap">
-          {currentPlan.exercises.map((exercise, index) => (
-            <button
-              key={exercise._id}
-              onClick={() => handleExerciseChange(index)}
-              className={`mr-2 mb-2 px-3 py-1 rounded ${
-                index === currentExerciseIndex
-                  ? 'bg-blue-500 text-white'
-                  : isExerciseComplete(exercise._id, sets[index] || [])
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-300 text-gray-800'
-              }`}
-            >
-              {exercise.name}
-            </button>
-          ))}
+  
+      {/* Updated Carousel */}
+      <div className="relative mb-4 overflow-hidden">
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => handleExerciseChange(Math.max(0, currentExerciseIndex - 1))}
+            className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-l"
+          >
+            &lt;
+          </button>
+          <div className="flex overflow-x-auto scrollbar-hide" style={{ scrollSnapType: 'x mandatory' }}>
+            {currentPlan.exercises.map((exercise, index) => (
+              <button
+                key={exercise._id}
+                onClick={() => handleExerciseChange(index)}
+                className={`flex-shrink-0 mx-1 px-4 py-2 rounded ${
+                  index === currentExerciseIndex
+                    ? 'bg-blue-500 text-white'
+                    : isExerciseComplete(exercise._id, sets[index] || [])
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-300 text-gray-800'
+                }`}
+                style={{ scrollSnapAlign: 'center' }}
+              >
+                {exercise.name}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => handleExerciseChange(Math.min(currentPlan.exercises.length - 1, currentExerciseIndex + 1))}
+            className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-r"
+          >
+            &gt;
+          </button>
         </div>
+      </div>
+      
+      <div className="flex justify-between mb-4">
+        
         <button
           onClick={handleCancelWorkout}
           className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         >
           Cancel Workout
         </button>
+        
       </div>
       
       <TransitionGroup>

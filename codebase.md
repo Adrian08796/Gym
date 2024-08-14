@@ -518,6 +518,9 @@ function WorkoutTracker() {
   const [totalPauseTime, setTotalPauseTime] = useState(0);
   const [skippedPauses, setSkippedPauses] = useState(0);
   const [progression, setProgression] = useState(0);
+  const [lastSetValues, setLastSetValues] = useState({});
+  const [requiredSets, setRequiredSets] = useState({});
+
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
@@ -530,12 +533,20 @@ function WorkoutTracker() {
     const storedIndex = localStorage.getItem('currentExerciseIndex');
     const storedStartTime = localStorage.getItem('workoutStartTime');
     const storedNotes = localStorage.getItem('workoutNotes');
+    const storedLastSetValues = localStorage.getItem('lastSetValues');
 
     if (storedPlan) {
       try {
         const parsedPlan = JSON.parse(storedPlan);
         setCurrentPlan(parsedPlan);
         
+        // Initialize requiredSets based on the plan
+        const initialRequiredSets = {};
+        parsedPlan.exercises.forEach(exercise => {
+          initialRequiredSets[exercise._id] = exercise.requiredSets || 3; // Default to 3 if not specified
+        });
+        setRequiredSets(initialRequiredSets);
+
         if (storedSets) {
           setSets(JSON.parse(storedSets));
         } else {
@@ -559,6 +570,10 @@ function WorkoutTracker() {
         } else {
           setNotes(parsedPlan.exercises.map(() => ''));
         }
+
+        if (storedLastSetValues) {
+          setLastSetValues(JSON.parse(storedLastSetValues));
+        }
       } catch (error) {
         console.error('Error parsing stored data:', error);
         clearLocalStorage();
@@ -581,7 +596,6 @@ function WorkoutTracker() {
             lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
           }
           if (!lastWorkout) {
-            // If no workout found for the current plan ID, search by exercise IDs
             lastWorkout = workoutHistory.find(workout => 
               workout.exercises.some(ex => 
                 currentPlan.exercises.some(planEx => 
@@ -614,10 +628,11 @@ function WorkoutTracker() {
       }
       localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
       localStorage.setItem('workoutNotes', JSON.stringify(notes));
+      localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
     };
 
     saveDataToLocalStorage();
-  }, [currentPlan, sets, currentExerciseIndex, notes]);
+  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
 
   useEffect(() => {
     let timer;
@@ -661,8 +676,13 @@ function WorkoutTracker() {
       ];
       return newSets;
     });
-    setWeight('');
-    setReps('');
+
+    // Store the last set values for the current exercise only
+    setLastSetValues(prev => ({
+      ...prev,
+      [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
+    }));
+
     addNotification('Set completed!', 'success');
 
     // Always start a new rest timer after completing a set
@@ -685,7 +705,9 @@ function WorkoutTracker() {
 
   const updateProgression = () => {
     const totalExercises = currentPlan.exercises.length;
-    const completedExercises = sets.filter(exerciseSets => exerciseSets.length > 0).length;
+    const completedExercises = currentPlan.exercises.filter((exercise, index) => 
+      isExerciseComplete(exercise._id, sets[index] || [])
+    ).length;
     const newProgression = (completedExercises / totalExercises) * 100;
     setProgression(newProgression);
   };
@@ -729,6 +751,7 @@ function WorkoutTracker() {
       setNotes([]);
       setStartTime(null);
       setElapsedTime(0);
+      setLastSetValues({});
       addNotification('Workout cancelled', 'info');
     }
   };
@@ -739,6 +762,7 @@ function WorkoutTracker() {
     localStorage.removeItem('currentExerciseIndex');
     localStorage.removeItem('workoutStartTime');
     localStorage.removeItem('workoutNotes');
+    localStorage.removeItem('lastSetValues');
   };
 
   const formatTime = (seconds) => {
@@ -748,10 +772,16 @@ function WorkoutTracker() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const isExerciseComplete = (exerciseId, exerciseSets) => {
+    return exerciseSets.length >= requiredSets[exerciseId];
+  };
+
   const calculateProgress = () => {
     if (!currentPlan) return 0;
     const totalExercises = currentPlan.exercises.length;
-    const completedExercises = sets.filter(exerciseSets => exerciseSets.length > 0).length;
+    const completedExercises = currentPlan.exercises.filter((exercise, index) => 
+      isExerciseComplete(exercise._id, sets[index] || [])
+    ).length;
     return (completedExercises / totalExercises) * 100;
   };
 
@@ -765,6 +795,16 @@ function WorkoutTracker() {
 
   const handleExerciseChange = (newIndex) => {
     setCurrentExerciseIndex(newIndex);
+    
+    const newExercise = currentPlan.exercises[newIndex];
+    const lastValues = lastSetValues[newExercise._id];
+    if (lastValues) {
+      setWeight(lastValues.weight);
+      setReps(lastValues.reps);
+    } else {
+      setWeight('');
+      setReps('');
+    }
   };
 
   if (!currentPlan) {
@@ -810,7 +850,7 @@ function WorkoutTracker() {
               className={`mr-2 mb-2 px-3 py-1 rounded ${
                 index === currentExerciseIndex
                   ? 'bg-blue-500 text-white'
-                  : sets[index] && sets[index].length > 0
+                  : isExerciseComplete(exercise._id, sets[index] || [])
                   ? 'bg-green-500 text-white'
                   : 'bg-gray-300 text-gray-800'
               }`}
@@ -847,14 +887,14 @@ function WorkoutTracker() {
                 <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
                 <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
                 <p className="mb-2">
-                  <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length}
-                  </p>
+                  <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id]}
+                </p>
               </div>
             </div>
             <div className="mb-4 flex">
               <input
                 type="number"
-                placeholder="Weight"
+                placeholder="Weight (kg)"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
@@ -891,17 +931,17 @@ function WorkoutTracker() {
               </div>
             )}
             <div className="mb-4">
-        <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
-          Rest Time (seconds):
-        </label>
-        <input
-          type="number"
-          id="restTime"
-          value={restTime}
-          onChange={(e) => setRestTime(Number(e.target.value))}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-        />
-      </div>
+              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
+                Rest Time (seconds):
+              </label>
+              <input
+                type="number"
+                id="restTime"
+                value={restTime}
+                onChange={(e) => setRestTime(Number(e.target.value))}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+            </div>
             <div className="mb-4">
               <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
                 Exercise Notes:
@@ -959,7 +999,7 @@ function WorkoutTracker() {
                 <ul className="list-disc pl-5">
                   {exercise.sets.map((set, setIndex) => (
                     <li key={setIndex}>
-                      Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
+                      Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
                     </li>
                   ))}
                 </ul>
@@ -979,18 +1019,24 @@ function WorkoutTracker() {
         <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Current Workout Set Log</h3>
         {currentPlan.exercises.map((exercise, index) => (
           <div key={exercise._id} className="mb-4">
-            <h4 className={`text-lg font-medium ${darkMode ? 'text-green-200' : 'text-green-700'}`}>{exercise.name}</h4>
+            <h4 className={`text-lg font-medium ${darkMode ? 'text-green-200' : 'text-green-700'}`}>
+              {exercise.name}
+              {isExerciseComplete(exercise._id, sets[index] || []) && ' (Complete)'}
+            </h4>
             {sets[index] && sets[index].length > 0 ? (
               <ul className="list-disc pl-5">
                 {sets[index].map((set, setIndex) => (
                   <li key={setIndex}>
-                    Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
+                    Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
                   </li>
                 ))}
               </ul>
             ) : (
               <p>No sets completed yet</p>
             )}
+            <p>
+              {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id]} sets completed
+            </p>
             {notes[index] && (
               <p className="mt-2 italic">Notes: {notes[index]}</p>
             )}
@@ -1753,6 +1799,10 @@ function ExerciseLibrary() {
 
 export default ExerciseLibrary;
 ```
+
+# src/assets/react.svg
+
+This is a file of the type: SVG Image
 
 # src/context/ThemeContext.jsx
 
@@ -3263,72 +3313,152 @@ export default WorkoutCalendar;
 
 ```jsx
 // src/components/Register.jsx
+
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { useNotification } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 
 function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
   const { register } = useAuth();
   const navigate = useNavigate();
+  const { addNotification } = useNotification();
+  const { darkMode } = useTheme();
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!username.trim()) newErrors.username = 'Username is required';
+    if (!email.trim()) newErrors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email is invalid';
+    if (!password) newErrors.password = 'Password is required';
+    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+    if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      await register(username, email, password);
-      navigate('/login');
-    } catch (error) {
-      console.error('Registration failed:', error);
-      // Handle error (e.g., show error message to user)
+    if (validateForm()) {
+      try {
+        await register(username, email, password);
+        addNotification('Registration successful! Please log in.', 'success');
+        navigate('/login');
+      } catch (err) {
+        addNotification('Registration failed: ' + (err.response?.data?.message || 'Unknown error'), 'error');
+      }
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">Username</label>
-        <input
-          type="text"
-          id="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
+    <div className={`flex items-center justify-center min-h-screen bg-gray-100 ${darkMode ? 'dark' : ''}`}>
+      <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg dark:bg-gray-800 rounded-lg">
+        <h3 className="text-2xl font-bold text-center text-gray-800 dark:text-white">Create an account</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="mt-4">
+            <div className="relative">
+              <label className="block text-gray-700 dark:text-gray-300" htmlFor="username">Username</label>
+              <div className="flex items-center">
+                <FiUser className="absolute left-3 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Enter Username"
+                  id="username"
+                  className={`w-full px-4 py-2 pl-10 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.username ? 'border-red-500' : ''}`}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+              {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+            </div>
+            <div className="mt-4 relative">
+              <label className="block text-gray-700 dark:text-gray-300" htmlFor="email">Email</label>
+              <div className="flex items-center">
+                <FiMail className="absolute left-3 text-gray-400" />
+                <input
+                  type="email"
+                  placeholder="Enter Email"
+                  id="email"
+                  className={`w-full px-4 py-2 pl-10 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.email ? 'border-red-500' : ''}`}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            </div>
+            <div className="mt-4 relative">
+              <label className="block text-gray-700 dark:text-gray-300" htmlFor="password">Password</label>
+              <div className="flex items-center">
+                <FiLock className="absolute left-3 text-gray-400" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter Password"
+                  id="password"
+                  className={`w-full px-4 py-2 pl-10 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.password ? 'border-red-500' : ''}`}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <FiEyeOff className="text-gray-400" /> : <FiEye className="text-gray-400" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+            </div>
+            <div className="mt-4 relative">
+              <label className="block text-gray-700 dark:text-gray-300" htmlFor="confirmPassword">Confirm Password</label>
+              <div className="flex items-center">
+                <FiLock className="absolute left-3 text-gray-400" />
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirm Password"
+                  id="confirmPassword"
+                  className={`w-full px-4 py-2 pl-10 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <FiEyeOff className="text-gray-400" /> : <FiEye className="text-gray-400" />}
+                </button>
+              </div>
+              {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+            </div>
+            <div className="flex items-center justify-between mt-6">
+              <button
+                type="submit"
+                className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-900 transition duration-300 ease-in-out"
+              >
+                Register
+              </button>
+            </div>
+          </div>
+        </form>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Already have an account?{' '}
+            <Link to="/login" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+              Log in
+            </Link>
+          </p>
+        </div>
       </div>
-      <div className="mb-4">
-        <label htmlFor="email" className="block text-gray-700 font-bold mb-2">Email</label>
-        <input
-          type="email"
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="mb-6">
-        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">Password</label>
-        <input
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          Register
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }
 
@@ -3380,67 +3510,106 @@ export default NotificationToast;
 
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
+import { FiEye, FiEyeOff, FiUser, FiLock } from 'react-icons/fi';
 
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
   const { login } = useAuth();
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+  const { darkMode } = useTheme();
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!username.trim()) newErrors.username = 'Username is required';
+    if (!password) newErrors.password = 'Password is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      await login(username, password);
-      addNotification('Logged in successfully', 'success');
-      navigate('/'); // Redirect to home page after successful login
-    } catch (err) {
-      addNotification('Failed to log in', 'error');
-      console.error(err);
+    if (validateForm()) {
+      try {
+        await login(username, password);
+        addNotification('Logged in successfully', 'success');
+        navigate('/');
+      } catch (err) {
+        addNotification('Failed to log in: ' + (err.response?.data?.message || 'Unknown error'), 'error');
+      }
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <label htmlFor="username" className="block text-gray-700 font-bold mb-2">
-          Username
-        </label>
-        <input
-          type="text"
-          id="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-          autoComplete="username"
-        />
+    <div className={`flex items-center justify-center min-h-screen bg-gray-100 ${darkMode ? 'dark' : ''}`}>
+      <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg dark:bg-gray-800 rounded-lg">
+        <h3 className="text-2xl font-bold text-center text-gray-800 dark:text-white">Login to your account</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="mt-4">
+            <div className="relative">
+              <label className="block text-gray-700 dark:text-gray-300" htmlFor="username">Username</label>
+              <div className="flex items-center">
+                <FiUser className="absolute left-3 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Enter Username"
+                  id="username"
+                  className={`w-full px-4 py-2 pl-10 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.username ? 'border-red-500' : ''}`}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+              {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+            </div>
+            <div className="mt-4 relative">
+              <label className="block text-gray-700 dark:text-gray-300" htmlFor="password">Password</label>
+              <div className="flex items-center">
+                <FiLock className="absolute left-3 text-gray-400" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter Password"
+                  id="password"
+                  className={`w-full px-4 py-2 pl-10 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.password ? 'border-red-500' : ''}`}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <FiEyeOff className="text-gray-400" /> : <FiEye className="text-gray-400" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+            </div>
+            <div className="flex items-center justify-between mt-4">
+              <button
+                type="submit"
+                className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-900 transition duration-300 ease-in-out"
+              >
+                Login
+              </button>
+              <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline dark:text-blue-400">Forgot password?</Link>
+            </div>
+          </div>
+        </form>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Don't have an account?{' '}
+            <Link to="/register" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+              Sign up
+            </Link>
+          </p>
+        </div>
       </div>
-      <div className="mb-6">
-        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">
-          Password
-        </label>
-        <input
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-          autoComplete="current-password"
-        />
-      </div>
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          Log In
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }
 
@@ -4269,8 +4438,4 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
 
 export default AddExerciseForm;
 ```
-
-# src/assets/react.svg
-
-This is a file of the type: SVG Image
 
