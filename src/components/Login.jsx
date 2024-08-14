@@ -29,11 +29,19 @@ function Login() {
     e.preventDefault();
     if (validateForm()) {
       try {
-        await login(username, password);
-        addNotification('Logged in successfully', 'success');
-        navigate('/');
+        console.log('Attempting to log in with username:', username);
+        const result = await login(username, password);
+        console.log('Login result:', result);
+        if (result && result.token) {
+          addNotification('Logged in successfully', 'success');
+          navigate('/');
+        } else {
+          console.error('Login failed: No token received');
+          addNotification('Login failed: No token received', 'error');
+        }
       } catch (err) {
-        addNotification('Failed to log in: ' + (err.response?.data?.message || 'Unknown error'), 'error');
+        console.error('Login error:', err);
+        addNotification('Failed to log in: ' + (err.response?.data?.message || err.message || 'Unknown error'), 'error');
       }
     }
   };

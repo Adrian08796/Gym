@@ -19,9 +19,11 @@ export function AuthProvider({ children }) {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const response = await axios.get(`${hostName}:4500/api/auth/user`, {
+          console.log('Checking logged in status with token');
+          const response = await axios.get(`${hostName}/api/auth/user`, {
             headers: { 'x-auth-token': token }
           });
+          console.log('User data received:', response.data);
           setUser(response.data);
         } catch (error) {
           console.error('Error fetching user:', error);
@@ -36,7 +38,9 @@ export function AuthProvider({ children }) {
 
   const register = async (username, email, password) => {
     try {
-      await axios.post(`${hostName}:4500/api/auth/register`, { username, email, password });
+      console.log('Attempting to register user:', username);
+      await axios.post(`${hostName}/api/auth/register`, { username, email, password });
+      console.log('Registration successful');
       return true;
     } catch (error) {
       console.error('Registration error:', error.response?.data || error.message);
@@ -46,10 +50,12 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password) => {
     try {
-      const response = await axios.post(`${hostName}:4500/api/auth/login`, { username, password });
+      console.log('Attempting to log in user:', username);
+      const response = await axios.post(`${hostName}/api/auth/login`, { username, password });
+      console.log('Login response:', response.data);
       localStorage.setItem('token', response.data.token);
       setUser(response.data.user);
-      return response.data.user;
+      return response.data;
     } catch (error) {
       console.error('Login error:', error.response?.data || error.message);
       throw error;
@@ -57,6 +63,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    console.log('Logging out user');
     localStorage.removeItem('token');
     setUser(null);
   };
@@ -75,3 +82,5 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+
+export default AuthProvider;
