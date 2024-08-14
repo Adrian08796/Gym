@@ -4,7 +4,9 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
-export const hostName = 'http://192.168.178.42';
+
+// Update this line to use HTTPS and your DigitalOcean app URL
+export const hostName = 'https://gym-app-xnglh.ondigitalocean.app';
 
 const GymContext = createContext();
 
@@ -20,7 +22,7 @@ export function GymProvider({ children }) {
   const { user } = useAuth();
   const { addNotification } = useNotification();
   
-  const API_URL = `${hostName}:4500/api`;
+  const API_URL = `${hostName}/api`;
 
   const getAuthConfig = useCallback(() => {
     const token = localStorage.getItem('token');
