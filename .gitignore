@@ -143,3 +143,4 @@ venv/
 *.merged
 
 # Local git configuration
+node_modules
