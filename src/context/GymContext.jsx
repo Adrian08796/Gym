@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
-export const hostName = 'http://192.168.178.42';
+export const hostName = '';
 
 const GymContext = createContext();
 
