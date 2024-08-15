@@ -7,7 +7,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'https://gym-app-xnglh.ondigitalocean.app'
+      '/api': {
+        target: 'http://192.168.178.42:4500', // Adjust this to your backend's actual address and port
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
     }
   },
   resolve: {

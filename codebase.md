@@ -9,8 +9,13 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true,
-    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://192.168.178.42:4500', // Adjust this to your backend's actual address and port
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   },
   resolve: {
     alias: {
@@ -213,7 +218,6 @@ out/
 
 # Nuxt.js build / generate output
 .nuxt
-dist/
 
 # Gatsby files
 .cache/
@@ -269,7 +273,7 @@ temp/
 
 # Build directories
 build/
-dist/
+
 
 # Static files
 public/static/
@@ -1889,7 +1893,8 @@ import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
 
 // Update this line to use HTTPS and your DigitalOcean app URL
-export const hostName = 'https://gym-app-xnglh.ondigitalocean.app';
+// export const hostName = 'https://gym-app-xnglh.ondigitalocean.app';
+export const hostName = '/api';
 
 const GymContext = createContext();
 
@@ -2338,7 +2343,15 @@ export function AuthProvider({ children }) {
       setUser(response.data.user);
       return response.data;
     } catch (error) {
-      console.error('Login error:', error.response?.data || error.message);
+      console.error('Login error:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
       throw error;
     }
   };
