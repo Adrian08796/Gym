@@ -51,7 +51,6 @@ export function AuthProvider({ children }) {
   const login = async (username, password) => {
     try {
       console.log('Attempting to log in user:', username);
-      console.log('API URL:', `${hostName}/api/auth/login`);
       const response = await axios.post(`${hostName}/api/auth/login`, { username, password });
       console.log('Login response:', response.data);
       localStorage.setItem('token', response.data.token);
