@@ -51,13 +51,22 @@ export function AuthProvider({ children }) {
   const login = async (username, password) => {
     try {
       console.log('Attempting to log in user:', username);
+      console.log('API URL:', `${hostName}/api/auth/login`);
       const response = await axios.post(`${hostName}/api/auth/login`, { username, password });
       console.log('Login response:', response.data);
       localStorage.setItem('token', response.data.token);
       setUser(response.data.user);
       return response.data;
     } catch (error) {
-      console.error('Login error:', error.response?.data || error.message);
+      console.error('Login error:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
       throw error;
     }
   };
