@@ -117,7 +117,7 @@ temp/
 
 # Build directories
 build/
-dist/
+
 
 # Static files
 public/static/
