@@ -318,12 +318,14 @@ function WorkoutTracker() {
   };
 
   const handleTouchStart = (e) => {
-    setTouchEnd(null);
+    setTouchEnd(null); // Reset touchEnd
     setTouchStart(e.targetTouches[0].clientX);
+    console.log('Touch start:', e.targetTouches[0].clientX);
   };
 
   const handleTouchMove = (e) => {
     setTouchEnd(e.targetTouches[0].clientX);
+    console.log('Touch move:', e.targetTouches[0].clientX);
   };
 
   const handleTouchEnd = () => {
@@ -331,10 +333,13 @@ function WorkoutTracker() {
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > 50;
     const isRightSwipe = distance < -50;
+    console.log('Touch end - distance:', distance, 'isLeftSwipe:', isLeftSwipe, 'isRightSwipe:', isRightSwipe);
 
     if (isLeftSwipe && currentExerciseIndex < currentPlan.exercises.length - 1) {
+      console.log('Swiping left to next exercise');
       handleExerciseChange(currentExerciseIndex + 1);
     } else if (isRightSwipe && currentExerciseIndex > 0) {
+      console.log('Swiping right to previous exercise');
       handleExerciseChange(currentExerciseIndex - 1);
     }
   };
@@ -492,28 +497,32 @@ function WorkoutTracker() {
                 rows="3"
               ></textarea>
             </div>
-          </div>
+            </div>
         </CSSTransition>
       </TransitionGroup>
 
-      <div className="flex justify-between">
+      <div className="flex justify-between items-center mt-4">
         <button
           onClick={() => handleExerciseChange(Math.max(0, currentExerciseIndex - 1))}
-          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+          className={`bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${currentExerciseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={currentExerciseIndex === 0}
         >
-          <FiChevronLeft className="inline-block mr-1" /> Previous Exercise
+          <FiChevronLeft className="inline-block mr-1" /> Previous
         </button>
+        <span className="text-lg font-semibold">
+          {currentExerciseIndex + 1} / {currentPlan.exercises.length}
+        </span>
         {currentExerciseIndex < currentPlan.exercises.length - 1 ? (
           <button
             onClick={() => handleExerciseChange(currentExerciseIndex + 1)}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           >
-            Next Exercise <FiChevronRight className="inline-block ml-1" />
+            Next <FiChevronRight className="inline-block ml-1" />
           </button>
         ) : (
           <button
             onClick={handleFinishWorkout}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           >
             Finish Workout
           </button>
