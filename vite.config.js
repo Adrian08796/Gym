@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       '/backend': {
         target: 'https://walrus-app-lqhsg.ondigitalocean.app',
+        // target: 'http://192.168.178.42:4500',
         changeOrigin: true,
       }
     }

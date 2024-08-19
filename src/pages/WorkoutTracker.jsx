@@ -6,6 +6,7 @@ import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import './WorkoutTracker.css';
 
 function WorkoutTracker() {
@@ -27,6 +28,8 @@ function WorkoutTracker() {
   const [progression, setProgression] = useState(0);
   const [lastSetValues, setLastSetValues] = useState({});
   const [requiredSets, setRequiredSets] = useState({});
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
@@ -314,6 +317,28 @@ function WorkoutTracker() {
     }
   };
 
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentExerciseIndex < currentPlan.exercises.length - 1) {
+      handleExerciseChange(currentExerciseIndex + 1);
+    } else if (isRightSwipe && currentExerciseIndex > 0) {
+      handleExerciseChange(currentExerciseIndex - 1);
+    }
+  };
+
   if (!currentPlan) {
     return (
       <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
@@ -381,7 +406,13 @@ function WorkoutTracker() {
           timeout={300}
           classNames="fade"
         >
-          <div ref={nodeRef} className={`bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+          <div 
+            ref={nodeRef} 
+            className={`bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Exercise {currentExerciseIndex + 1} of {currentPlan.exercises.length}</p>
             <div className="flex flex-col md:flex-row mb-4">
@@ -470,14 +501,14 @@ function WorkoutTracker() {
           onClick={() => handleExerciseChange(Math.max(0, currentExerciseIndex - 1))}
           className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
         >
-          Previous Exercise
+          <FiChevronLeft className="inline-block mr-1" /> Previous Exercise
         </button>
         {currentExerciseIndex < currentPlan.exercises.length - 1 ? (
           <button
             onClick={() => handleExerciseChange(currentExerciseIndex + 1)}
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
           >
-            Next Exercise
+            Next Exercise <FiChevronRight className="inline-block ml-1" />
           </button>
         ) : (
           <button
