@@ -1,4 +1,4 @@
-
+// vite.config.js
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -9,8 +9,6 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        // Adjust this to your backend's actual address and port
-        // target: 'http://192.168.178.42:4500', 
         target: 'https://walrus-app-lqhsg.ondigitalocean.app/backend',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')

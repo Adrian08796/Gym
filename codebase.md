@@ -1,17 +1,20 @@
 # vite.config.js
 
 ```js
-// vite.config.js
+
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  base: '/',
   server: {
     proxy: {
       '/api': {
-        target: 'http://192.168.178.42:4500', // Adjust this to your backend's actual address and port
+        // Adjust this to your backend's actual address and port
+        // target: 'http://192.168.178.42:4500', 
+        target: 'https://walrus-app-lqhsg.ondigitalocean.app/backend',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }
@@ -21,6 +24,11 @@ export default defineConfig({
     alias: {
       '@': '/src',
     },
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    emptyOutDir: true,
   },
 });
 ```
@@ -59,6 +67,17 @@ export default {
     },
   },
   plugins: [],
+}
+```
+
+# serve.json
+
+```json
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://walrus-app-lqhsg.ondigitalocean.app/backend/api/$1" },
+    { "source": "/**", "destination": "/index.html" }
+  ]
 }
 ```
 
@@ -1893,8 +1912,8 @@ import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
 
 // Update this line to use HTTPS and your DigitalOcean app URL
-// export const hostName = 'https://gym-app-xnglh.ondigitalocean.app';
-export const hostName = '/api';
+// export const hostName = '/api';
+export const hostName = 'https://walrus-app-lqhsg.ondigitalocean.app/backend';
 
 const GymContext = createContext();
 
