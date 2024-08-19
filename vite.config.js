@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://walrus-app-lqhsg.ondigitalocean.app/backend:4500',
+        target: 'https://walrus-app-lqhsg.ondigitalocean.app:4500',
         // target: 'http://192.168.178.42:4500', // Adjust this to your backend's actual address and port
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
