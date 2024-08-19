@@ -6,7 +6,6 @@ import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
 
 // Update this line to use HTTPS and your DigitalOcean app URL
-// export const hostName = 'https://gym-app-xnglh.ondigitalocean.app';
 export const hostName = '/api';
 
 const GymContext = createContext();
