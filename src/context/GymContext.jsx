@@ -6,8 +6,8 @@ import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
 
 // Update this line to use HTTPS and your DigitalOcean app URL
-// export const hostName = '/api';
-export const hostName = 'https://walrus-app-lqhsg.ondigitalocean.app/backend';
+export const hostName = '/api';
+// export const hostName = 'https://walrus-app-lqhsg.ondigitalocean.app/backend';
 
 const GymContext = createContext();
 
