@@ -458,6 +458,23 @@ function WorkoutTracker() {
               </div>
             </div>
 
+            <div className="mb-4 flex">
+              <input
+                type="number"
+                placeholder="Weight (kg)"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
+              />
+              <input
+                type="number"
+                placeholder="Reps"
+                value={reps}
+                onChange={(e) => setReps(e.target.value)}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+            </div>
+
             <div className="mb-4 flex justify-between items-center">
               <button
                 onClick={handleSetComplete}
@@ -476,22 +493,6 @@ function WorkoutTracker() {
 
             {isExerciseOptionsOpen && (
               <div className="mb-4 p-4 bg-gray-200 dark:bg-gray-600 rounded">
-                <div className="mb-4 flex">
-                  <input
-                    type="number"
-                    placeholder="Weight (kg)"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Reps"
-                    value={reps}
-                    onChange={(e) => setReps(e.target.value)}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  />
-                </div>
                 <div className="mb-4">
                   <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
                     Rest Time (seconds):
