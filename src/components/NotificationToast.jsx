@@ -11,7 +11,7 @@ function NotificationToast() {
       {notifications.map((notification) => (
         <div
           key={notification.id}
-          className={`mb-2 p-4 rounded shadow-md ${
+          className={`mb-2 p-4 rounded shadow-md w-64 sm:w-80 md:w-96 ${
             notification.type === 'error' ? 'bg-red-500' : 
             notification.type === 'success' ? 'bg-green-500' : 
             notification.type === 'warning' ? 'bg-yellow-500' :
