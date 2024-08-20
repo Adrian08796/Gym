@@ -30,17 +30,54 @@ function WorkoutTracker() {
   const [requiredSets, setRequiredSets] = useState({});
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
-  const [slideDirection, setSlideDirection] = useState(null);
+  const [swipeDirection, setSwipeDirection] = useState(null);
+  const [isExerciseDetailsOpen, setIsExerciseDetailsOpen] = useState(false);
+  const [isExerciseOptionsOpen, setIsExerciseOptionsOpen] = useState(false);
   const [isPreviousWorkoutOpen, setIsPreviousWorkoutOpen] = useState(false);
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
-  const [isExerciseOptionsOpen, setIsExerciseOptionsOpen] = useState(false);
-  const [isExerciseDetailsOpen, setIsExerciseDetailsOpen] = useState(false);
 
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
   const nodeRef = useRef(null);
+
+  useEffect(() => {
+    loadStoredData();
+  }, []);
+
+  useEffect(() => {
+    if (currentPlan) {
+      fetchPreviousWorkout();
+    }
+  }, [currentPlan]);
+
+  useEffect(() => {
+    saveDataToLocalStorage();
+  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
+
+  useEffect(() => {
+    let timer;
+    if (startTime) {
+      timer = setInterval(() => {
+        setElapsedTime(prevTime => prevTime + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [startTime]);
+
+  useEffect(() => {
+    let restTimer;
+    if (isResting && remainingRestTime > 0) {
+      restTimer = setInterval(() => {
+        setRemainingRestTime(prevTime => prevTime - 1);
+      }, 1000);
+    } else if (remainingRestTime === 0 && isResting) {
+      setIsResting(false);
+      addNotification('Rest time is over. Ready for the next set!', 'info');
+    }
+    return () => clearInterval(restTimer);
+  }, [isResting, remainingRestTime, addNotification]);
 
   const loadStoredData = useCallback(() => {
     const storedPlan = localStorage.getItem('currentPlan');
@@ -55,10 +92,9 @@ function WorkoutTracker() {
         const parsedPlan = JSON.parse(storedPlan);
         setCurrentPlan(parsedPlan);
         
-        // Initialize requiredSets based on the plan
         const initialRequiredSets = {};
         parsedPlan.exercises.forEach(exercise => {
-          initialRequiredSets[exercise._id] = exercise.requiredSets || 3; // Default to 3 if not specified
+          initialRequiredSets[exercise._id] = exercise.requiredSets || 3;
         });
         setRequiredSets(initialRequiredSets);
 
@@ -97,80 +133,41 @@ function WorkoutTracker() {
     }
   }, [addNotification]);
 
-  useEffect(() => {
-    loadStoredData();
-  }, [loadStoredData]);
-
-  useEffect(() => {
-    if (currentPlan) {
-      const fetchPreviousWorkout = async () => {
-        setIsPreviousWorkoutLoading(true);
-        try {
-          let lastWorkout;
-          if (currentPlan._id) {
-            lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
-          }
-          if (!lastWorkout) {
-            lastWorkout = workoutHistory.find(workout => 
-              workout.exercises.some(ex => 
-                currentPlan.exercises.some(planEx => 
-                  planEx._id === ex.exercise._id
-                )
-              )
-            );
-          }
-          setPreviousWorkout(lastWorkout);
-        } catch (error) {
-          console.error('Error fetching previous workout:', error);
-        } finally {
-          setIsPreviousWorkoutLoading(false);
-        }
-      };
-      fetchPreviousWorkout();
-    } else {
-      setPreviousWorkout(null);
+  const fetchPreviousWorkout = async () => {
+    setIsPreviousWorkoutLoading(true);
+    try {
+      let lastWorkout;
+      if (currentPlan._id) {
+        lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
+      }
+      if (!lastWorkout) {
+        lastWorkout = workoutHistory.find(workout => 
+          workout.exercises.some(ex => 
+            currentPlan.exercises.some(planEx => 
+              planEx._id === ex.exercise._id
+            )
+          )
+        );
+      }
+      setPreviousWorkout(lastWorkout);
+    } catch (error) {
+      console.error('Error fetching previous workout:', error);
+    } finally {
       setIsPreviousWorkoutLoading(false);
     }
-  }, [currentPlan, getLastWorkoutByPlan, workoutHistory]);
+  };
 
-  useEffect(() => {
-    const saveDataToLocalStorage = () => {
-      if (currentPlan) {
-        localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
-      }
-      if (sets.length > 0) {
-        localStorage.setItem('currentSets', JSON.stringify(sets));
-      }
-      localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
-      localStorage.setItem('workoutNotes', JSON.stringify(notes));
-      localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
-    };
-
-    saveDataToLocalStorage();
-  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
-
-  useEffect(() => {
-    let timer;
-    if (startTime) {
-      timer = setInterval(() => {
-        setElapsedTime(prevTime => prevTime + 1);
-      }, 1000);
+  const saveDataToLocalStorage = () => {
+    if (currentPlan) {
+      localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
     }
-    return () => clearInterval(timer);
-  }, [startTime]);
-
-  useEffect(() => {
-    let restTimer;
-    if (isResting && remainingRestTime > 0) {
-      restTimer = setInterval(() => {
-        setRemainingRestTime(prevTime => prevTime - 1);
-      }, 1000);
-    } else if (remainingRestTime === 0 && isResting) {
-      setIsResting(false);
-      addNotification('Rest time is over. Ready for the next set!', 'info');
+    if (sets.length > 0) {
+      localStorage.setItem('currentSets', JSON.stringify(sets));
     }
-    return () => clearInterval(restTimer);
-  }, [isResting, remainingRestTime, addNotification]);
+    localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
+    localStorage.setItem('workoutNotes', JSON.stringify(notes));
+    localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
+  };
 
   const handleSetComplete = () => {
     if (!weight || !reps) {
@@ -192,17 +189,13 @@ function WorkoutTracker() {
       return newSets;
     });
 
-    // Store the last set values for the current exercise only
     setLastSetValues(prev => ({
       ...prev,
       [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
     }));
 
     addNotification('Set completed!', 'success');
-
-    // Always start a new rest timer after completing a set
     startRestTimer();
-
     updateProgression();
   };
 
@@ -308,30 +301,6 @@ function WorkoutTracker() {
     });
   };
 
-  const handleTouchStart = (e) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe && currentExerciseIndex < currentPlan.exercises.length - 1) {
-      setSlideDirection('left');
-      handleExerciseChange(currentExerciseIndex + 1);
-    } else if (isRightSwipe && currentExerciseIndex > 0) {
-      setSlideDirection('right');
-      handleExerciseChange(currentExerciseIndex - 1);
-    }
-  };
-
   const handleExerciseChange = (newIndex) => {
     setCurrentExerciseIndex(newIndex);
     
@@ -346,23 +315,49 @@ function WorkoutTracker() {
     }
   };
 
-  if (!currentPlan) {
-    return (
-      <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
-        <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
-        <p className="text-xl mb-4">No active workout</p>
-        <p className="mb-4">To start a new workout, please select a workout plan from the Workout Plans page.</p>
-        <button
-          onClick={() => navigate('/plans')}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          Go to Workout Plans
-        </button>
-      </div>
-    );
-  }
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
 
-  const currentExercise = currentPlan.exercises[currentExerciseIndex];
+  const handleTouchMove = (e) => {
+    const currentTouch = e.targetTouches[0].clientX;
+    setTouchEnd(currentTouch);
+    
+    if (touchStart && currentTouch) {
+      const distance = touchStart - currentTouch;
+      if (distance > 20) {
+        setSwipeDirection('left');
+      } else if (distance < -20) {
+        setSwipeDirection('right');
+      } else {
+        setSwipeDirection(null);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentExerciseIndex < currentPlan.exercises.length - 1) {
+      handleExerciseChange(currentExerciseIndex + 1);
+    } else if (isRightSwipe && currentExerciseIndex > 0) {
+      handleExerciseChange(currentExerciseIndex - 1);
+    }
+
+    setSwipeDirection(null);
+  };
+
+  const toggleExerciseDetails = () => {
+    setIsExerciseDetailsOpen(!isExerciseDetailsOpen);
+  };
+
+  const toggleExerciseOptions = () => {
+    setIsExerciseOptionsOpen(!isExerciseOptionsOpen);
+  };
 
   const togglePreviousWorkout = () => {
     setIsPreviousWorkoutOpen(!isPreviousWorkoutOpen);
@@ -372,16 +367,31 @@ function WorkoutTracker() {
     setIsCurrentSetLogOpen(!isCurrentSetLogOpen);
   };
 
-  const toggleExerciseOptions = () => {
-    setIsExerciseOptionsOpen(!isExerciseOptionsOpen);
-  };
+  if (!currentPlan) {
+    return (
+      <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
+        <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
+        <p className="text-xl mb-4">No active workout</p>
+        <p className="mb-4">To start a new workout, please select a workout plan from the Workout Plans page.</p>
+        <button
+          onClick={() => navigate('/plans')}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4rounded focus:outline-none focus:shadow-outline"
+        >
+          Go to Workout Plans
+        </button>
+      </div>
+    );
+  }
 
-  const toggleExerciseDetails = () => {
-    setIsExerciseDetailsOpen(!isExerciseDetailsOpen);
-  };
+  const currentExercise = currentPlan.exercises[currentExerciseIndex];
 
   return (
-    <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
+    <div 
+      className={`workout-tracker container mx-auto mt-8 p-4 ${darkMode ? 'dark-mode bg-gray-800 text-white' : 'bg-white text-gray-800'}`}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="relative mb-6">
         <button
           onClick={handleCancelWorkout}
@@ -398,8 +408,8 @@ function WorkoutTracker() {
       </div>
 
       <div className="mb-4">
-        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-          <div className="bg-blue-600 h-2.5 rounded-full" style={{width: `${calculateProgress()}%`}}></div>
+        <div className="progress-bar">
+          <div className="progress-bar-fill" style={{width: `${calculateProgress()}%`}}></div>
         </div>
         <p className="text-sm mt-2 text-center">Overall Progress: {calculateProgress().toFixed(2)}%</p>
       </div>
@@ -423,7 +433,7 @@ function WorkoutTracker() {
           ))}
         </div>
       </div>
-      
+
       <SwitchTransition mode="out-in">
         <CSSTransition
           key={currentExerciseIndex}
@@ -433,7 +443,7 @@ function WorkoutTracker() {
         >
           <div 
             ref={nodeRef} 
-            className={`exercise-container bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}
+            className="exercise-container bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4"
           >
             <div className="flex flex-col md:flex-row mb-4">
               <img 
@@ -479,13 +489,13 @@ function WorkoutTracker() {
             <div className="mb-4 flex justify-between items-center">
               <button
                 onClick={handleSetComplete}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                className="btn btn-primary"
               >
                 Complete Set
               </button>
               <button
                 onClick={toggleExerciseOptions}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center"
+                className="btn btn-secondary flex items-center"
               >
                 <FiSettings className="mr-2" /> Options
                 {isExerciseOptionsOpen ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
@@ -493,40 +503,38 @@ function WorkoutTracker() {
             </div>
 
             <div className={`collapsible-content ${isExerciseOptionsOpen ? 'open' : ''}`}>
-              <div className="mb-4 p-4 bg-gray-200 dark:bg-gray-600 rounded">
-                <div className="mb-4">
-                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
-                    Rest Time (seconds):
-                  </label>
-                  <input
-                    type="number"
-                    id="restTime"
-                    value={restTime}
-                    onChange={(e) => setRestTime(Number(e.target.value))}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
-                    Exercise Notes:
-                  </label>
-                  <textarea
-                    id={`notes-${currentExerciseIndex}`}
-                    value={notes[currentExerciseIndex] || ''}
-                    onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    rows="3"
-                  ></textarea>
-                </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
+                  Rest Time (seconds):
+                </label>
+                <input
+                  type="number"
+                  id="restTime"
+                  value={restTime}
+                  onChange={(e) => setRestTime(Number(e.target.value))}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
+                  Exercise Notes:
+                </label>
+                <textarea
+                  id={`notes-${currentExerciseIndex}`}
+                  value={notes[currentExerciseIndex] || ''}
+                  onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  rows="3"
+                ></textarea>
               </div>
             </div>
 
             {isResting && (
-              <div className="mb-4">
+              <div className="rest-timer mb-4">
                 <p>Rest Time Remaining: {formatTime(remainingRestTime)}</p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                <div className="rest-timer-bar">
                   <div 
-                    className="bg-green-600 h-2.5 rounded-full" 
+                    className="rest-timer-fill"
                     style={{width: `${(remainingRestTime / restTime) * 100}%`}}
                   ></div>
                 </div>
@@ -545,7 +553,7 @@ function WorkoutTracker() {
       <div className="flex justify-between items-center mt-4">
         <button
           onClick={() => handleExerciseChange(Math.max(0, currentExerciseIndex - 1))}
-          className={`bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${currentExerciseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`btn btn-secondary ${currentExerciseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
           disabled={currentExerciseIndex === 0}
         >
           <FiChevronLeft className="inline-block mr-1" /> Previous
@@ -556,21 +564,20 @@ function WorkoutTracker() {
         {currentExerciseIndex < currentPlan.exercises.length - 1 ? (
           <button
             onClick={() => handleExerciseChange(currentExerciseIndex + 1)}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="btn btn-primary"
           >
             Next <FiChevronRight className="inline-block ml-1" />
           </button>
         ) : (
           <button
             onClick={handleFinishWorkout}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="btn btn-primary"
           >
             Finish Workout
           </button>
         )}
       </div>
 
-      {/* Previous Workout Performance Section */}
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
         <button 
           onClick={togglePreviousWorkout}
@@ -580,39 +587,36 @@ function WorkoutTracker() {
           {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
         </button>
         <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
-          <div className="p-4">
-            {isPreviousWorkoutLoading ? (
-              <p>Loading previous workout data...</p>
-            ) : previousWorkout ? (
-              <div>
-                <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
-                <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
-                {previousWorkout.exercises.map((exercise, index) => (
-                  <div key={index} className="mb-4">
-                    <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
-                      {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
-                    </h4>
-                    <ul className="list-disc pl-5">
-                      {exercise.sets.map((set, setIndex) => (
-                        <li key={setIndex}>
-                          Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
-                        </li>
-                      ))}
-                    </ul>
-                    {exercise.notes && (
-                      <p className="mt-2 italic">Notes: {exercise.notes}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p>No previous workout data available for this plan.</p>
-            )}
-          </div>
+          {isPreviousWorkoutLoading ? (
+            <p className="p-4">Loading previous workout data...</p>
+          ) : previousWorkout ? (
+            <div className="p-4">
+              <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
+              <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
+              {previousWorkout.exercises.map((exercise, index) => (
+                <div key={index} className="mb-4">
+                  <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                    {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
+                  </h4>
+                  <ul className="list-disc pl-5">
+                    {exercise.sets.map((set, setIndex) => (
+                      <li key={setIndex}>
+                        Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
+                      </li>
+                    ))}
+                  </ul>
+                  {exercise.notes && (
+                    <p className="mt-2 italic">Notes: {exercise.notes}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="p-4">No previous workout data available for this plan.</p>
+          )}
         </div>
       </div>
 
-      {/* Current Workout Set Log */}
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
         <button 
           onClick={toggleCurrentSetLog}
@@ -650,6 +654,19 @@ function WorkoutTracker() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className={`swipe-overlay ${swipeDirection ? 'active' : ''}`}>
+        {swipeDirection === 'left' && (
+          <div className="swipe-indicator right">
+            <FiChevronRight />
+          </div>
+        )}
+        {swipeDirection === 'right' && (
+          <div className="swipe-indicator left">
+            <FiChevronLeft />
+          </div>
+        )}
       </div>
     </div>
   );
