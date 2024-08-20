@@ -33,6 +33,7 @@ function WorkoutTracker() {
   const [isPreviousWorkoutOpen, setIsPreviousWorkoutOpen] = useState(false);
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isExerciseOptionsOpen, setIsExerciseOptionsOpen] = useState(false);
+  const [isExerciseDetailsOpen, setIsExerciseDetailsOpen] = useState(false);
 
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
@@ -377,6 +378,10 @@ function WorkoutTracker() {
     setIsExerciseOptionsOpen(!isExerciseOptionsOpen);
   };
 
+  const toggleExerciseDetails = () => {
+    setIsExerciseDetailsOpen(!isExerciseDetailsOpen);
+  };
+
   return (
     <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
       <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
@@ -448,10 +453,20 @@ function WorkoutTracker() {
                 alt={currentExercise.name} 
                 className="w-full md:w-1/3 h-48 object-cover rounded-lg mr-0 md:mr-4 mb-4 md:mb-0"
               />
-              <div>
-                <h4 className="text-lg font-semibold mb-2">{currentExercise.name}</h4>
-                <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
-                <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+              <div className="flex-grow">
+                <div 
+                  className="flex justify-between items-center cursor-pointer"
+                  onClick={toggleExerciseDetails}
+                >
+                  <h4 className="text-lg font-semibold mb-2">{currentExercise.name}</h4>
+                  {isExerciseDetailsOpen ? <FiChevronUp /> : <FiChevronDown />}
+                </div>
+                {isExerciseDetailsOpen && (
+                  <div className="mt-2">
+                    <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
+                    <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+                  </div>
+                )}
                 <p className="mb-2">
                   <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id]}
                 </p>
