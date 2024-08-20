@@ -6,7 +6,7 @@ import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
-import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings } from 'react-icons/fi';
 import './WorkoutTracker.css';
 
 function WorkoutTracker() {
@@ -32,6 +32,7 @@ function WorkoutTracker() {
   const [touchEnd, setTouchEnd] = useState(null);
   const [isPreviousWorkoutOpen, setIsPreviousWorkoutOpen] = useState(false);
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
+  const [isExerciseOptionsOpen, setIsExerciseOptionsOpen] = useState(false);
 
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
@@ -372,6 +373,10 @@ function WorkoutTracker() {
     setIsCurrentSetLogOpen(!isCurrentSetLogOpen);
   };
 
+  const toggleExerciseOptions = () => {
+    setIsExerciseOptionsOpen(!isExerciseOptionsOpen);
+  };
+
   return (
     <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
       <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
@@ -444,6 +449,7 @@ function WorkoutTracker() {
                 className="w-full md:w-1/3 h-48 object-cover rounded-lg mr-0 md:mr-4 mb-4 md:mb-0"
               />
               <div>
+                <h4 className="text-lg font-semibold mb-2">{currentExercise.name}</h4>
                 <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
                 <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
                 <p className="mb-2">
@@ -451,28 +457,68 @@ function WorkoutTracker() {
                 </p>
               </div>
             </div>
-            <div className="mb-4 flex">
-              <input
-                type="number"
-                placeholder="Weight (kg)"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
-              />
-              <input
-                type="number"
-                placeholder="Reps"
-                value={reps}
-                onChange={(e) => setReps(e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              />
+
+            <div className="mb-4 flex justify-between items-center">
+              <button
+                onClick={handleSetComplete}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              >
+                Complete Set
+              </button>
+              <button
+                onClick={toggleExerciseOptions}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center"
+              >
+                <FiSettings className="mr-2" /> Options
+                {isExerciseOptionsOpen ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
+              </button>
             </div>
-            <button
-              onClick={handleSetComplete}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-            >
-              Complete Set
-            </button>
+
+            {isExerciseOptionsOpen && (
+              <div className="mb-4 p-4 bg-gray-200 dark:bg-gray-600 rounded">
+                <div className="mb-4 flex">
+                  <input
+                    type="number"
+                    placeholder="Weight (kg)"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Reps"
+                    value={reps}
+                    onChange={(e) => setReps(e.target.value)}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
+                    Rest Time (seconds):
+                  </label>
+                  <input
+                    type="number"
+                    id="restTime"
+                    value={restTime}
+                    onChange={(e) => setRestTime(Number(e.target.value))}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
+                    Exercise Notes:
+                  </label>
+                  <textarea
+                    id={`notes-${currentExerciseIndex}`}
+                    value={notes[currentExerciseIndex] || ''}
+                    onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    rows="3"
+                  ></textarea>
+                </div>
+              </div>
+            )}
+
             {isResting && (
               <div className="mb-4">
                 <p>Rest Time Remaining: {formatTime(remainingRestTime)}</p>
@@ -490,30 +536,6 @@ function WorkoutTracker() {
                 </button>
               </div>
             )}
-            <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
-                Rest Time (seconds):
-              </label>
-              <input
-                type="number"
-                id="restTime"
-                value={restTime}
-                onChange={(e) => setRestTime(Number(e.target.value))}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
-                Exercise Notes:
-              </label>
-              <textarea
-                id={`notes-${currentExerciseIndex}`}
-                value={notes[currentExerciseIndex] || ''}
-                onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                rows="3"
-              ></textarea>
-            </div>
           </div>
         </CSSTransition>
       </TransitionGroup>
