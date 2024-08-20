@@ -253,6 +253,8 @@ function WorkoutTracker() {
   };
 
   const handleCancelWorkout = () => {
+    if (isConfirmingCancel) return; // Prevent multiple confirmation dialogs
+
     setIsConfirmingCancel(true);
     addNotification(
       'Are you sure you want to cancel this workout? All progress will be lost.',
@@ -270,7 +272,7 @@ function WorkoutTracker() {
             setLastSetValues({});
             addNotification('Workout cancelled', 'info');
             setIsConfirmingCancel(false);
-            navigate('/'); // Optionally navigate away after canceling
+            navigate('/'); // Navigate away after canceling
           },
         },
         {
@@ -279,7 +281,8 @@ function WorkoutTracker() {
             setIsConfirmingCancel(false);
           },
         },
-      ]
+      ],
+      0 // Set duration to 0 to prevent auto-dismissal
     );
   };
 
