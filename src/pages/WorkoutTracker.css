@@ -8,7 +8,7 @@
 .fade-enter-active {
   opacity: 1;
   transform: translateX(0%);
-  transition: opacity 300ms, transform 300ms ease-in-out;
+  transition: opacity 300ms ease-in, transform 300ms ease-in;
 }
 
 .fade-exit {
@@ -19,15 +19,26 @@
 .fade-exit-active {
   opacity: 0;
   transform: translateX(-100%);
-  transition: opacity 300ms, transform 300ms ease-in-out;
+  transition: opacity 300ms ease-in, transform 300ms ease-in;
 }
 
-@media (max-width: 768px) {
-  .fade-enter {
-    transform: translateX(50%);
-  }
+/* Add these new styles for a smoother height transition */
+.exercise-container {
+  transition: height 300ms ease-in-out;
+  overflow: hidden;
+}
 
-  .fade-exit-active {
-    transform: translateX(-50%);
-  }
+/* Optional: Add transitions to other elements for a more fluid feel */
+input, textarea, button {
+  transition: all 150ms ease-in-out;
+}
+
+.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 300ms ease-in-out;
+}
+
+.collapsible-content.open {
+  max-height: 1000px; /* Adjust this value based on your content */
 }

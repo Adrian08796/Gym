@@ -433,7 +433,7 @@ function WorkoutTracker() {
         </p>
       </div>
       
-      <TransitionGroup>
+      <SwitchTransition mode="out-in">
         <CSSTransition
           key={currentExerciseIndex}
           nodeRef={nodeRef}
@@ -554,7 +554,7 @@ function WorkoutTracker() {
             )}
           </div>
         </CSSTransition>
-      </TransitionGroup>
+      </SwitchTransition>
 
       <div className="flex justify-between items-center mt-4">
         <button
