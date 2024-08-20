@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { CSSTransition, TransitionGroup } from 'react-transition-group';
+import { CSSTransition, SwitchTransition } from 'react-transition-group';
 import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings } from 'react-icons/fi';
 import './WorkoutTracker.css';
 
