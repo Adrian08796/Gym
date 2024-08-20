@@ -30,6 +30,7 @@ function WorkoutTracker() {
   const [requiredSets, setRequiredSets] = useState({});
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [slideDirection, setSlideDirection] = useState(null);
   const [isPreviousWorkoutOpen, setIsPreviousWorkoutOpen] = useState(false);
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isExerciseOptionsOpen, setIsExerciseOptionsOpen] = useState(false);
@@ -307,6 +308,30 @@ function WorkoutTracker() {
     });
   };
 
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentExerciseIndex < currentPlan.exercises.length - 1) {
+      setSlideDirection('left');
+      handleExerciseChange(currentExerciseIndex + 1);
+    } else if (isRightSwipe && currentExerciseIndex > 0) {
+      setSlideDirection('right');
+      handleExerciseChange(currentExerciseIndex - 1);
+    }
+  };
+
   const handleExerciseChange = (newIndex) => {
     setCurrentExerciseIndex(newIndex);
     
@@ -318,33 +343,6 @@ function WorkoutTracker() {
     } else {
       setWeight('');
       setReps('');
-    }
-  };
-
-  const handleTouchStart = (e) => {
-    setTouchEnd(null); // Reset touchEnd
-    setTouchStart(e.targetTouches[0].clientX);
-    console.log('Touch start:', e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-    console.log('Touch move:', e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-    console.log('Touch end - distance:', distance, 'isLeftSwipe:', isLeftSwipe, 'isRightSwipe:', isRightSwipe);
-
-    if (isLeftSwipe && currentExerciseIndex < currentPlan.exercises.length - 1) {
-      console.log('Swiping left to next exercise');
-      handleExerciseChange(currentExerciseIndex + 1);
-    } else if (isRightSwipe && currentExerciseIndex > 0) {
-      console.log('Swiping right to previous exercise');
-      handleExerciseChange(currentExerciseIndex - 1);
     }
   };
 

@@ -1,5 +1,12 @@
 /* src/pages/WorkoutTracker.css */
 
+/* General styles */
+.workout-tracker {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Transition styles for exercise switching */
 .fade-enter {
   opacity: 0;
   transform: translateX(100%);
@@ -22,17 +29,13 @@
   transition: opacity 300ms ease-in, transform 300ms ease-in;
 }
 
-/* Add these new styles for a smoother height transition */
+/* Exercise container styles */
 .exercise-container {
-  transition: height 300ms ease-in-out;
+  transition: height 300ms ease-in-out, background-color 300ms ease-in-out;
   overflow: hidden;
 }
 
-/* Optional: Add transitions to other elements for a more fluid feel */
-input, textarea, button {
-  transition: all 150ms ease-in-out;
-}
-
+/* Collapsible content styles */
 .collapsible-content {
   max-height: 0;
   overflow: hidden;
@@ -41,4 +44,151 @@ input, textarea, button {
 
 .collapsible-content.open {
   max-height: 1000px; /* Adjust this value based on your content */
+}
+
+/* Form element styles */
+input, textarea, button {
+  transition: all 150ms ease-in-out;
+}
+
+input[type="number"], textarea {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Button styles */
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 150ms ease-in-out, transform 150ms ease-in-out;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background-color: #3490dc;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #2779bd;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+/* Exercise carousel styles */
+.carousel-container {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.carousel-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Progress bar styles */
+.progress-bar {
+  height: 8px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: #3490dc;
+  transition: width 300ms ease-in-out;
+}
+
+/* Rest timer styles */
+.rest-timer {
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.rest-timer-bar {
+  height: 4px;
+  background-color: #e9ecef;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.rest-timer-fill {
+  height: 100%;
+  background-color: #28a745;
+  transition: width 1s linear;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .workout-tracker {
+    padding: 1rem;
+  }
+
+  .exercise-container {
+    padding: 1rem;
+  }
+
+  .btn {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Dark mode styles */
+.dark-mode .exercise-container {
+  background-color: #2d3748;
+  color: #e2e8f0;
+}
+
+.dark-mode input, .dark-mode textarea {
+  background-color: #4a5568;
+  color: #e2e8f0;
+  border-color: #718096;
+}
+
+.dark-mode .rest-timer {
+  background-color: #2d3748;
+}
+
+.dark-mode .progress-bar {
+  background-color: #4a5568;
+}
+
+.dark-mode .btn-primary {
+  background-color: #4299e1;
+}
+
+.dark-mode .btn-primary:hover {
+  background-color: #3182ce;
+}
+
+.dark-mode .btn-secondary {
+  background-color: #718096;
+}
+
+.dark-mode .btn-secondary:hover {
+  background-color: #4a5568;
 }
