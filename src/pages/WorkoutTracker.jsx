@@ -406,7 +406,6 @@ function WorkoutTracker() {
         <p className="text-sm mt-2 text-center">Overall Progress: {calculateProgress().toFixed(2)}%</p>
       </div>
 
-      {/* Exercise carousel */}
       <div className="mb-4 flex justify-center items-center">
         <div className="flex space-x-2 overflow-x-auto py-2 px-4 carousel-container">
           {currentPlan.exercises.map((exercise, index) => (
@@ -437,9 +436,6 @@ function WorkoutTracker() {
           <div 
             ref={nodeRef} 
             className={`exercise-container bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
           >
             <div className="flex flex-col md:flex-row mb-4">
               <img 
@@ -455,12 +451,10 @@ function WorkoutTracker() {
                   <h4 className="text-lg font-semibold mb-2">{currentExercise.name}</h4>
                   {isExerciseDetailsOpen ? <FiChevronUp /> : <FiChevronDown />}
                 </div>
-                {isExerciseDetailsOpen && (
-                  <div className="mt-2">
-                    <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
-                    <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
-                  </div>
-                )}
+                <div className={`collapsible-content ${isExerciseDetailsOpen ? 'open' : ''}`}>
+                  <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
+                  <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+                </div>
                 <p className="mb-2">
                   <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id]}
                 </p>
@@ -500,7 +494,7 @@ function WorkoutTracker() {
               </button>
             </div>
 
-            {isExerciseOptionsOpen && (
+            <div className={`collapsible-content ${isExerciseOptionsOpen ? 'open' : ''}`}>
               <div className="mb-4 p-4 bg-gray-200 dark:bg-gray-600 rounded">
                 <div className="mb-4">
                   <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
@@ -527,7 +521,7 @@ function WorkoutTracker() {
                   ></textarea>
                 </div>
               </div>
-            )}
+            </div>
 
             {isResting && (
               <div className="mb-4">
@@ -587,7 +581,7 @@ function WorkoutTracker() {
           <span>Previous Workout Performance</span>
           {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
         </button>
-        {isPreviousWorkoutOpen && (
+        <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
           <div className="p-4">
             {isPreviousWorkoutLoading ? (
               <p>Loading previous workout data...</p>
@@ -617,10 +611,10 @@ function WorkoutTracker() {
               <p>No previous workout data available for this plan.</p>
             )}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Set Log */}
+      {/* Current Workout Set Log */}
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
         <button 
           onClick={toggleCurrentSetLog}
@@ -629,7 +623,7 @@ function WorkoutTracker() {
           <span>Current Workout Set Log</span>
           {isCurrentSetLogOpen ? <FiChevronUp /> : <FiChevronDown />}
         </button>
-        {isCurrentSetLogOpen && (
+        <div className={`collapsible-content ${isCurrentSetLogOpen ? 'open' : ''}`}>
           <div className="p-4">
             {currentPlan.exercises.map((exercise, index) => (
               <div key={exercise._id} className="mb-4">
@@ -657,7 +651,7 @@ function WorkoutTracker() {
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
