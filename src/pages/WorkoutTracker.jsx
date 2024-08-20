@@ -6,7 +6,7 @@ import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { CSSTransition, SwitchTransition } from 'react-transition-group';
-import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings, FiX } from 'react-icons/fi';
 import './WorkoutTracker.css';
 
 function WorkoutTracker() {
@@ -384,10 +384,18 @@ function WorkoutTracker() {
 
   return (
     <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
-      <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
-      <h3 className="text-xl mb-4">{currentPlan.name}</h3>
+      <div className="relative mb-6">
+        <button
+          onClick={handleCancelWorkout}
+          className="absolute top-0 right-0 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          <FiX />
+        </button>
+        <h2 className="text-3xl font-bold text-center">Workout Tracker</h2>
+        <h3 className="text-xl text-center mt-2">{currentPlan.name}</h3>
+      </div>
       
-      <div className="mb-4 text-lg">
+      <div className="mb-4 text-lg text-center">
         Elapsed Time: {formatTime(elapsedTime)}
       </div>
 
@@ -395,9 +403,10 @@ function WorkoutTracker() {
         <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
           <div className="bg-blue-600 h-2.5 rounded-full" style={{width: `${calculateProgress()}%`}}></div>
         </div>
-        <p className="text-sm mt-2">Overall Progress: {calculateProgress().toFixed(2)}%</p>
+        <p className="text-sm mt-2 text-center">Overall Progress: {calculateProgress().toFixed(2)}%</p>
       </div>
 
+      {/* Exercise carousel */}
       <div className="mb-4 flex justify-center items-center">
         <div className="flex space-x-2 overflow-x-auto py-2 px-4 carousel-container">
           {currentPlan.exercises.map((exercise, index) => (
@@ -416,21 +425,6 @@ function WorkoutTracker() {
             />
           ))}
         </div>
-        <button
-          onClick={handleCancelWorkout}
-          className="ml-4 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm focus:outline-none focus:shadow-outline"
-        >
-          Cancel
-        </button>
-      </div>
-
-      <div className="text-center mb-4">
-        <h4 className="text-lg font-semibold">
-          {currentPlan.exercises[currentExerciseIndex].name}
-        </h4>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Exercise {currentExerciseIndex + 1} of {currentPlan.exercises.length}
-        </p>
       </div>
       
       <SwitchTransition mode="out-in">

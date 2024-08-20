@@ -25,20 +25,4 @@
 /* Add these new styles for a smoother height transition */
 .exercise-container {
   transition: height 300ms ease-in-out;
-  overflow: hidden;
-}
-
-/* Optional: Add transitions to other elements for a more fluid feel */
-input, textarea, button {
-  transition: all 150ms ease-in-out;
-}
-
-.collapsible-content {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 300ms ease-in-out;
-}
-
-.collapsible-content.open {
-  max-height: 1000px; /* Adjust this value based on your content */
-}
+  overflow:
