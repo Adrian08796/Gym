@@ -695,4 +695,4 @@ function WorkoutTracker() {
   );
 }
 
-export default WorkoutTracker;
+export default WorkoutTra
