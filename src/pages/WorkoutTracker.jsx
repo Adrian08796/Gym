@@ -6,7 +6,7 @@ import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import './WorkoutTracker.css';
 
 function WorkoutTracker() {
@@ -30,6 +30,8 @@ function WorkoutTracker() {
   const [requiredSets, setRequiredSets] = useState({});
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [isPreviousWorkoutOpen, setIsPreviousWorkoutOpen] = useState(false);
+  const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
 
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
@@ -362,6 +364,14 @@ function WorkoutTracker() {
 
   const currentExercise = currentPlan.exercises[currentExerciseIndex];
 
+  const togglePreviousWorkout = () => {
+    setIsPreviousWorkoutOpen(!isPreviousWorkoutOpen);
+  };
+
+  const toggleCurrentSetLog = () => {
+    setIsCurrentSetLogOpen(!isCurrentSetLogOpen);
+  };
+
   return (
     <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
       <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
@@ -536,66 +546,86 @@ function WorkoutTracker() {
         )}
       </div>
 
-      {/* Previous Workout Section */}
-      <div className={`mt-8 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
-        <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>Previous Workout Performance</h3>
-        {isPreviousWorkoutLoading ? (
-          <p>Loading previous workout data...</p>
-        ) : previousWorkout ? (
-          <div>
-            <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
-            <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
-            {previousWorkout.exercises.map((exercise, index) => (
-              <div key={index} className="mb-4">
-                <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
-                  {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
-                </h4>
-                <ul className="list-disc pl-5">
-                  {exercise.sets.map((set, setIndex) => (
-                    <li key={setIndex}>
-                      Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
-                    </li>
-                  ))}
-                </ul>
-                {exercise.notes && (
-                  <p className="mt-2 italic">Notes: {exercise.notes}</p>
-                )}
+      {/* Previous Workout Performance Section */}
+      <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
+        <button 
+          onClick={togglePreviousWorkout}
+          className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
+        >
+          <span>Previous Workout Performance</span>
+          {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
+        </button>
+        {isPreviousWorkoutOpen && (
+          <div className="p-4">
+            {isPreviousWorkoutLoading ? (
+              <p>Loading previous workout data...</p>
+            ) : previousWorkout ? (
+              <div>
+                <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
+                <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
+                {previousWorkout.exercises.map((exercise, index) => (
+                  <div key={index} className="mb-4">
+                    <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                      {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
+                    </h4>
+                    <ul className="list-disc pl-5">
+                      {exercise.sets.map((set, setIndex) => (
+                        <li key={setIndex}>
+                          Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
+                        </li>
+                      ))}
+                    </ul>
+                    {exercise.notes && (
+                      <p className="mt-2 italic">Notes: {exercise.notes}</p>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <p>No previous workout data available for this plan.</p>
+            )}
           </div>
-        ) : (
-          <p>No previous workout data available for this plan.</p>
         )}
       </div>
 
       {/* Set Log */}
-      <div className={`mt-8 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
-        <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Current Workout Set Log</h3>
-        {currentPlan.exercises.map((exercise, index) => (
-          <div key={exercise._id} className="mb-4">
-            <h4 className={`text-lg font-medium ${darkMode ? 'text-green-200' : 'text-green-700'}`}>
-              {exercise.name}
-              {isExerciseComplete(exercise._id, sets[index] || []) && ' (Complete)'}
-            </h4>
-            {sets[index] && sets[index].length > 0 ? (
-              <ul className="list-disc pl-5">
-                {sets[index].map((set, setIndex) => (
-                  <li key={setIndex}>
-                    Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No sets completed yet</p>
-            )}
-            <p>
-              {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id]} sets completed
-            </p>
-            {notes[index] && (
-              <p className="mt-2 italic">Notes: {notes[index]}</p>
-            )}
+      <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
+        <button 
+          onClick={toggleCurrentSetLog}
+          className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-green-300' : 'text-green-800'}`}
+        >
+          <span>Current Workout Set Log</span>
+          {isCurrentSetLogOpen ? <FiChevronUp /> : <FiChevronDown />}
+        </button>
+        {isCurrentSetLogOpen && (
+          <div className="p-4">
+            {currentPlan.exercises.map((exercise, index) => (
+              <div key={exercise._id} className="mb-4">
+                <h4 className={`text-lg font-medium ${darkMode ? 'text-green-200' : 'text-green-700'}`}>
+                  {exercise.name}
+                  {isExerciseComplete(exercise._id, sets[index] || []) && ' (Complete)'}
+                </h4>
+                {sets[index] && sets[index].length > 0 ? (
+                  <ul className="list-disc pl-5">
+                    {sets[index].map((set, setIndex) => (
+                      <li key={setIndex}>
+                        Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No sets completed yet</p>
+                )}
+                <p>
+                  {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id]} sets completed
+                </p>
+                {notes[index] && (
+                  <p className="mt-2 italic">Notes: {notes[index]}</p>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
