@@ -14,16 +14,27 @@ function NotificationToast() {
           className={`mb-2 p-4 rounded shadow-md ${
             notification.type === 'error' ? 'bg-red-500' : 
             notification.type === 'success' ? 'bg-green-500' : 
-            notification.type === 'info' ? 'bg-blue-500' : 'bg-yellow-500'
+            notification.type === 'warning' ? 'bg-yellow-500' :
+            'bg-blue-500'
           } text-white`}
         >
-          {notification.message}
-          <button
-            onClick={() => removeNotification(notification.id)}
-            className="ml-2 text-white font-bold"
-          >
-            &times;
-          </button>
+          <p>{notification.message}</p>
+          {notification.actions && notification.actions.length > 0 && (
+            <div className="mt-2 flex justify-end">
+              {notification.actions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    action.onClick();
+                    removeNotification(notification.id);
+                  }}
+                  className="ml-2 px-2 py-1 bg-white text-gray-800 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ))}
     </div>

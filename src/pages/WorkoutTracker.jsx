@@ -35,6 +35,7 @@ function WorkoutTracker() {
   const [isExerciseOptionsOpen, setIsExerciseOptionsOpen] = useState(false);
   const [isPreviousWorkoutOpen, setIsPreviousWorkoutOpen] = useState(false);
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
+  const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
 
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
@@ -252,16 +253,34 @@ function WorkoutTracker() {
   };
 
   const handleCancelWorkout = () => {
-    if (window.confirm("Are you sure you want to cancel this workout? All progress will be lost.")) {
-      clearLocalStorage();
-      setCurrentPlan(null);
-      setSets([]);
-      setNotes([]);
-      setStartTime(null);
-      setElapsedTime(0);
-      setLastSetValues({});
-      addNotification('Workout cancelled', 'info');
-    }
+    setIsConfirmingCancel(true);
+    addNotification(
+      'Are you sure you want to cancel this workout? All progress will be lost.',
+      'warning',
+      [
+        {
+          label: 'Yes, Cancel',
+          onClick: () => {
+            clearLocalStorage();
+            setCurrentPlan(null);
+            setSets([]);
+            setNotes([]);
+            setStartTime(null);
+            setElapsedTime(0);
+            setLastSetValues({});
+            addNotification('Workout cancelled', 'info');
+            setIsConfirmingCancel(false);
+            navigate('/'); // Optionally navigate away after canceling
+          },
+        },
+        {
+          label: 'No, Continue',
+          onClick: () => {
+            setIsConfirmingCancel(false);
+          },
+        },
+      ]
+    );
   };
 
   const clearLocalStorage = () => {
@@ -396,6 +415,7 @@ function WorkoutTracker() {
         <button
           onClick={handleCancelWorkout}
           className="absolute top-0 right-0 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          disabled={isConfirmingCancel}
         >
           <FiX />
         </button>

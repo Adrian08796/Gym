@@ -9,21 +9,23 @@ export const useNotification = () => useContext(NotificationContext);
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
 
-  const addNotification = useCallback((message, type = 'info', duration = 5000) => {
+  const addNotification = useCallback((message, type = 'info', actions = [], duration = 5000) => {
     const id = Date.now() + Math.random();
-    setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => removeNotification(id), duration);
+    setNotifications(prev => [...prev, { id, message, type, actions }]);
+    if (duration > 0) {
+      setTimeout(() => removeNotification(id), duration);
+    }
   }, []);
 
   const removeNotification = useCallback((id) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
   }, []);
 
-  const contextValue = React.useMemo(() => ({
+  const contextValue = {
     notifications,
     addNotification,
     removeNotification
-  }), [notifications, addNotification, removeNotification]);
+  };
 
   return (
     <NotificationContext.Provider value={contextValue}>
