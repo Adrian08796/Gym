@@ -272,7 +272,7 @@ function WorkoutTracker() {
             setLastSetValues({});
             addNotification('Workout cancelled', 'info');
             setIsConfirmingCancel(false);
-            navigate('/'); // Navigate away after canceling
+            navigate('/plans'); // Navigate away after canceling
           },
         },
         {
