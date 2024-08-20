@@ -378,30 +378,39 @@ function WorkoutTracker() {
         <p className="text-sm mt-2">Overall Progress: {calculateProgress().toFixed(2)}%</p>
       </div>
 
-      <div className="mb-4 flex flex-wrap justify-between items-center">
-        <div className="flex flex-wrap">
+      <div className="mb-4 flex justify-center items-center">
+        <div className="flex space-x-2 overflow-x-auto py-2 px-4 carousel-container">
           {currentPlan.exercises.map((exercise, index) => (
             <button
               key={exercise._id}
               onClick={() => handleExerciseChange(index)}
-              className={`mr-2 mb-2 px-3 py-1 rounded ${
+              className={`w-3 h-3 rounded-full focus:outline-none transition-all duration-200 ${
                 index === currentExerciseIndex
-                  ? 'bg-blue-500 text-white'
+                  ? 'bg-blue-500 w-4 h-4'
                   : isExerciseComplete(exercise._id, sets[index] || [])
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-300 text-gray-800'
+                  ? 'bg-green-500'
+                  : 'bg-gray-300 dark:bg-gray-600'
               }`}
-            >
-              {exercise.name}
-            </button>
+              title={exercise.name}
+              aria-label={`Go to exercise: ${exercise.name}`}
+            />
           ))}
         </div>
         <button
           onClick={handleCancelWorkout}
-          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          className="ml-4 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm focus:outline-none focus:shadow-outline"
         >
-          Cancel Workout
+          Cancel
         </button>
+      </div>
+
+      <div className="text-center mb-4">
+        <h4 className="text-lg font-semibold">
+          {currentPlan.exercises[currentExerciseIndex].name}
+        </h4>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Exercise {currentExerciseIndex + 1} of {currentPlan.exercises.length}
+        </p>
       </div>
       
       <TransitionGroup>
@@ -413,13 +422,11 @@ function WorkoutTracker() {
         >
           <div 
             ref={nodeRef} 
-            className={`bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}
+            className={`exercise-container bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Exercise {currentExerciseIndex + 1} of {currentPlan.exercises.length}</p>
             <div className="flex flex-col md:flex-row mb-4">
               <img 
                 src={currentExercise.imageUrl} 
@@ -497,7 +504,7 @@ function WorkoutTracker() {
                 rows="3"
               ></textarea>
             </div>
-            </div>
+          </div>
         </CSSTransition>
       </TransitionGroup>
 
