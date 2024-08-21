@@ -5,8 +5,6 @@ import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
 
-// Update this line to use HTTPS and your DigitalOcean app URL
-// export const hostName = 'http://192.168.178.42:3000';
 export const hostName = 'https://walrus-app-lqhsg.ondigitalocean.app/backend';
 
 const GymContext = createContext();
@@ -32,86 +30,6 @@ export function GymProvider({ children }) {
     };
   }, []);
 
-  const saveProgress = useCallback(async (progressData) => {
-    if(!user) return;
-
-    try {
-      //Save to local storage
-      localStorage.setItem('workoutProgress', JSON.stringify(progressData));
-
-      //Save to database
-      const response = await axios.post(`${API_URL}/workouts/progress`, progressData, getAuthConfig());
-
-      addNotification('Progress saved successfully', 'success');
-      return response.data;
-    } catch (error) {
-      console.error('Error saving progress:', error);
-      addNotification('Failed to save progress', 'error');
-      throw error;
-    }
-  }, [user, API_URL, getAuthConfig, addNotification]);
-
-  const updateProgress = useCallback(async () => {
-    if (!user) return null;
-
-    try {
-      // Check for active plan in the database
-      const dbResponse = await axios.get(`${API_URL}/workouts/progress`, getAuthConfig());
-      const dbPlan = dbResponse.data;
-
-      // Get local progress data
-      const localData = JSON.parse(localStorage.getItem('workoutProgress'));
-
-      if (dbPlan && localData) {
-        //Compare local and database data timestamps
-        const dbTimestamp = new Date(dbPlan.lastUpdated);
-        const localTimestamp = new Date(localData.lastUpdated);
-
-        if (dbTimestamp > localTimestamp) {
-          // Database data is more recent
-          localStorage.setItem('workoutProgress', JSON.stringify(dbPlan));
-          return dbPlan;
-        } else {
-          // Local data is more recent or equal
-          return localData;
-        }
-    } else if (dbPlan) {
-      // Only database data exists
-      localStorage.setItem('workoutProgress', JSON.stringify(dbPlan));
-      return dbPlan;
-    } else if (localData) {
-      // Only local data exists
-      await saveProgress(localData);
-      return localData;
-    }
-
-    // No progress data found
-    return null;
-  } catch (error) {
-    console.error('Error updating progress:', error);
-    addNotification('Failed to update progress', 'error');
-    throw error;
-  }
-}, [user, API_URL, getAuthConfig, addNotification, saveProgress]);
-
-const clearProgress = useCallback(async () => {
-  if (!user) return;
-
-  try {
-    // Clear progress from local storage
-    localStorage.removeItem('workoutProgress');
-
-    // Clear progress from the database
-    await axios.delete(`${API_URL}/workouts/progress`, getAuthConfig());
-    
-    addNotification('Workout progress cleared', 'success');
-  } catch (error) {
-    console.error('Error clearing progress:', error);
-    addNotification('Failed to clear workout progress', 'error');
-    throw error;
-  }
-}, [user, API_URL, getAuthConfig, addNotification]);
-
   const toTitleCase = (str) => {
     if (typeof str !== 'string') return str;
     return str.replace(
@@ -122,7 +40,6 @@ const clearProgress = useCallback(async () => {
     );
   };
 
-  // Fetch workout history
   const fetchWorkoutHistory = useCallback(async () => {
     if (user) {
       try {
@@ -135,7 +52,6 @@ const clearProgress = useCallback(async () => {
     }
   }, [user, addNotification, API_URL, getAuthConfig]);
 
-  // Fetch exercises
   const fetchExercises = useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}/exercises`, getAuthConfig());
@@ -154,7 +70,6 @@ const clearProgress = useCallback(async () => {
     }
   }, [API_URL, getAuthConfig, addNotification]);
 
-  // Fetch workout plans
   const fetchWorkoutPlans = useCallback(async () => {
     if (user) {
       try {
@@ -188,7 +103,6 @@ const clearProgress = useCallback(async () => {
     }
   }, [user, fetchWorkoutHistory, fetchExercises, fetchWorkoutPlans]);
 
-  // Add a workout (updated to include notes)
   const addWorkout = async (workout) => {
     try {
       console.log('Sending workout data:', JSON.stringify(workout, null, 2));
@@ -213,7 +127,6 @@ const clearProgress = useCallback(async () => {
     }
   };
 
-  // Update a workout
   const updateWorkout = async (id, updatedWorkout) => {
     try {
       const response = await axios.put(`${API_URL}/workouts/${id}`, updatedWorkout, getAuthConfig());
@@ -236,7 +149,6 @@ const clearProgress = useCallback(async () => {
     }
   };
 
-  // Delete a workout
   const deleteWorkout = async (id) => {
     try {
       await axios.delete(`${API_URL}/workouts/${id}`, getAuthConfig());
@@ -250,7 +162,6 @@ const clearProgress = useCallback(async () => {
     }
   };
 
-  // Add an exercise
   const addExercise = async (exercise) => {
     try {
       const exerciseWithTitleCase = {
@@ -269,7 +180,6 @@ const clearProgress = useCallback(async () => {
     }
   };
 
-  // Update an exercise
   const updateExercise = async (id, updatedExercise) => {
     try {
       const exerciseWithTitleCase = {
@@ -292,7 +202,6 @@ const clearProgress = useCallback(async () => {
     }
   };
 
-  // Delete an exercise
   const deleteExercise = async (id) => {
     try {
       await axios.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
@@ -305,7 +214,6 @@ const clearProgress = useCallback(async () => {
     }
   };
 
-  // Add a workout plan
   const addWorkoutPlan = async (plan) => {
     try {
       const planToSend = {
@@ -343,7 +251,6 @@ const clearProgress = useCallback(async () => {
     }
   };
 
-  // Update a workout plan
   const updateWorkoutPlan = async (id, updatedPlan) => {
     try {
       if (!id) {
@@ -364,12 +271,10 @@ const clearProgress = useCallback(async () => {
     }
   };
 
-  // Delete a workout plan
   const deleteWorkoutPlan = async (id) => {
     try {
       await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
       setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
-      // Update workouts to mark the plan as deleted instead of removing the association
       setWorkoutHistory(prevHistory => 
         prevHistory.map(workout => 
           workout.plan && workout.plan._id === id 
@@ -385,7 +290,6 @@ const clearProgress = useCallback(async () => {
     }
   };
 
-  // Add an exercise to a workout plan
   const addExerciseToPlan = async (planId, exerciseId) => {
     if (!planId || !exerciseId) {
       throw new Error('Plan ID and Exercise ID are required');
@@ -427,14 +331,12 @@ const clearProgress = useCallback(async () => {
     }
   };
 
-  // Get the last workout for a given plan
   const getLastWorkoutByPlan = useCallback(async (planId) => {
     try {
       const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
       return response.data;
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        // No previous workout found, this is not an error
         console.log('No previous workout found for this plan');
         return null;
       }
@@ -443,6 +345,78 @@ const clearProgress = useCallback(async () => {
       return null;
     }
   }, [API_URL, getAuthConfig, addNotification]);
+
+  const saveProgress = useCallback(async (progressData) => {
+    if (!user) return;
+
+    try {
+      await axios.post(`${API_URL}/workouts/progress`, progressData, getAuthConfig());
+      localStorage.setItem('workoutProgress', JSON.stringify(progressData));
+      console.log('Progress saved successfully');
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      addNotification('Failed to save progress', 'error');
+      throw error;
+    }
+  }, [user, API_URL, getAuthConfig, addNotification]);
+
+  const updateProgress = useCallback(async () => {
+    if (!user) return null;
+
+    try {
+      const dbResponse = await axios.get(`${API_URL}/workouts/progress`, getAuthConfig());
+      const dbProgress = dbResponse.data;
+
+      const localProgress = JSON.parse(localStorage.getItem('workoutProgress'));
+
+      if (dbProgress && localProgress) {
+        const dbTimestamp = new Date(dbProgress.lastUpdated);
+        const localTimestamp = new Date(localProgress.lastUpdated);
+
+        if (dbTimestamp > localTimestamp) {
+          localStorage.setItem('workoutProgress', JSON.stringify(dbProgress));
+          return dbProgress;
+        } else {
+          return localProgress;
+        }
+      } else if (dbProgress) {
+        localStorage.setItem('workoutProgress', JSON.stringify(dbProgress));
+        return dbProgress;
+      } else if (localProgress) {
+        await saveProgress(localProgress);
+        return localProgress;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      addNotification('Failed to update progress', 'error');
+      throw error;
+    }
+  }, [user, API_URL, getAuthConfig, addNotification, saveProgress]);
+
+  const clearProgress = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      localStorage.removeItem('workoutProgress');
+      localStorage.removeItem('currentPlan');
+      localStorage.removeItem('currentSets');
+      localStorage.removeItem('currentExerciseIndex');
+      localStorage.removeItem('workoutStartTime');
+      localStorage.removeItem('workoutNotes');
+      localStorage.removeItem('lastSetValues');
+
+      await axios.delete(`${API_URL}/workouts/progress`, getAuthConfig());
+      
+      console.log('Progress cleared successfully');
+      addNotification('Workout progress cleared', 'success');
+    } catch (error) {
+      console.error('Error clearing progress:', error);
+      addNotification('Failed to clear workout progress', 'error');
+      throw error;
+    }
+  }, [user, API_URL, getAuthConfig, addNotification]);
 
   const contextValue = useMemo(() => ({
     workouts,
@@ -465,7 +439,28 @@ const clearProgress = useCallback(async () => {
     saveProgress,
     updateProgress,
     clearProgress
-  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan, fetchWorkoutPlans, fetchWorkoutHistory, saveProgress, updateProgress, clearProgress]);
+  }), [
+    workouts, 
+    exercises, 
+    workoutPlans, 
+    workoutHistory, 
+    addWorkout,
+    updateWorkout,
+    deleteWorkout,
+    addExercise,
+    updateExercise,
+    deleteExercise,
+    addWorkoutPlan,
+    updateWorkoutPlan,
+    deleteWorkoutPlan,
+    fetchWorkoutHistory,
+    fetchWorkoutPlans,
+    addExerciseToPlan,
+    getLastWorkoutByPlan,
+    saveProgress,
+    updateProgress,
+    clearProgress
+  ]);
 
   return (
     <GymContext.Provider value={contextValue}>

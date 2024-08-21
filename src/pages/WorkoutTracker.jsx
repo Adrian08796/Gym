@@ -297,7 +297,21 @@ function WorkoutTracker() {
     try {
       await addWorkout(completedWorkout);
       addNotification('Workout completed and saved!', 'success');
-      await clearProgress(); // Clear the progress after successful save
+      await clearProgress();
+      // Clear local state
+      setCurrentPlan(null);
+      setSets([]);
+      setNotes([]);
+      setStartTime(null);
+      setElapsedTime(0);
+      setLastSetValues({});
+      // Clear local storage
+      localStorage.removeItem('currentPlan');
+      localStorage.removeItem('currentSets');
+      localStorage.removeItem('currentExerciseIndex');
+      localStorage.removeItem('workoutStartTime');
+      localStorage.removeItem('workoutNotes');
+      localStorage.removeItem('lastSetValues');
       navigate('/');
     } catch (error) {
       console.error('Error saving workout:', error);

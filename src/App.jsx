@@ -36,43 +36,43 @@ function AppContent() {
   }
 
   return (
-    <Router>
-      <div className={`App min-h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
-        <Header />
-        <main className="flex-grow bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-          <div className="container mx-auto px-4 py-8">
-            <Routes>
-              <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-              <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
-              <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
-              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-              <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
-              <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
-              <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
-              <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
-              <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
-              <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
-            </Routes>
-          </div>
-        </main>
-        <Footer />
-        <NotificationToast />
-      </div>
-    </Router>
+    <div className={`App min-h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
+      <Header />
+      <main className="flex-grow bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <div className="container mx-auto px-4 py-8">
+          <Routes>
+            <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+            <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+            <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
+            <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
+            <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
+            <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
+            <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
+            <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
+          </Routes>
+        </div>
+      </main>
+      <Footer />
+      <NotificationToast />
+    </div>
   );
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <GymProvider>
-          <ThemeProvider>
-            <AppContent />
-          </ThemeProvider>
-        </GymProvider>
-      </NotificationProvider>
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <NotificationProvider>
+          <GymProvider>
+            <ThemeProvider>
+              <AppContent />
+            </ThemeProvider>
+          </GymProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
