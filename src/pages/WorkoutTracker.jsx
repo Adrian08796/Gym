@@ -43,7 +43,8 @@ function WorkoutTracker() {
     workoutHistory, 
     saveProgress, 
     updateProgress, 
-    clearWorkout 
+    clearWorkout,
+    getExerciseHistory 
   } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
@@ -124,6 +125,24 @@ function WorkoutTracker() {
       setLastSetValues(JSON.parse(storedLastSetValues));
     }
   };
+
+  useEffect(() => {
+    const fetchExerciseHistory = async () => {
+      if (currentPlan) {
+        const historyPromises = currentPlan.exercises.map(exercise => 
+          getExerciseHistory(exercise._id)
+        );
+        const histories = await Promise.all(historyPromises);
+        const historyMap = {};
+        currentPlan.exercises.forEach((exercise, index) => {
+          historyMap[exercise._id] = histories[index];
+        });
+        setExerciseHistory(historyMap);
+      }
+    };
+
+    fetchExerciseHistory();
+  }, [currentPlan, getExerciseHistory]);
 
   useEffect(() => {
     let timer;
@@ -623,36 +642,31 @@ function WorkoutTracker() {
           onClick={togglePreviousWorkout}
           className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
         >
-          <span>Previous Workout Performance</span>
+          <span>Previous Exercise Performance</span>
           {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
         </button>
         <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
-          {isPreviousWorkoutLoading ? (
-            <p className="p-4">Loading previous workout data...</p>
-          ) : previousWorkout ? (
+          {currentExercise && exerciseHistory[currentExercise._id] ? (
             <div className="p-4">
-              <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
-              <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
-              {previousWorkout.exercises.map((exercise, index) => (
+              <h4 className="text-lg font-semibold mb-2">{currentExercise.name} History</h4>
+              {exerciseHistory[currentExercise._id].map((workout, index) => (
                 <div key={index} className="mb-4">
-                  <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
-                    {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
-                  </h4>
+                  <p><strong>Date:</strong> {new Date(workout.date).toLocaleDateString()}</p>
                   <ul className="list-disc pl-5">
-                    {exercise.sets.map((set, setIndex) => (
+                    {workout.sets.map((set, setIndex) => (
                       <li key={setIndex}>
                         Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
                       </li>
                     ))}
                   </ul>
-                  {exercise.notes && (
-                    <p className="mt-2 italic">Notes: {exercise.notes}</p>
+                  {workout.notes && (
+                    <p className="mt-2 italic">Notes: {workout.notes}</p>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <p className="p-4">No previous workout data available for this plan. This will be your first workout!</p>
+            <p className="p-4">No previous data available for this exercise.</p>
           )}
         </div>
       </div>

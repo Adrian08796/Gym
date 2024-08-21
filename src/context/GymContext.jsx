@@ -40,6 +40,17 @@ export function GymProvider({ children }) {
     );
   };
 
+  const getExerciseHistory = useCallback(async (exerciseId) => {
+    try {
+      const response = await axios.get(`${API_URL}/workouts/exercise-history/${exerciseId}`, getAuthConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching exercise history:', error);
+      addNotification('Failed to fetch exercise history', 'error');
+      return [];
+    }
+  }, [API_URL, getAuthConfig, addNotification]);
+
   const fetchWorkoutHistory = useCallback(async () => {
     if (user) {
       try {
@@ -423,7 +434,8 @@ export function GymProvider({ children }) {
     getLastWorkoutByPlan,
     saveProgress,
     updateProgress,
-    clearWorkout
+    clearWorkout,
+    getExerciseHistory
   }), [
     workouts, 
     exercises, 
@@ -444,7 +456,8 @@ export function GymProvider({ children }) {
     getLastWorkoutByPlan,
     saveProgress,
     updateProgress,
-    clearWorkout
+    clearWorkout,
+    getExerciseHistory
   ]);
 
   return (
