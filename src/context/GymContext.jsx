@@ -342,7 +342,7 @@ export function GymProvider({ children }) {
       }
       console.error('Error fetching last workout:', error);
       addNotification('Failed to fetch last workout', 'error');
-      return null;
+      throw error;
     }
   }, [API_URL, getAuthConfig, addNotification]);
 

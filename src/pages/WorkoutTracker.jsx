@@ -1,4 +1,4 @@
-// src/pages/WorkoutTracker.jsx 
+// src/pages/WorkoutTracker.jsx
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -51,56 +51,79 @@ function WorkoutTracker() {
   const nodeRef = useRef(null);
 
   useEffect(() => {
-    const loadProgress = async () => {
-      const progress = await updateProgress();
-      if (progress) {
-        // Load the saved progress
-        setCurrentPlan(progress.plan);
-        setSets(progress.sets);
-        setCurrentExerciseIndex(progress.currentExerciseIndex);
-        setStartTime(new Date(progress.startTime));
-        setNotes(progress.notes);
-        setLastSetValues(progress.lastSetValues);
+    const loadWorkout = async () => {
+      const storedPlan = localStorage.getItem('currentPlan');
+      if (storedPlan) {
+        const plan = JSON.parse(storedPlan);
+        setCurrentPlan(plan);
+        await fetchPreviousWorkout(plan._id);
+        loadStoredData(plan);
       } else {
-        // No saved progress, reset the state
-        resetWorkoutState();
+        addNotification('No workout plan selected', 'error');
+        navigate('/plans');
       }
     };
 
-    loadProgress();
-  }, [updateProgress]);
+    loadWorkout();
+  }, [navigate, addNotification]);
 
-  useEffect(() => {
-    let saveInterval;
-    if (currentPlan) {
-      saveInterval = setInterval(() => {
-        saveProgress({
-          plan: currentPlan,
-          sets,
-          currentExerciseIndex,
-          startTime: startTime.toISOString(),
-          notes,
-          lastSetValues,
-        });
-      }, 30000); // Save every 30 seconds
+  const fetchPreviousWorkout = async (planId) => {
+    setIsPreviousWorkoutLoading(true);
+    try {
+      const lastWorkout = await getLastWorkoutByPlan(planId);
+      if (lastWorkout) {
+        setPreviousWorkout(lastWorkout);
+      } else {
+        console.log('No previous workout found for plan ID:', planId);
+      }
+    } catch (error) {
+      console.error('Error fetching previous workout:', error);
+    } finally {
+      setIsPreviousWorkoutLoading(false);
+    }
+  };
+
+  const loadStoredData = (plan) => {
+    const storedSets = localStorage.getItem('currentSets');
+    const storedIndex = localStorage.getItem('currentExerciseIndex');
+    const storedStartTime = localStorage.getItem('workoutStartTime');
+    const storedNotes = localStorage.getItem('workoutNotes');
+    const storedLastSetValues = localStorage.getItem('lastSetValues');
+
+    const initialRequiredSets = {};
+    plan.exercises.forEach(exercise => {
+      initialRequiredSets[exercise._id] = exercise.requiredSets || 3;
+    });
+    setRequiredSets(initialRequiredSets);
+
+    if (storedSets) {
+      setSets(JSON.parse(storedSets));
+    } else {
+      setSets(plan.exercises.map(() => []));
+    }
+    
+    if (storedIndex !== null) {
+      setCurrentExerciseIndex(parseInt(storedIndex, 10));
     }
 
-    return () => clearInterval(saveInterval);
-  }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress]);
-
-  useEffect(() => {
-    loadStoredData();
-  }, []);
-
-  useEffect(() => {
-    if (currentPlan) {
-      fetchPreviousWorkout();
+    if (storedStartTime) {
+      setStartTime(new Date(storedStartTime));
+    } else {
+      const newStartTime = new Date();
+      setStartTime(newStartTime);
+      localStorage.setItem('workoutStartTime', newStartTime.toISOString());
     }
-  }, [currentPlan]);
 
-  useEffect(() => {
-    saveDataToLocalStorage();
-  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
+    if (storedNotes) {
+      setNotes(JSON.parse(storedNotes));
+    } else {
+      setNotes(plan.exercises.map(() => ''));
+    }
+
+    if (storedLastSetValues) {
+      setLastSetValues(JSON.parse(storedLastSetValues));
+    }
+  };
 
   useEffect(() => {
     let timer;
@@ -125,81 +148,9 @@ function WorkoutTracker() {
     return () => clearInterval(restTimer);
   }, [isResting, remainingRestTime, addNotification]);
 
-  const loadStoredData = useCallback(() => {
-    const storedPlan = localStorage.getItem('currentPlan');
-    const storedSets = localStorage.getItem('currentSets');
-    const storedIndex = localStorage.getItem('currentExerciseIndex');
-    const storedStartTime = localStorage.getItem('workoutStartTime');
-    const storedNotes = localStorage.getItem('workoutNotes');
-    const storedLastSetValues = localStorage.getItem('lastSetValues');
-
-    if (storedPlan) {
-      try {
-        const parsedPlan = JSON.parse(storedPlan);
-        setCurrentPlan(parsedPlan);
-        
-        const initialRequiredSets = {};
-        parsedPlan.exercises.forEach(exercise => {
-          initialRequiredSets[exercise._id] = exercise.requiredSets || 3;
-        });
-        setRequiredSets(initialRequiredSets);
-
-        if (storedSets) {
-          setSets(JSON.parse(storedSets));
-        } else {
-          setSets(parsedPlan.exercises.map(() => []));
-        }
-        
-        if (storedIndex !== null) {
-          setCurrentExerciseIndex(parseInt(storedIndex, 10));
-        }
-
-        if (storedStartTime) {
-          setStartTime(new Date(storedStartTime));
-        } else {
-          const newStartTime = new Date();
-          setStartTime(newStartTime);
-          localStorage.setItem('workoutStartTime', newStartTime.toISOString());
-        }
-
-        if (storedNotes) {
-          setNotes(JSON.parse(storedNotes));
-        } else {
-          setNotes(parsedPlan.exercises.map(() => ''));
-        }
-
-        if (storedLastSetValues) {
-          setLastSetValues(JSON.parse(storedLastSetValues));
-        }
-      } catch (error) {
-        console.error('Error parsing stored data:', error);
-        clearLocalStorage();
-        addNotification('Error loading workout data. Starting a new workout.', 'error');
-      }
-    }
-  }, [addNotification]);
-
-  const fetchPreviousWorkout = async () => {
-    setIsPreviousWorkoutLoading(true);
-    try {
-      if (currentPlan && currentPlan._id) {
-        console.log('Fetching workout for plan ID:', currentPlan._id);
-        const lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
-        if (lastWorkout) {
-          setPreviousWorkout(lastWorkout);
-        } else {
-          console.log('No previous workout found for plan ID:', currentPlan._id);
-          setPreviousWorkout(null);
-        }
-      } else {
-        console.log('No current plan or plan ID available');
-      }
-    } catch (error) {
-      console.error('Error fetching previous workout:', error);
-    } finally {
-      setIsPreviousWorkoutLoading(false);
-    }
-  };
+  useEffect(() => {
+    saveDataToLocalStorage();
+  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
 
   const saveDataToLocalStorage = () => {
     if (currentPlan) {
@@ -213,7 +164,7 @@ function WorkoutTracker() {
     localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
   };
 
-  const handleSetComplete = useCallback(() => {
+  const handleSetComplete = () => {
     if (!weight || !reps) {
       addNotification('Please enter both weight and reps', 'error');
       return;
@@ -241,18 +192,7 @@ function WorkoutTracker() {
     addNotification('Set completed!', 'success');
     startRestTimer();
     updateProgression();
-
-    // Save progress after completing a set
-    saveProgress({
-      plan: currentPlan,
-      sets,
-      currentExerciseIndex,
-      startTime: startTime.toISOString(),
-      notes,
-      lastSetValues,
-      lastUpdated: new Date().toISOString(),
-    });
-  }, [weight, reps, currentExerciseIndex, isResting, currentPlan, sets, startTime, notes, lastSetValues, addNotification, saveProgress]);
+  };
 
   const startRestTimer = () => {
     setIsResting(true);
@@ -463,7 +403,7 @@ function WorkoutTracker() {
         <p className="mb-4">To start a new workout, please select a workout plan from the Workout Plans page.</p>
         <button
           onClick={() => navigate('/plans')}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4rounded focus:outline-none focus:shadow-outline"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         >
           Go to Workout Plans
         </button>
@@ -669,7 +609,7 @@ function WorkoutTracker() {
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
         <button 
-          onClick={() => setIsPreviousWorkoutOpen(!isPreviousWorkoutOpen)}
+          onClick={togglePreviousWorkout}
           className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
         >
           <span>Previous Workout Performance</span>
