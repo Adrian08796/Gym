@@ -37,7 +37,14 @@ function WorkoutTracker() {
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
 
-  const { addWorkout, getLastWorkoutByPlan, workoutHistory, saveProgress, updateProgress, clearWorkout } = useGymContext();
+  const { 
+    addWorkout, 
+    getLastWorkoutByPlan, 
+    workoutHistory, 
+    saveProgress, 
+    updateProgress, 
+    clearWorkout 
+  } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
@@ -45,31 +52,28 @@ function WorkoutTracker() {
 
   useEffect(() => {
     const loadProgress = async () => {
-      try {
-        const progress = await updateProgress();
-        if (progress) {
-          setCurrentPlan(progress.plan);
-          setSets(progress.sets);
-          setCurrentExerciseIndex(progress.currentExerciseIndex);
-          setStartTime(new Date(progress.startTime));
-          setNotes(progress.notes);
-          setLastSetValues(progress.lastSetValues);
-        } else {
-          loadStoredData();
-        }
-      } catch (error) {
-        console.error('Error loading progress:', error);
-        addNotification('Error loading progress. Starting a new workout.', 'error');
-        loadStoredData();
+      const progress = await updateProgress();
+      if (progress) {
+        // Load the saved progress
+        setCurrentPlan(progress.plan);
+        setSets(progress.sets);
+        setCurrentExerciseIndex(progress.currentExerciseIndex);
+        setStartTime(new Date(progress.startTime));
+        setNotes(progress.notes);
+        setLastSetValues(progress.lastSetValues);
+      } else {
+        // No saved progress, reset the state
+        resetWorkoutState();
       }
     };
 
     loadProgress();
-  }, [updateProgress, addNotification]);
+  }, [updateProgress]);
 
   useEffect(() => {
-    const saveProgressInterval = setInterval(() => {
-      if (currentPlan) {
+    let saveInterval;
+    if (currentPlan) {
+      saveInterval = setInterval(() => {
         saveProgress({
           plan: currentPlan,
           sets,
@@ -77,12 +81,11 @@ function WorkoutTracker() {
           startTime: startTime.toISOString(),
           notes,
           lastSetValues,
-          lastUpdated: new Date().toISOString(),
         });
-      }
-    }, 30000); // Save every 30 seconds
+      }, 30000); // Save every 30 seconds
+    }
 
-    return () => clearInterval(saveProgressInterval);
+    return () => clearInterval(saveInterval);
   }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress]);
 
   useEffect(() => {

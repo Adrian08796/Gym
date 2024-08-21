@@ -356,7 +356,6 @@ export function GymProvider({ children }) {
     } catch (error) {
       console.error('Error saving progress:', error);
       addNotification('Failed to save progress', 'error');
-      throw error;
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 
@@ -367,56 +366,30 @@ export function GymProvider({ children }) {
       const dbResponse = await axios.get(`${API_URL}/workouts/progress`, getAuthConfig());
       const dbProgress = dbResponse.data;
 
-      const localProgress = JSON.parse(localStorage.getItem('workoutProgress'));
-
-      if (dbProgress && localProgress) {
-        const dbTimestamp = new Date(dbProgress.lastUpdated);
-        const localTimestamp = new Date(localProgress.lastUpdated);
-
-        if (dbTimestamp > localTimestamp) {
-          localStorage.setItem('workoutProgress', JSON.stringify(dbProgress));
-          return dbProgress;
-        } else {
-          return localProgress;
-        }
-      } else if (dbProgress) {
+      if (dbProgress) {
         localStorage.setItem('workoutProgress', JSON.stringify(dbProgress));
         return dbProgress;
-      } else if (localProgress) {
-        await saveProgress(localProgress);
-        return localProgress;
       }
 
       return null;
     } catch (error) {
       console.error('Error updating progress:', error);
       addNotification('Failed to update progress', 'error');
-      throw error;
+      return null;
     }
-  }, [user, API_URL, getAuthConfig, addNotification, saveProgress]);
+  }, [user, API_URL, getAuthConfig, addNotification]);
 
   const clearWorkout = useCallback(async () => {
     if (!user) return;
 
     try {
-      // Clear local storage
       localStorage.removeItem('workoutProgress');
-      localStorage.removeItem('currentPlan');
-      localStorage.removeItem('currentSets');
-      localStorage.removeItem('currentExerciseIndex');
-      localStorage.removeItem('workoutStartTime');
-      localStorage.removeItem('workoutNotes');
-      localStorage.removeItem('lastSetValues');
-
-      // Clear progress from the database
       await axios.delete(`${API_URL}/workouts/progress`, getAuthConfig());
-      
       console.log('Workout cleared successfully');
       addNotification('Workout cleared', 'success');
     } catch (error) {
       console.error('Error clearing workout:', error);
       addNotification('Failed to clear workout', 'error');
-      throw error;
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 
