@@ -669,7 +669,7 @@ function WorkoutTracker() {
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
         <button 
-          onClick={togglePreviousWorkout}
+          onClick={() => setIsPreviousWorkoutOpen(!isPreviousWorkoutOpen)}
           className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
         >
           <span>Previous Workout Performance</span>
@@ -701,7 +701,7 @@ function WorkoutTracker() {
               ))}
             </div>
           ) : (
-            <p className="p-4">No previous workout data available for this plan.</p>
+            <p className="p-4">No previous workout data available for this plan. This will be your first workout!</p>
           )}
         </div>
       </div>

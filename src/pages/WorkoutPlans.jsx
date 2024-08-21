@@ -231,7 +231,7 @@ function WorkoutPlans() {
         </div>
       )}
 
-<div className="mb-4 flex flex-wrap items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between">
         <button
           onClick={() => {
             setShowForm(!showForm);
