@@ -94,6 +94,24 @@ export function GymProvider({ children }) {
   }
 }, [user, API_URL, getAuthConfig, addNotification, saveProgress]);
 
+const clearProgress = useCallback(async () => {
+  if (!user) return;
+
+  try {
+    // Clear progress from local storage
+    localStorage.removeItem('workoutProgress');
+
+    // Clear progress from the database
+    await axios.delete(`${API_URL}/workouts/progress`, getAuthConfig());
+    
+    addNotification('Workout progress cleared', 'success');
+  } catch (error) {
+    console.error('Error clearing progress:', error);
+    addNotification('Failed to clear workout progress', 'error');
+    throw error;
+  }
+}, [user, API_URL, getAuthConfig, addNotification]);
+
   const toTitleCase = (str) => {
     if (typeof str !== 'string') return str;
     return str.replace(
@@ -445,8 +463,9 @@ export function GymProvider({ children }) {
     addExerciseToPlan,
     getLastWorkoutByPlan,
     saveProgress,
-    updateProgress
-  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan, fetchWorkoutPlans, fetchWorkoutHistory, saveProgress, updateProgress]);
+    updateProgress,
+    clearProgress
+  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan, fetchWorkoutPlans, fetchWorkoutHistory, saveProgress, updateProgress, clearProgress]);
 
   return (
     <GymContext.Provider value={contextValue}>

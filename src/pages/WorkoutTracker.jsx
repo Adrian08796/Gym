@@ -37,7 +37,7 @@ function WorkoutTracker() {
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
 
-  const { addWorkout, getLastWorkoutByPlan, workoutHistory, saveProgress, updateProgress } = useGymContext();
+  const { addWorkout, getLastWorkoutByPlan, workoutHistory, saveProgress, updateProgress, clearProgress } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
@@ -297,7 +297,7 @@ function WorkoutTracker() {
     try {
       await addWorkout(completedWorkout);
       addNotification('Workout completed and saved!', 'success');
-      clearLocalStorage();
+      await clearProgress(); // Clear the progress after successful save
       navigate('/');
     } catch (error) {
       console.error('Error saving workout:', error);
