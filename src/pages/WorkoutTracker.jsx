@@ -634,10 +634,10 @@ function WorkoutTracker() {
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
   <button 
-    onClick={togglePreviousWorkout}
+    onClick={togglePreviousWorkout}  // Keep this if you're still using the toggle functionality
     className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
   >
-    <span>Previous Workout Performance</span>
+    <span>Previous Exercise Performance</span>
     {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
   </button>
   <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
