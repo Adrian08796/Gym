@@ -37,7 +37,6 @@ function WorkoutTracker() {
 
   const { 
     addWorkout, 
-    getLastWorkoutByPlan, 
     saveProgress, 
     clearWorkout,
     getExerciseHistory 
@@ -177,6 +176,10 @@ function WorkoutTracker() {
     localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
     localStorage.setItem('workoutNotes', JSON.stringify(notes));
     localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
+  };
+
+  const togglePreviousWorkout = () => {
+    setIsPreviousWorkoutOpen(prev => !prev);
   };
 
   const handleSetComplete = () => {
