@@ -32,6 +32,68 @@ export function GymProvider({ children }) {
     };
   }, []);
 
+  const saveProgress = useCallback(async (progressData) => {
+    if(!user) return;
+
+    try {
+      //Save to local storage
+      localStorage.setItem('workoutProgress', JSON.stringify(progressData));
+
+      //Save to database
+      const response = await axios.post(`${API_URL}/workouts/progress`, progressData, getAuthConfig());
+
+      addNotification('Progress saved successfully', 'success');
+      return response.data;
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      addNotification('Failed to save progress', 'error');
+      throw error;
+    }
+  }, [user, API_URL, getAuthConfig, addNotification]);
+
+  const updateProgress = useCallback(async () => {
+    if(!user) return null;
+
+    try {
+      // Check for active plan in the database
+      const dbResponse = await axios.get(`${API_URL}/workouts/progress`, getAuthConfig());
+      const dbPlan = dbResponse.data;
+
+      // Get local progress data
+      const localData = JSON.parse(localStorage.getItem('workoutProgress'));
+
+      if (dbPlan && localData) {
+        //Compare local and database data timestamps
+        const dbTimestamp = new Date(dbPlan.lastUpdated);
+        const localTimestamp = new Date(localData.lastUpdated);
+
+        if (dbTimestamp > localTimestamp) {
+          // Database data is more recent
+          localStorage.setItem('workoutProgress', JSON.stringify(dbPlan));
+          return dbPlan;
+        } else {
+          // Local data is more recent or equal
+          return localData;
+        }
+    } else if (dbPlan) {
+      // Only database data exists
+      localStorage.setItem('workoutProgress', JSON.stringify(dbPlan));
+      return dbPlan;
+    } else if (localData) {
+      // Only local data exists
+      await saveProgress(localData);
+      return localData;
+    }
+
+    // No progress data found
+    return null;
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      addNotification('Failed to update progress', 'error');
+      throw error;
+    }
+  }, [user, API_URL, getAuthConfig, addNotification, saveProgress]);
+
   const toTitleCase = (str) => {
     if (typeof str !== 'string') return str;
     return str.replace(
@@ -381,8 +443,10 @@ export function GymProvider({ children }) {
     fetchWorkoutHistory,
     fetchWorkoutPlans,
     addExerciseToPlan,
-    getLastWorkoutByPlan
-  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan, fetchWorkoutPlans, fetchWorkoutHistory]);
+    getLastWorkoutByPlan,
+    saveProgress,
+    updateProgress
+  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan, fetchWorkoutPlans, fetchWorkoutHistory, saveProgress, updateProgress]);
 
   return (
     <GymContext.Provider value={contextValue}>

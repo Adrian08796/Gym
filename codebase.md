@@ -1,8 +1,6 @@
 # vite.config.js
 
 ```js
-
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -11,12 +9,10 @@ export default defineConfig({
   base: '/',
   server: {
     proxy: {
-      '/api': {
-        // Adjust this to your backend's actual address and port
-        // target: 'http://192.168.178.42:4500', 
-        target: 'https://walrus-app-lqhsg.ondigitalocean.app/backend',
+      '/backend': {
+        target: 'https://walrus-app-lqhsg.ondigitalocean.app',
+        // target: 'http://192.168.178.42:4500',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
   },
@@ -75,7 +71,7 @@ export default {
 ```json
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://walrus-app-lqhsg.ondigitalocean.app/backend/api/$1" },
+    { "source": "/api/(.*)", "destination": "https://walrus-app-lqhsg.ondigitalocean.app/backend/$1" },
     { "source": "/**", "destination": "/index.html" }
   ]
 }
@@ -516,14 +512,15 @@ export default App;
 # src/pages/WorkoutTracker.jsx
 
 ```jsx
-// src/pages/WorkoutTracker.jsx
+// src/pages/WorkoutTracker.jsx 
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { CSSTransition, TransitionGroup } from 'react-transition-group';
+import { CSSTransition, SwitchTransition } from 'react-transition-group';
+import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings, FiX } from 'react-icons/fi';
 import './WorkoutTracker.css';
 
 function WorkoutTracker() {
@@ -545,12 +542,57 @@ function WorkoutTracker() {
   const [progression, setProgression] = useState(0);
   const [lastSetValues, setLastSetValues] = useState({});
   const [requiredSets, setRequiredSets] = useState({});
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const [swipeDirection, setSwipeDirection] = useState(null);
+  const [isExerciseDetailsOpen, setIsExerciseDetailsOpen] = useState(false);
+  const [isExerciseOptionsOpen, setIsExerciseOptionsOpen] = useState(false);
+  const [isPreviousWorkoutOpen, setIsPreviousWorkoutOpen] = useState(false);
+  const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
+  const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
 
   const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
   const nodeRef = useRef(null);
+
+  useEffect(() => {
+    loadStoredData();
+  }, []);
+
+  useEffect(() => {
+    if (currentPlan) {
+      fetchPreviousWorkout();
+    }
+  }, [currentPlan]);
+
+  useEffect(() => {
+    saveDataToLocalStorage();
+  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
+
+  useEffect(() => {
+    let timer;
+    if (startTime) {
+      timer = setInterval(() => {
+        setElapsedTime(prevTime => prevTime + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [startTime]);
+
+  useEffect(() => {
+    let restTimer;
+    if (isResting && remainingRestTime > 0) {
+      restTimer = setInterval(() => {
+        setRemainingRestTime(prevTime => prevTime - 1);
+      }, 1000);
+    } else if (remainingRestTime === 0 && isResting) {
+      setIsResting(false);
+      addNotification('Rest time is over. Ready for the next set!', 'info');
+    }
+    return () => clearInterval(restTimer);
+  }, [isResting, remainingRestTime, addNotification]);
 
   const loadStoredData = useCallback(() => {
     const storedPlan = localStorage.getItem('currentPlan');
@@ -565,10 +607,9 @@ function WorkoutTracker() {
         const parsedPlan = JSON.parse(storedPlan);
         setCurrentPlan(parsedPlan);
         
-        // Initialize requiredSets based on the plan
         const initialRequiredSets = {};
         parsedPlan.exercises.forEach(exercise => {
-          initialRequiredSets[exercise._id] = exercise.requiredSets || 3; // Default to 3 if not specified
+          initialRequiredSets[exercise._id] = exercise.requiredSets || 3;
         });
         setRequiredSets(initialRequiredSets);
 
@@ -607,80 +648,41 @@ function WorkoutTracker() {
     }
   }, [addNotification]);
 
-  useEffect(() => {
-    loadStoredData();
-  }, [loadStoredData]);
-
-  useEffect(() => {
-    if (currentPlan) {
-      const fetchPreviousWorkout = async () => {
-        setIsPreviousWorkoutLoading(true);
-        try {
-          let lastWorkout;
-          if (currentPlan._id) {
-            lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
-          }
-          if (!lastWorkout) {
-            lastWorkout = workoutHistory.find(workout => 
-              workout.exercises.some(ex => 
-                currentPlan.exercises.some(planEx => 
-                  planEx._id === ex.exercise._id
-                )
-              )
-            );
-          }
-          setPreviousWorkout(lastWorkout);
-        } catch (error) {
-          console.error('Error fetching previous workout:', error);
-        } finally {
-          setIsPreviousWorkoutLoading(false);
-        }
-      };
-      fetchPreviousWorkout();
-    } else {
-      setPreviousWorkout(null);
+  const fetchPreviousWorkout = async () => {
+    setIsPreviousWorkoutLoading(true);
+    try {
+      let lastWorkout;
+      if (currentPlan._id) {
+        lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
+      }
+      if (!lastWorkout) {
+        lastWorkout = workoutHistory.find(workout => 
+          workout.exercises.some(ex => 
+            currentPlan.exercises.some(planEx => 
+              planEx._id === ex.exercise._id
+            )
+          )
+        );
+      }
+      setPreviousWorkout(lastWorkout);
+    } catch (error) {
+      console.error('Error fetching previous workout:', error);
+    } finally {
       setIsPreviousWorkoutLoading(false);
     }
-  }, [currentPlan, getLastWorkoutByPlan, workoutHistory]);
+  };
 
-  useEffect(() => {
-    const saveDataToLocalStorage = () => {
-      if (currentPlan) {
-        localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
-      }
-      if (sets.length > 0) {
-        localStorage.setItem('currentSets', JSON.stringify(sets));
-      }
-      localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
-      localStorage.setItem('workoutNotes', JSON.stringify(notes));
-      localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
-    };
-
-    saveDataToLocalStorage();
-  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
-
-  useEffect(() => {
-    let timer;
-    if (startTime) {
-      timer = setInterval(() => {
-        setElapsedTime(prevTime => prevTime + 1);
-      }, 1000);
+  const saveDataToLocalStorage = () => {
+    if (currentPlan) {
+      localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
     }
-    return () => clearInterval(timer);
-  }, [startTime]);
-
-  useEffect(() => {
-    let restTimer;
-    if (isResting && remainingRestTime > 0) {
-      restTimer = setInterval(() => {
-        setRemainingRestTime(prevTime => prevTime - 1);
-      }, 1000);
-    } else if (remainingRestTime === 0 && isResting) {
-      setIsResting(false);
-      addNotification('Rest time is over. Ready for the next set!', 'info');
+    if (sets.length > 0) {
+      localStorage.setItem('currentSets', JSON.stringify(sets));
     }
-    return () => clearInterval(restTimer);
-  }, [isResting, remainingRestTime, addNotification]);
+    localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
+    localStorage.setItem('workoutNotes', JSON.stringify(notes));
+    localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
+  };
 
   const handleSetComplete = () => {
     if (!weight || !reps) {
@@ -702,17 +704,13 @@ function WorkoutTracker() {
       return newSets;
     });
 
-    // Store the last set values for the current exercise only
     setLastSetValues(prev => ({
       ...prev,
       [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
     }));
 
     addNotification('Set completed!', 'success');
-
-    // Always start a new rest timer after completing a set
     startRestTimer();
-
     updateProgression();
   };
 
@@ -769,16 +767,37 @@ function WorkoutTracker() {
   };
 
   const handleCancelWorkout = () => {
-    if (window.confirm("Are you sure you want to cancel this workout? All progress will be lost.")) {
-      clearLocalStorage();
-      setCurrentPlan(null);
-      setSets([]);
-      setNotes([]);
-      setStartTime(null);
-      setElapsedTime(0);
-      setLastSetValues({});
-      addNotification('Workout cancelled', 'info');
-    }
+    if (isConfirmingCancel) return; // Prevent multiple confirmation dialogs
+
+    setIsConfirmingCancel(true);
+    addNotification(
+      'Are you sure you want to cancel this workout? All progress will be lost.',
+      'warning',
+      [
+        {
+          label: 'Yes, Cancel',
+          onClick: () => {
+            clearLocalStorage();
+            setCurrentPlan(null);
+            setSets([]);
+            setNotes([]);
+            setStartTime(null);
+            setElapsedTime(0);
+            setLastSetValues({});
+            addNotification('Workout cancelled', 'info');
+            setIsConfirmingCancel(false);
+            navigate('/plans'); // Navigate away after canceling
+          },
+        },
+        {
+          label: 'No, Continue',
+          onClick: () => {
+            setIsConfirmingCancel(false);
+          },
+        },
+      ],
+      0 // Set duration to 0 to prevent auto-dismissal
+    );
   };
 
   const clearLocalStorage = () => {
@@ -832,6 +851,58 @@ function WorkoutTracker() {
     }
   };
 
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    const currentTouch = e.targetTouches[0].clientX;
+    setTouchEnd(currentTouch);
+    
+    if (touchStart && currentTouch) {
+      const distance = touchStart - currentTouch;
+      if (distance > 20) {
+        setSwipeDirection('left');
+      } else if (distance < -20) {
+        setSwipeDirection('right');
+      } else {
+        setSwipeDirection(null);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentExerciseIndex < currentPlan.exercises.length - 1) {
+      handleExerciseChange(currentExerciseIndex + 1);
+    } else if (isRightSwipe && currentExerciseIndex > 0) {
+      handleExerciseChange(currentExerciseIndex - 1);
+    }
+
+    setSwipeDirection(null);
+  };
+
+  const toggleExerciseDetails = () => {
+    setIsExerciseDetailsOpen(!isExerciseDetailsOpen);
+  };
+
+  const toggleExerciseOptions = () => {
+    setIsExerciseOptionsOpen(!isExerciseOptionsOpen);
+  };
+
+  const togglePreviousWorkout = () => {
+    setIsPreviousWorkoutOpen(!isPreviousWorkoutOpen);
+  };
+
+  const toggleCurrentSetLog = () => {
+    setIsCurrentSetLogOpen(!isCurrentSetLogOpen);
+  };
+
   if (!currentPlan) {
     return (
       <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
@@ -840,7 +911,7 @@ function WorkoutTracker() {
         <p className="mb-4">To start a new workout, please select a workout plan from the Workout Plans page.</p>
         <button
           onClick={() => navigate('/plans')}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4rounded focus:outline-none focus:shadow-outline"
         >
           Go to Workout Plans
         </button>
@@ -851,71 +922,90 @@ function WorkoutTracker() {
   const currentExercise = currentPlan.exercises[currentExerciseIndex];
 
   return (
-    <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
-      <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
-      <h3 className="text-xl mb-4">{currentPlan.name}</h3>
+    <div 
+      className={`workout-tracker container mx-auto mt-8 p-4 ${darkMode ? 'dark-mode bg-gray-800 text-white' : 'bg-white text-gray-800'}`}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div className="relative mb-6">
+        <button
+          onClick={handleCancelWorkout}
+          className="absolute top-0 right-0 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          disabled={isConfirmingCancel}
+        >
+          <FiX />
+        </button>
+        <h2 className="text-3xl font-bold text-center">Workout Tracker</h2>
+        <h3 className="text-xl text-center mt-2">{currentPlan.name}</h3>
+      </div>
       
-      <div className="mb-4 text-lg">
+      <div className="mb-4 text-lg text-center">
         Elapsed Time: {formatTime(elapsedTime)}
       </div>
 
       <div className="mb-4">
-        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-          <div className="bg-blue-600 h-2.5 rounded-full" style={{width: `${calculateProgress()}%`}}></div>
+        <div className="progress-bar">
+          <div className="progress-bar-fill" style={{width: `${calculateProgress()}%`}}></div>
         </div>
-        <p className="text-sm mt-2">Overall Progress: {calculateProgress().toFixed(2)}%</p>
+        <p className="text-sm mt-2 text-center">Overall Progress: {calculateProgress().toFixed(2)}%</p>
       </div>
 
-      <div className="mb-4 flex flex-wrap justify-between items-center">
-        <div className="flex flex-wrap">
+      <div className="mb-4 flex justify-center items-center">
+        <div className="flex space-x-2 overflow-x-auto py-2 px-4 carousel-container">
           {currentPlan.exercises.map((exercise, index) => (
             <button
               key={exercise._id}
               onClick={() => handleExerciseChange(index)}
-              className={`mr-2 mb-2 px-3 py-1 rounded ${
+              className={`w-3 h-3 rounded-full focus:outline-none transition-all duration-200 ${
                 index === currentExerciseIndex
-                  ? 'bg-blue-500 text-white'
+                  ? 'bg-blue-500 w-4 h-4'
                   : isExerciseComplete(exercise._id, sets[index] || [])
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-300 text-gray-800'
+                  ? 'bg-green-500'
+                  : 'bg-gray-300 dark:bg-gray-600'
               }`}
-            >
-              {exercise.name}
-            </button>
+              title={exercise.name}
+              aria-label={`Go to exercise: ${exercise.name}`}
+            />
           ))}
         </div>
-        <button
-          onClick={handleCancelWorkout}
-          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          Cancel Workout
-        </button>
       </div>
-      
-      <TransitionGroup>
+
+      <SwitchTransition mode="out-in">
         <CSSTransition
           key={currentExerciseIndex}
           nodeRef={nodeRef}
           timeout={300}
           classNames="fade"
         >
-          <div ref={nodeRef} className={`bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            <h4 className="text-lg font-semibold mb-2">Current Exercise: {currentExercise.name}</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Exercise {currentExerciseIndex + 1} of {currentPlan.exercises.length}</p>
+          <div 
+            ref={nodeRef} 
+            className="exercise-container bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4"
+          >
             <div className="flex flex-col md:flex-row mb-4">
               <img 
                 src={currentExercise.imageUrl} 
                 alt={currentExercise.name} 
                 className="w-full md:w-1/3 h-48 object-cover rounded-lg mr-0 md:mr-4 mb-4 md:mb-0"
               />
-              <div>
-                <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
-                <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+              <div className="flex-grow">
+                <div 
+                  className="flex justify-between items-center cursor-pointer"
+                  onClick={toggleExerciseDetails}
+                >
+                  <h4 className="text-lg font-semibold mb-2">{currentExercise.name}</h4>
+                  {isExerciseDetailsOpen ? <FiChevronUp /> : <FiChevronDown />}
+                </div>
+                <div className={`collapsible-content ${isExerciseDetailsOpen ? 'open' : ''}`}>
+                  <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
+                  <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+                </div>
                 <p className="mb-2">
                   <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id]}
                 </p>
               </div>
             </div>
+
             <div className="mb-4 flex">
               <input
                 type="number"
@@ -932,18 +1022,56 @@ function WorkoutTracker() {
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
-            <button
-              onClick={handleSetComplete}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-            >
-              Complete Set
-            </button>
-            {isResting && (
+
+            <div className="mb-4 flex justify-between items-center">
+              <button
+                onClick={handleSetComplete}
+                className="btn btn-primary"
+              >
+                Complete Set
+              </button>
+              <button
+                onClick={toggleExerciseOptions}
+                className="btn btn-secondary flex items-center"
+              >
+                <FiSettings className="mr-2" /> Options
+                {isExerciseOptionsOpen ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
+              </button>
+            </div>
+
+            <div className={`collapsible-content ${isExerciseOptionsOpen ? 'open' : ''}`}>
               <div className="mb-4">
+                <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
+                  Rest Time (seconds):
+                </label>
+                <input
+                  type="number"
+                  id="restTime"
+                  value={restTime}
+                  onChange={(e) => setRestTime(Number(e.target.value))}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
+                  Exercise Notes:
+                </label>
+                <textarea
+                  id={`notes-${currentExerciseIndex}`}
+                  value={notes[currentExerciseIndex] || ''}
+                  onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  rows="3"
+                ></textarea>
+              </div>
+            </div>
+
+            {isResting && (
+              <div className="rest-timer mb-4">
                 <p>Rest Time Remaining: {formatTime(remainingRestTime)}</p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                <div className="rest-timer-bar">
                   <div 
-                    className="bg-green-600 h-2.5 rounded-full" 
+                    className="rest-timer-fill"
                     style={{width: `${(remainingRestTime / restTime) * 100}%`}}
                   ></div>
                 </div>
@@ -955,118 +1083,127 @@ function WorkoutTracker() {
                 </button>
               </div>
             )}
-            <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
-                Rest Time (seconds):
-              </label>
-              <input
-                type="number"
-                id="restTime"
-                value={restTime}
-                onChange={(e) => setRestTime(Number(e.target.value))}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
-                Exercise Notes:
-              </label>
-              <textarea
-                id={`notes-${currentExerciseIndex}`}
-                value={notes[currentExerciseIndex] || ''}
-                onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                rows="3"
-              ></textarea>
-            </div>
           </div>
         </CSSTransition>
-      </TransitionGroup>
+      </SwitchTransition>
 
-      <div className="flex justify-between">
+      <div className="flex justify-between items-center mt-4">
         <button
           onClick={() => handleExerciseChange(Math.max(0, currentExerciseIndex - 1))}
-          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+          className={`btn btn-secondary ${currentExerciseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={currentExerciseIndex === 0}
         >
-          Previous Exercise
+          <FiChevronLeft className="inline-block mr-1" /> Previous
         </button>
+        <span className="text-lg font-semibold">
+          {currentExerciseIndex + 1} / {currentPlan.exercises.length}
+        </span>
         {currentExerciseIndex < currentPlan.exercises.length - 1 ? (
           <button
             onClick={() => handleExerciseChange(currentExerciseIndex + 1)}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+            className="btn btn-primary"
           >
-            Next Exercise
+            Next <FiChevronRight className="inline-block ml-1" />
           </button>
         ) : (
           <button
             onClick={handleFinishWorkout}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+            className="btn btn-primary"
           >
             Finish Workout
           </button>
         )}
       </div>
 
-      {/* Previous Workout Section */}
-      <div className={`mt-8 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
-        <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>Previous Workout Performance</h3>
-        {isPreviousWorkoutLoading ? (
-          <p>Loading previous workout data...</p>
-        ) : previousWorkout ? (
-          <div>
-            <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
-            <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
-            {previousWorkout.exercises.map((exercise, index) => (
-              <div key={index} className="mb-4">
-                <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
-                  {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
+      <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
+        <button 
+          onClick={togglePreviousWorkout}
+          className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
+        >
+          <span>Previous Workout Performance</span>
+          {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
+        </button>
+        <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
+          {isPreviousWorkoutLoading ? (
+            <p className="p-4">Loading previous workout data...</p>
+          ) : previousWorkout ? (
+            <div className="p-4">
+              <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
+              <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
+              {previousWorkout.exercises.map((exercise, index) => (
+                <div key={index} className="mb-4">
+                  <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                    {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
+                  </h4>
+                  <ul className="list-disc pl-5">
+                    {exercise.sets.map((set, setIndex) => (
+                      <li key={setIndex}>
+                        Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
+                      </li>
+                    ))}
+                  </ul>
+                  {exercise.notes && (
+                    <p className="mt-2 italic">Notes: {exercise.notes}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="p-4">No previous workout data available for this plan.</p>
+          )}
+        </div>
+      </div>
+
+      <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
+        <button 
+          onClick={toggleCurrentSetLog}
+          className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-green-300' : 'text-green-800'}`}
+        >
+          <span>Current Workout Set Log</span>
+          {isCurrentSetLogOpen ? <FiChevronUp /> : <FiChevronDown />}
+        </button>
+        <div className={`collapsible-content ${isCurrentSetLogOpen ? 'open' : ''}`}>
+          <div className="p-4">
+            {currentPlan.exercises.map((exercise, index) => (
+              <div key={exercise._id} className="mb-4">
+                <h4 className={`text-lg font-medium ${darkMode ? 'text-green-200' : 'text-green-700'}`}>
+                  {exercise.name}
+                  {isExerciseComplete(exercise._id, sets[index] || []) && ' (Complete)'}
                 </h4>
-                <ul className="list-disc pl-5">
-                  {exercise.sets.map((set, setIndex) => (
-                    <li key={setIndex}>
-                      Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
-                    </li>
-                  ))}
-                </ul>
-                {exercise.notes && (
-                  <p className="mt-2 italic">Notes: {exercise.notes}</p>
+                {sets[index] && sets[index].length > 0 ? (
+                  <ul className="list-disc pl-5">
+                    {sets[index].map((set, setIndex) => (
+                      <li key={setIndex}>
+                        Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No sets completed yet</p>
+                )}
+                <p>
+                  {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id]} sets completed
+                </p>
+                {notes[index] && (
+                  <p className="mt-2 italic">Notes: {notes[index]}</p>
                 )}
               </div>
             ))}
           </div>
-        ) : (
-          <p>No previous workout data available for this plan.</p>
-        )}
+        </div>
       </div>
 
-      {/* Set Log */}
-      <div className={`mt-8 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
-        <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Current Workout Set Log</h3>
-        {currentPlan.exercises.map((exercise, index) => (
-          <div key={exercise._id} className="mb-4">
-            <h4 className={`text-lg font-medium ${darkMode ? 'text-green-200' : 'text-green-700'}`}>
-              {exercise.name}
-              {isExerciseComplete(exercise._id, sets[index] || []) && ' (Complete)'}
-            </h4>
-            {sets[index] && sets[index].length > 0 ? (
-              <ul className="list-disc pl-5">
-                {sets[index].map((set, setIndex) => (
-                  <li key={setIndex}>
-                    Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No sets completed yet</p>
-            )}
-            <p>
-              {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id]} sets completed
-            </p>
-            {notes[index] && (
-              <p className="mt-2 italic">Notes: {notes[index]}</p>
-            )}
+      <div className={`swipe-overlay ${swipeDirection ? 'active' : ''}`}>
+        {swipeDirection === 'left' && (
+          <div className="swipe-indicator right">
+            <FiChevronRight />
           </div>
-        ))}
+        )}
+        {swipeDirection === 'right' && (
+          <div className="swipe-indicator left">
+            <FiChevronLeft />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1080,26 +1217,244 @@ export default WorkoutTracker;
 ```css
 /* src/pages/WorkoutTracker.css */
 
+.workout-tracker {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Transition styles for exercise switching */
 .fade-enter {
-    opacity: 0;
-    transform: translateY(20px);
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transform: translateX(0%);
+  transition: opacity 300ms ease-in, transform 300ms ease-in;
+}
+
+.fade-exit {
+  opacity: 1;
+  transform: translateX(0%);
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transform: translateX(-100%);
+  transition: opacity 300ms ease-in, transform 300ms ease-in;
+}
+
+/* Exercise container styles */
+.exercise-container {
+  transition: height 300ms ease-in-out, background-color 300ms ease-in-out;
+  overflow: hidden;
+}
+
+/* Collapsible content styles */
+.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 300ms ease-in-out;
+}
+
+.collapsible-content.open {
+  max-height: 1000px; /* Adjust this value based on your content */
+}
+
+/* Form element styles */
+input, textarea,button {
+  transition: all 150ms ease-in-out;
+}
+
+input[type="number"], textarea {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Button styles */
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 150ms ease-in-out, transform 150ms ease-in-out;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background-color: #3490dc;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #2779bd;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+/* Exercise carousel styles */
+.carousel-container {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.carousel-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Progress bar styles */
+.progress-bar {
+  height: 8px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: #3490dc;
+  transition: width 300ms ease-in-out;
+}
+
+/* Rest timer styles */
+.rest-timer {
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.rest-timer-bar {
+  height: 4px;
+  background-color: #e9ecef;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.rest-timer-fill {
+  height: 100%;
+  background-color: #28a745;
+  transition: width 1s linear;
+}
+
+/* Swipe overlay styles */
+.swipe-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.swipe-overlay.active {
+  opacity: 1;
+}
+
+.swipe-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #333;
+}
+
+.swipe-indicator.left {
+  left: 10px;
+}
+
+.swipe-indicator.right {
+  right: 10px;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .workout-tracker {
+    padding: 1rem;
   }
-  
-  .fade-enter-active {
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity 300ms, transform 300ms;
+
+  .exercise-container {
+    padding: 1rem;
   }
-  
-  .fade-exit {
-    opacity: 1;
+
+  .btn {
+    padding: 0.5rem;
+    font-size: 0.875rem;
   }
-  
-  .fade-exit-active {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 300ms, transform 300ms;
-  }
+}
+
+/* Dark mode styles */
+.dark-mode .exercise-container {
+  background-color: #2d3748;
+  color: #e2e8f0;
+}
+
+.dark-mode input, .dark-mode textarea {
+  background-color: #4a5568;
+  color: #e2e8f0;
+  border-color: #718096;
+}
+
+.dark-mode .rest-timer {
+  background-color: #2d3748;
+}
+
+.dark-mode .progress-bar {
+  background-color: #4a5568;
+}
+
+.dark-mode .btn-primary {
+  background-color: #4299e1;
+}
+
+.dark-mode .btn-primary:hover {
+  background-color: #3182ce;
+}
+
+.dark-mode .btn-secondary {
+  background-color: #718096;
+}
+
+.dark-mode .btn-secondary:hover {
+  background-color: #4a5568;
+}
+
+.dark-mode .swipe-indicator {
+  background-color: rgba(74, 85, 104, 0.8);
+  color: #e2e8f0;
+}
 ```
 
 # src/pages/WorkoutSummary.jsx
@@ -1823,580 +2178,6 @@ function ExerciseLibrary() {
 }
 
 export default ExerciseLibrary;
-```
-
-# src/context/ThemeContext.jsx
-
-```jsx
-// src/context/ThemeContext.jsx
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
-const ThemeContext = createContext();
-
-export const useTheme = () => useContext(ThemeContext);
-
-export const ThemeProvider = ({ children }) => {
-  const [darkMode, setDarkMode] = useState(false);
-
-  useEffect(() => {
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(isDarkMode);
-  }, []);
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode);
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
-
-  return (
-    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-};
-```
-
-# src/context/NotificationContext.jsx
-
-```jsx
-// src/context/NotificationContext.jsx
-
-import React, { createContext, useContext, useState, useCallback } from 'react';
-
-const NotificationContext = createContext();
-
-export const useNotification = () => useContext(NotificationContext);
-
-export function NotificationProvider({ children }) {
-  const [notifications, setNotifications] = useState([]);
-
-  const addNotification = useCallback((message, type = 'info', duration = 5000) => {
-    const id = Date.now() + Math.random();
-    setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => removeNotification(id), duration);
-  }, []);
-
-  const removeNotification = useCallback((id) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
-  }, []);
-
-  const contextValue = React.useMemo(() => ({
-    notifications,
-    addNotification,
-    removeNotification
-  }), [notifications, addNotification, removeNotification]);
-
-  return (
-    <NotificationContext.Provider value={contextValue}>
-      {children}
-    </NotificationContext.Provider>
-  );
-}
-```
-
-# src/context/GymContext.jsx
-
-```jsx
-// src/context/GymContext.jsx
-
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import axios from 'axios';
-import { useAuth } from './AuthContext';
-import { useNotification } from './NotificationContext';
-
-// Update this line to use HTTPS and your DigitalOcean app URL
-// export const hostName = '/api';
-export const hostName = 'https://walrus-app-lqhsg.ondigitalocean.app/backend';
-
-const GymContext = createContext();
-
-export function useGymContext() {
-  return useContext(GymContext);
-}
-
-export function GymProvider({ children }) {
-  const [workouts, setWorkouts] = useState([]);
-  const [exercises, setExercises] = useState([]);
-  const [workoutPlans, setWorkoutPlans] = useState([]);
-  const [workoutHistory, setWorkoutHistory] = useState([]);
-  const { user } = useAuth();
-  const { addNotification } = useNotification();
-  
-  const API_URL = `${hostName}/api`;
-
-  const getAuthConfig = useCallback(() => {
-    const token = localStorage.getItem('token');
-    return {
-      headers: { 'x-auth-token': token }
-    };
-  }, []);
-
-  const toTitleCase = (str) => {
-    if (typeof str !== 'string') return str;
-    return str.replace(
-      /\w\S*/g,
-      function(txt) {
-        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-      }
-    );
-  };
-
-  // Fetch workout history
-  const fetchWorkoutHistory = useCallback(async () => {
-    if (user) {
-      try {
-        const response = await axios.get(`${API_URL}/workouts/user`, getAuthConfig());
-        setWorkoutHistory(response.data);
-      } catch (error) {
-        console.error('Error fetching workout history:', error);
-        addNotification('Failed to fetch workout history', 'error');
-      }
-    }
-  }, [user, addNotification, API_URL, getAuthConfig]);
-
-  // Fetch exercises
-  const fetchExercises = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API_URL}/exercises`, getAuthConfig());
-      const formattedExercises = response.data.map(exercise => ({
-        ...exercise,
-        name: toTitleCase(exercise.name),
-        description: toTitleCase(exercise.description),
-        target: Array.isArray(exercise.target) 
-          ? exercise.target.map(toTitleCase) 
-          : toTitleCase(exercise.target)
-      }));
-      setExercises(formattedExercises);
-    } catch (error) {
-      console.error('Error fetching exercises:', error);
-      addNotification('Failed to fetch exercises', 'error');
-    }
-  }, [API_URL, getAuthConfig, addNotification]);
-
-  // Fetch workout plans
-  const fetchWorkoutPlans = useCallback(async () => {
-    if (user) {
-      try {
-        const response = await axios.get(`${API_URL}/workoutplans`, getAuthConfig());
-        const plansWithFullExerciseDetails = await Promise.all(response.data.map(async (plan) => {
-          const fullExercises = await Promise.all(plan.exercises.map(async (exercise) => {
-            if (!exercise.description || !exercise.imageUrl) {
-              const fullExercise = await axios.get(`${API_URL}/exercises/${exercise._id}`, getAuthConfig());
-              return fullExercise.data;
-            }
-            return exercise;
-          }));
-          return { ...plan, exercises: fullExercises };
-        }));
-        setWorkoutPlans(plansWithFullExerciseDetails);
-        return plansWithFullExerciseDetails;
-      } catch (error) {
-        console.error('Error fetching workout plans:', error);
-        addNotification('Failed to fetch workout plans', 'error');
-        return [];
-      }
-    }
-    return [];
-  }, [user, API_URL, getAuthConfig, addNotification]);
-
-  useEffect(() => {
-    if (user) {
-      fetchWorkoutHistory();
-      fetchExercises();
-      fetchWorkoutPlans();
-    }
-  }, [user, fetchWorkoutHistory, fetchExercises, fetchWorkoutPlans]);
-
-  // Add a workout (updated to include notes)
-  const addWorkout = async (workout) => {
-    try {
-      console.log('Sending workout data:', JSON.stringify(workout, null, 2));
-      const response = await axios.post(`${API_URL}/workouts`, workout, getAuthConfig());
-      console.log('Server response:', response.data);
-      setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
-      setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
-      addNotification('Workout added successfully', 'success');
-    } catch (error) {
-      console.error('Error adding workout:', error);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-        console.error('Response headers:', error.response.headers);
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-      } else {
-        console.error('Error setting up request:', error.message);
-      }
-      addNotification('Failed to add workout', 'error');
-      throw error;
-    }
-  };
-
-  // Update a workout
-  const updateWorkout = async (id, updatedWorkout) => {
-    try {
-      const response = await axios.put(`${API_URL}/workouts/${id}`, updatedWorkout, getAuthConfig());
-      setWorkouts(prevWorkouts =>
-        prevWorkouts.map(workout =>
-          workout._id === id ? response.data : workout
-        )
-      );
-      setWorkoutHistory(prevHistory =>
-        prevHistory.map(workout =>
-          workout._id === id ? response.data : workout
-        )
-      );
-      addNotification('Workout updated successfully', 'success');
-      return response.data;
-    } catch (error) {
-      console.error('Error updating workout:', error);
-      addNotification('Failed to update workout', 'error');
-      throw error;
-    }
-  };
-
-  // Delete a workout
-  const deleteWorkout = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/workouts/${id}`, getAuthConfig());
-      setWorkouts(prevWorkouts => prevWorkouts.filter(workout => workout._id !== id));
-      setWorkoutHistory(prevHistory => prevHistory.filter(workout => workout._id !== id));
-      addNotification('Workout deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting workout:', error);
-      addNotification('Failed to delete workout', 'error');
-      throw error;
-    }
-  };
-
-  // Add an exercise
-  const addExercise = async (exercise) => {
-    try {
-      const exerciseWithTitleCase = {
-        ...exercise,
-        name: toTitleCase(exercise.name),
-        description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target)
-      };
-      const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
-      setExercises(prevExercises => [...prevExercises, response.data]);
-      return response.data;
-    } catch (error) {
-      console.error('Error adding exercise:', error);
-      addNotification('Failed to add exercise', 'error');
-      throw error;
-    }
-  };
-
-  // Update an exercise
-  const updateExercise = async (id, updatedExercise) => {
-    try {
-      const exerciseWithTitleCase = {
-        ...updatedExercise,
-        name: toTitleCase(updatedExercise.name),
-        description: toTitleCase(updatedExercise.description),
-        target: toTitleCase(updatedExercise.target)
-      };
-      const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
-      setExercises(prevExercises =>
-        prevExercises.map(exercise =>
-          exercise._id === id ? response.data : exercise
-        )
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error updating exercise:', error);
-      addNotification('Failed to update exercise', 'error');
-      throw error;
-    }
-  };
-
-  // Delete an exercise
-  const deleteExercise = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
-      setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
-      addNotification('Exercise deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting exercise:', error);
-      addNotification('Failed to delete exercise', 'error');
-      throw error;
-    }
-  };
-
-  // Add a workout plan
-  const addWorkoutPlan = async (plan) => {
-    try {
-      const planToSend = {
-        ...plan,
-        exercises: plan.exercises.map(exercise => 
-          typeof exercise === 'string' ? exercise : exercise._id
-        )
-      };
-
-      const response = await axios.post(`${API_URL}/workoutplans`, planToSend, getAuthConfig());
-      
-      const fullPlan = {
-        ...response.data,
-        exercises: await Promise.all(response.data.exercises.map(async (exerciseId) => {
-          if (typeof exerciseId === 'string') {
-            try {
-              const exerciseResponse = await axios.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
-              return exerciseResponse.data;
-            } catch (error) {
-              console.error(`Error fetching exercise ${exerciseId}:`, error);
-              return null;
-            }
-          }
-          return exerciseId;
-        }))
-      };
-
-      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan]);
-      addNotification('Workout plan added successfully', 'success');
-      return fullPlan;
-    } catch (error) {
-      console.error('Error adding workout plan:', error);
-      addNotification('Failed to add workout plan', 'error');
-      throw error;
-    }
-  };
-
-  // Update a workout plan
-  const updateWorkoutPlan = async (id, updatedPlan) => {
-    try {
-      if (!id) {
-        return addWorkoutPlan(updatedPlan);
-      }
-      const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
-      setWorkoutPlans(prevPlans =>
-        prevPlans.map(plan =>
-          plan._id === id ? response.data : plan
-        )
-      );
-      addNotification('Workout plan updated successfully', 'success');
-      return response.data;
-    } catch (error) {
-      console.error('Error updating workout plan:', error);
-      addNotification('Failed to update workout plan', 'error');
-      throw error;
-    }
-  };
-
-  // Delete a workout plan
-  const deleteWorkoutPlan = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
-      setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
-      // Update workouts to mark the plan as deleted instead of removing the association
-      setWorkoutHistory(prevHistory => 
-        prevHistory.map(workout => 
-          workout.plan && workout.plan._id === id 
-            ? { ...workout, planDeleted: true, planName: workout.planName || 'Deleted Plan' } 
-            : workout
-        )
-      );
-      addNotification('Workout plan deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting workout plan:', error);
-      addNotification('Failed to delete workout plan', 'error');
-      throw error;
-    }
-  };
-
-  // Add an exercise to a workout plan
-  const addExerciseToPlan = async (planId, exerciseId) => {
-    if (!planId || !exerciseId) {
-      throw new Error('Plan ID and Exercise ID are required');
-    }
-    console.log(`Attempting to add exercise ${exerciseId} to plan ${planId}`);
-    
-    const plan = workoutPlans.find(p => p._id === planId);
-    if (!plan) {
-      console.error('Plan not found');
-      addNotification('Plan not found', 'error');
-      return { success: false, error: 'Plan not found' };
-    }
-
-    if (plan.exercises.some(e => e._id === exerciseId)) {
-      console.log('Exercise is already in the workout plan');
-      addNotification('This exercise is already in the workout plan', 'info');
-      return { success: false, alreadyInPlan: true };
-    }
-
-    try {
-      const response = await axios.post(
-        `${API_URL}/workoutplans/${planId}/exercises`,
-        { exerciseId },
-        getAuthConfig()
-      );
-      
-      console.log('Server response:', response.data);
-      setWorkoutPlans(prevPlans =>
-        prevPlans.map(p =>
-          p._id === planId ? response.data : p
-        )
-      );
-      addNotification('Exercise added to plan successfully', 'success');
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('Error adding exercise to plan:', error);
-      addNotification(`Failed to add exercise to plan: ${error.response ? error.response.data.message : error.message}`, 'error');
-      return { success: false, error };
-    }
-  };
-
-  // Get the last workout for a given plan
-  const getLastWorkoutByPlan = useCallback(async (planId) => {
-    try {
-      const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
-      return response.data;
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        // No previous workout found, this is not an error
-        console.log('No previous workout found for this plan');
-        return null;
-      }
-      console.error('Error fetching last workout:', error);
-      addNotification('Failed to fetch last workout', 'error');
-      return null;
-    }
-  }, [API_URL, getAuthConfig, addNotification]);
-
-  const contextValue = useMemo(() => ({
-    workouts,
-    exercises,
-    workoutPlans,
-    workoutHistory,
-    addWorkout,
-    updateWorkout,
-    deleteWorkout,
-    addExercise,
-    updateExercise,
-    deleteExercise,
-    addWorkoutPlan,
-    updateWorkoutPlan,
-    deleteWorkoutPlan,
-    fetchWorkoutHistory,
-    fetchWorkoutPlans,
-    addExerciseToPlan,
-    getLastWorkoutByPlan
-  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan, fetchWorkoutPlans, fetchWorkoutHistory]);
-
-  return (
-    <GymContext.Provider value={contextValue}>
-      {children}
-    </GymContext.Provider>
-  );
-}
-
-export default GymProvider;
-```
-
-# src/context/AuthContext.jsx
-
-```jsx
-// src/context/AuthContext.jsx
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { hostName } from './GymContext';
-
-const AuthContext = createContext();
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkLoggedIn = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          console.log('Checking logged in status with token');
-          const response = await axios.get(`${hostName}/api/auth/user`, {
-            headers: { 'x-auth-token': token }
-          });
-          console.log('User data received:', response.data);
-          setUser(response.data);
-        } catch (error) {
-          console.error('Error fetching user:', error);
-          localStorage.removeItem('token');
-        }
-      }
-      setLoading(false);
-    };
-
-    checkLoggedIn();
-  }, []);
-
-  const register = async (username, email, password) => {
-    try {
-      console.log('Attempting to register user:', username);
-      await axios.post(`${hostName}/api/auth/register`, { username, email, password });
-      console.log('Registration successful');
-      return true;
-    } catch (error) {
-      console.error('Registration error:', error.response?.data || error.message);
-      throw error;
-    }
-  };
-
-  const login = async (username, password) => {
-    try {
-      console.log('Attempting to log in user:', username);
-      const response = await axios.post(`${hostName}/api/auth/login`, { username, password });
-      console.log('Login response:', response.data);
-      localStorage.setItem('token', response.data.token);
-      setUser(response.data.user);
-      return response.data;
-    } catch (error) {
-      console.error('Login error:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        console.error('Error status:', error.response.status);
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-      } else {
-        console.error('Error message:', error.message);
-      }
-      throw error;
-    }
-  };
-
-  const logout = () => {
-    console.log('Logging out user');
-    localStorage.removeItem('token');
-    setUser(null);
-  };
-
-  const value = {
-    user,
-    register,
-    login,
-    logout,
-    loading
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export default AuthProvider;
 ```
 
 # src/components/WorkoutPlanSelector.jsx
@@ -3522,19 +3303,30 @@ function NotificationToast() {
       {notifications.map((notification) => (
         <div
           key={notification.id}
-          className={`mb-2 p-4 rounded shadow-md ${
+          className={`mb-2 p-4 rounded shadow-md w-64 sm:w-80 md:w-96 ${
             notification.type === 'error' ? 'bg-red-500' : 
             notification.type === 'success' ? 'bg-green-500' : 
-            notification.type === 'info' ? 'bg-blue-500' : 'bg-yellow-500'
+            notification.type === 'warning' ? 'bg-yellow-500' :
+            'bg-blue-500'
           } text-white`}
         >
-          {notification.message}
-          <button
-            onClick={() => removeNotification(notification.id)}
-            className="ml-2 text-white font-bold"
-          >
-            &times;
-          </button>
+          <p>{notification.message}</p>
+          {notification.actions && notification.actions.length > 0 && (
+            <div className="mt-2 flex justify-end">
+              {notification.actions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    action.onClick();
+                    removeNotification(notification.id);
+                  }}
+                  className="ml-2 px-2 py-1 bg-white text-gray-800 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -4486,6 +4278,582 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
 }
 
 export default AddExerciseForm;
+```
+
+# src/context/ThemeContext.jsx
+
+```jsx
+// src/context/ThemeContext.jsx
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+const ThemeContext = createContext();
+
+export const useTheme = () => useContext(ThemeContext);
+
+export const ThemeProvider = ({ children }) => {
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(isDarkMode);
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode);
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  return (
+    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+```
+
+# src/context/NotificationContext.jsx
+
+```jsx
+// src/context/NotificationContext.jsx
+
+import React, { createContext, useContext, useState, useCallback } from 'react';
+
+const NotificationContext = createContext();
+
+export const useNotification = () => useContext(NotificationContext);
+
+export function NotificationProvider({ children }) {
+  const [notifications, setNotifications] = useState([]);
+
+  const addNotification = useCallback((message, type = 'info', actions = [], duration = 5000) => {
+    const id = Date.now() + Math.random();
+    setNotifications(prev => [...prev, { id, message, type, actions }]);
+    if (duration > 0) {
+      setTimeout(() => removeNotification(id), duration);
+    }
+  }, []);
+
+  const removeNotification = useCallback((id) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  }, []);
+
+  const contextValue = {
+    notifications,
+    addNotification,
+    removeNotification
+  };
+
+  return (
+    <NotificationContext.Provider value={contextValue}>
+      {children}
+    </NotificationContext.Provider>
+  );
+}
+```
+
+# src/context/GymContext.jsx
+
+```jsx
+// src/context/GymContext.jsx
+
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import axios from 'axios';
+import { useAuth } from './AuthContext';
+import { useNotification } from './NotificationContext';
+
+// Update this line to use HTTPS and your DigitalOcean app URL
+// export const hostName = 'http://192.168.178.42:3000';
+export const hostName = 'https://walrus-app-lqhsg.ondigitalocean.app/backend';
+
+const GymContext = createContext();
+
+export function useGymContext() {
+  return useContext(GymContext);
+}
+
+export function GymProvider({ children }) {
+  const [workouts, setWorkouts] = useState([]);
+  const [exercises, setExercises] = useState([]);
+  const [workoutPlans, setWorkoutPlans] = useState([]);
+  const [workoutHistory, setWorkoutHistory] = useState([]);
+  const { user } = useAuth();
+  const { addNotification } = useNotification();
+  
+  const API_URL = `${hostName}/api`;
+
+  const getAuthConfig = useCallback(() => {
+    const token = localStorage.getItem('token');
+    return {
+      headers: { 'x-auth-token': token }
+    };
+  }, []);
+
+  const toTitleCase = (str) => {
+    if (typeof str !== 'string') return str;
+    return str.replace(
+      /\w\S*/g,
+      function(txt) {
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+      }
+    );
+  };
+
+  // Fetch workout history
+  const fetchWorkoutHistory = useCallback(async () => {
+    if (user) {
+      try {
+        const response = await axios.get(`${API_URL}/workouts/user`, getAuthConfig());
+        setWorkoutHistory(response.data);
+      } catch (error) {
+        console.error('Error fetching workout history:', error);
+        addNotification('Failed to fetch workout history', 'error');
+      }
+    }
+  }, [user, addNotification, API_URL, getAuthConfig]);
+
+  // Fetch exercises
+  const fetchExercises = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/exercises`, getAuthConfig());
+      const formattedExercises = response.data.map(exercise => ({
+        ...exercise,
+        name: toTitleCase(exercise.name),
+        description: toTitleCase(exercise.description),
+        target: Array.isArray(exercise.target) 
+          ? exercise.target.map(toTitleCase) 
+          : toTitleCase(exercise.target)
+      }));
+      setExercises(formattedExercises);
+    } catch (error) {
+      console.error('Error fetching exercises:', error);
+      addNotification('Failed to fetch exercises', 'error');
+    }
+  }, [API_URL, getAuthConfig, addNotification]);
+
+  // Fetch workout plans
+  const fetchWorkoutPlans = useCallback(async () => {
+    if (user) {
+      try {
+        const response = await axios.get(`${API_URL}/workoutplans`, getAuthConfig());
+        const plansWithFullExerciseDetails = await Promise.all(response.data.map(async (plan) => {
+          const fullExercises = await Promise.all(plan.exercises.map(async (exercise) => {
+            if (!exercise.description || !exercise.imageUrl) {
+              const fullExercise = await axios.get(`${API_URL}/exercises/${exercise._id}`, getAuthConfig());
+              return fullExercise.data;
+            }
+            return exercise;
+          }));
+          return { ...plan, exercises: fullExercises };
+        }));
+        setWorkoutPlans(plansWithFullExerciseDetails);
+        return plansWithFullExerciseDetails;
+      } catch (error) {
+        console.error('Error fetching workout plans:', error);
+        addNotification('Failed to fetch workout plans', 'error');
+        return [];
+      }
+    }
+    return [];
+  }, [user, API_URL, getAuthConfig, addNotification]);
+
+  useEffect(() => {
+    if (user) {
+      fetchWorkoutHistory();
+      fetchExercises();
+      fetchWorkoutPlans();
+    }
+  }, [user, fetchWorkoutHistory, fetchExercises, fetchWorkoutPlans]);
+
+  // Add a workout (updated to include notes)
+  const addWorkout = async (workout) => {
+    try {
+      console.log('Sending workout data:', JSON.stringify(workout, null, 2));
+      const response = await axios.post(`${API_URL}/workouts`, workout, getAuthConfig());
+      console.log('Server response:', response.data);
+      setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
+      setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
+      addNotification('Workout added successfully', 'success');
+    } catch (error) {
+      console.error('Error adding workout:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
+      addNotification('Failed to add workout', 'error');
+      throw error;
+    }
+  };
+
+  // Update a workout
+  const updateWorkout = async (id, updatedWorkout) => {
+    try {
+      const response = await axios.put(`${API_URL}/workouts/${id}`, updatedWorkout, getAuthConfig());
+      setWorkouts(prevWorkouts =>
+        prevWorkouts.map(workout =>
+          workout._id === id ? response.data : workout
+        )
+      );
+      setWorkoutHistory(prevHistory =>
+        prevHistory.map(workout =>
+          workout._id === id ? response.data : workout
+        )
+      );
+      addNotification('Workout updated successfully', 'success');
+      return response.data;
+    } catch (error) {
+      console.error('Error updating workout:', error);
+      addNotification('Failed to update workout', 'error');
+      throw error;
+    }
+  };
+
+  // Delete a workout
+  const deleteWorkout = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/workouts/${id}`, getAuthConfig());
+      setWorkouts(prevWorkouts => prevWorkouts.filter(workout => workout._id !== id));
+      setWorkoutHistory(prevHistory => prevHistory.filter(workout => workout._id !== id));
+      addNotification('Workout deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting workout:', error);
+      addNotification('Failed to delete workout', 'error');
+      throw error;
+    }
+  };
+
+  // Add an exercise
+  const addExercise = async (exercise) => {
+    try {
+      const exerciseWithTitleCase = {
+        ...exercise,
+        name: toTitleCase(exercise.name),
+        description: toTitleCase(exercise.description),
+        target: toTitleCase(exercise.target)
+      };
+      const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
+      setExercises(prevExercises => [...prevExercises, response.data]);
+      return response.data;
+    } catch (error) {
+      console.error('Error adding exercise:', error);
+      addNotification('Failed to add exercise', 'error');
+      throw error;
+    }
+  };
+
+  // Update an exercise
+  const updateExercise = async (id, updatedExercise) => {
+    try {
+      const exerciseWithTitleCase = {
+        ...updatedExercise,
+        name: toTitleCase(updatedExercise.name),
+        description: toTitleCase(updatedExercise.description),
+        target: toTitleCase(updatedExercise.target)
+      };
+      const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
+      setExercises(prevExercises =>
+        prevExercises.map(exercise =>
+          exercise._id === id ? response.data : exercise
+        )
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error updating exercise:', error);
+      addNotification('Failed to update exercise', 'error');
+      throw error;
+    }
+  };
+
+  // Delete an exercise
+  const deleteExercise = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
+      setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
+      addNotification('Exercise deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      addNotification('Failed to delete exercise', 'error');
+      throw error;
+    }
+  };
+
+  // Add a workout plan
+  const addWorkoutPlan = async (plan) => {
+    try {
+      const planToSend = {
+        ...plan,
+        exercises: plan.exercises.map(exercise => 
+          typeof exercise === 'string' ? exercise : exercise._id
+        )
+      };
+
+      const response = await axios.post(`${API_URL}/workoutplans`, planToSend, getAuthConfig());
+      
+      const fullPlan = {
+        ...response.data,
+        exercises: await Promise.all(response.data.exercises.map(async (exerciseId) => {
+          if (typeof exerciseId === 'string') {
+            try {
+              const exerciseResponse = await axios.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
+              return exerciseResponse.data;
+            } catch (error) {
+              console.error(`Error fetching exercise ${exerciseId}:`, error);
+              return null;
+            }
+          }
+          return exerciseId;
+        }))
+      };
+
+      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan]);
+      addNotification('Workout plan added successfully', 'success');
+      return fullPlan;
+    } catch (error) {
+      console.error('Error adding workout plan:', error);
+      addNotification('Failed to add workout plan', 'error');
+      throw error;
+    }
+  };
+
+  // Update a workout plan
+  const updateWorkoutPlan = async (id, updatedPlan) => {
+    try {
+      if (!id) {
+        return addWorkoutPlan(updatedPlan);
+      }
+      const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
+      setWorkoutPlans(prevPlans =>
+        prevPlans.map(plan =>
+          plan._id === id ? response.data : plan
+        )
+      );
+      addNotification('Workout plan updated successfully', 'success');
+      return response.data;
+    } catch (error) {
+      console.error('Error updating workout plan:', error);
+      addNotification('Failed to update workout plan', 'error');
+      throw error;
+    }
+  };
+
+  // Delete a workout plan
+  const deleteWorkoutPlan = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
+      setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
+      // Update workouts to mark the plan as deleted instead of removing the association
+      setWorkoutHistory(prevHistory => 
+        prevHistory.map(workout => 
+          workout.plan && workout.plan._id === id 
+            ? { ...workout, planDeleted: true, planName: workout.planName || 'Deleted Plan' } 
+            : workout
+        )
+      );
+      addNotification('Workout plan deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting workout plan:', error);
+      addNotification('Failed to delete workout plan', 'error');
+      throw error;
+    }
+  };
+
+  // Add an exercise to a workout plan
+  const addExerciseToPlan = async (planId, exerciseId) => {
+    if (!planId || !exerciseId) {
+      throw new Error('Plan ID and Exercise ID are required');
+    }
+    console.log(`Attempting to add exercise ${exerciseId} to plan ${planId}`);
+    
+    const plan = workoutPlans.find(p => p._id === planId);
+    if (!plan) {
+      console.error('Plan not found');
+      addNotification('Plan not found', 'error');
+      return { success: false, error: 'Plan not found' };
+    }
+
+    if (plan.exercises.some(e => e._id === exerciseId)) {
+      console.log('Exercise is already in the workout plan');
+      addNotification('This exercise is already in the workout plan', 'info');
+      return { success: false, alreadyInPlan: true };
+    }
+
+    try {
+      const response = await axios.post(
+        `${API_URL}/workoutplans/${planId}/exercises`,
+        { exerciseId },
+        getAuthConfig()
+      );
+      
+      console.log('Server response:', response.data);
+      setWorkoutPlans(prevPlans =>
+        prevPlans.map(p =>
+          p._id === planId ? response.data : p
+        )
+      );
+      addNotification('Exercise added to plan successfully', 'success');
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error adding exercise to plan:', error);
+      addNotification(`Failed to add exercise to plan: ${error.response ? error.response.data.message : error.message}`, 'error');
+      return { success: false, error };
+    }
+  };
+
+  // Get the last workout for a given plan
+  const getLastWorkoutByPlan = useCallback(async (planId) => {
+    try {
+      const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        // No previous workout found, this is not an error
+        console.log('No previous workout found for this plan');
+        return null;
+      }
+      console.error('Error fetching last workout:', error);
+      addNotification('Failed to fetch last workout', 'error');
+      return null;
+    }
+  }, [API_URL, getAuthConfig, addNotification]);
+
+  const contextValue = useMemo(() => ({
+    workouts,
+    exercises,
+    workoutPlans,
+    workoutHistory,
+    addWorkout,
+    updateWorkout,
+    deleteWorkout,
+    addExercise,
+    updateExercise,
+    deleteExercise,
+    addWorkoutPlan,
+    updateWorkoutPlan,
+    deleteWorkoutPlan,
+    fetchWorkoutHistory,
+    fetchWorkoutPlans,
+    addExerciseToPlan,
+    getLastWorkoutByPlan
+  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan, fetchWorkoutPlans, fetchWorkoutHistory]);
+
+  return (
+    <GymContext.Provider value={contextValue}>
+      {children}
+    </GymContext.Provider>
+  );
+}
+
+export default GymProvider;
+```
+
+# src/context/AuthContext.jsx
+
+```jsx
+// src/context/AuthContext.jsx
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
+import { hostName } from './GymContext';
+
+const AuthContext = createContext();
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkLoggedIn = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          console.log('Checking logged in status with token');
+          const response = await axios.get(`${hostName}/api/auth/user`, {
+            headers: { 'x-auth-token': token }
+          });
+          console.log('User data received:', response.data);
+          setUser(response.data);
+        } catch (error) {
+          console.error('Error fetching user:', error);
+          localStorage.removeItem('token');
+        }
+      }
+      setLoading(false);
+    };
+
+    checkLoggedIn();
+  }, []);
+
+  const register = async (username, email, password) => {
+    try {
+      console.log('Attempting to register user:', username);
+      await axios.post(`${hostName}/api/auth/register`, { username, email, password });
+      console.log('Registration successful');
+      return true;
+    } catch (error) {
+      console.error('Registration error:', error.response?.data || error.message);
+      throw error;
+    }
+  };
+
+  const login = async (username, password) => {
+    try {
+      console.log('Attempting to log in user:', username);
+      const response = await axios.post(`${hostName}/api/auth/login`, { username, password });
+      console.log('Login response:', response.data);
+      localStorage.setItem('token', response.data.token);
+      setUser(response.data.user);
+      return response.data;
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+      throw error;
+    }
+  };
+
+  const logout = () => {
+    console.log('Logging out user');
+    localStorage.removeItem('token');
+    setUser(null);
+  };
+
+  const value = {
+    user,
+    register,
+    login,
+    logout,
+    loading
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export default AuthProvider;
 ```
 
 # src/assets/react.svg

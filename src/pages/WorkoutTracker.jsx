@@ -44,6 +44,48 @@ function WorkoutTracker() {
   const nodeRef = useRef(null);
 
   useEffect(() => {
+    const loadProgress = async () => {
+      try {
+        const progress = await updateProgress();
+        if (progress) {
+          setCurrentPlan(progress.plan);
+          setSets(progress.sets);
+          setCurrentExerciseIndex(progress.currentExerciseIndex);
+          setStartTime(new Date(progress.startTime));
+          setNotes(progress.notes);
+          setLastSetValues(progress.lastSetValues);
+        } else {
+          loadStoredData();
+        }
+      } catch (error) {
+        console.error('Error loading progress:', error);
+        addNotification('Error loading progress. Starting a new workout.', 'error');
+        loadStoredData();
+      }
+    };
+
+    loadProgress();
+  }, [updateProgress, addNotification]);
+
+  useEffect(() => {
+    const saveProgressInterval = setInterval(() => {
+      if (currentPlan) {
+        saveProgress({
+          plan: currentPlan,
+          sets,
+          currentExerciseIndex,
+          startTime: startTime.toISOString(),
+          notes,
+          lastSetValues,
+          lastUpdated: new Date().toISOString(),
+        });
+      }
+    }, 30000); // Save every 30 seconds
+
+    return () => clearInterval(saveProgressInterval);
+  }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress]);
+
+  useEffect(() => {
     loadStoredData();
   }, []);
 
@@ -170,7 +212,7 @@ function WorkoutTracker() {
     localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
   };
 
-  const handleSetComplete = () => {
+  const handleSetComplete = useCallback(() => {
     if (!weight || !reps) {
       addNotification('Please enter both weight and reps', 'error');
       return;
@@ -198,7 +240,18 @@ function WorkoutTracker() {
     addNotification('Set completed!', 'success');
     startRestTimer();
     updateProgression();
-  };
+
+    // Save progress after completing a set
+    saveProgress({
+      plan: currentPlan,
+      sets,
+      currentExerciseIndex,
+      startTime: startTime.toISOString(),
+      notes,
+      lastSetValues,
+      lastUpdated: new Date().toISOString(),
+    });
+  }, [weight, reps, currentExerciseIndex, isResting, currentPlan, sets, startTime, notes, lastSetValues, addNotification, saveProgress]);
 
   const startRestTimer = () => {
     setIsResting(true);
