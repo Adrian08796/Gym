@@ -182,20 +182,16 @@ function WorkoutTracker() {
   const fetchPreviousWorkout = async () => {
     setIsPreviousWorkoutLoading(true);
     try {
-      let lastWorkout;
-      if (currentPlan._id) {
-        lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
+      if (currentPlan && currentPlan._id) {
+        const lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
+        if (lastWorkout) {
+          setPreviousWorkout(lastWorkout);
+        } else {
+          console.log('No previous workout found for this plan');
+        }
+      } else {
+        console.log('No current plan or plan ID available');
       }
-      if (!lastWorkout) {
-        lastWorkout = workoutHistory.find(workout => 
-          workout.exercises.some(ex => 
-            currentPlan.exercises.some(planEx => 
-              planEx._id === ex.exercise._id
-            )
-          )
-        );
-      }
-      setPreviousWorkout(lastWorkout);
     } catch (error) {
       console.error('Error fetching previous workout:', error);
     } finally {
