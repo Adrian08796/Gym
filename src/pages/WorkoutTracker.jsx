@@ -240,6 +240,7 @@ function WorkoutTracker() {
       addNotification('Workout completed and saved!', 'success');
       await clearWorkout();
       resetWorkoutState();
+      clearLocalStorage();
       navigate('/');
     } catch (error) {
       console.error('Error saving workout:', error);
@@ -261,6 +262,7 @@ function WorkoutTracker() {
             try {
               await clearWorkout();
               resetWorkoutState();
+              clearLocalStorage();
               addNotification('Workout cancelled', 'info');
               setIsConfirmingCancel(false);
               navigate('/plans');
@@ -299,6 +301,15 @@ function WorkoutTracker() {
     setSkippedPauses(0);
     setProgression(0);
     setRequiredSets({});
+  };
+
+  const clearLocalStorage = () => {
+    localStorage.removeItem('currentPlan');
+    localStorage.removeItem('currentSets');
+    localStorage.removeItem('currentExerciseIndex');
+    localStorage.removeItem('workoutStartTime');
+    localStorage.removeItem('workoutNotes');
+    localStorage.removeItem('lastSetValues');
   };
 
   const formatTime = (seconds) => {

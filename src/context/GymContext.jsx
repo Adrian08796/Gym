@@ -383,13 +383,23 @@ export function GymProvider({ children }) {
     if (!user) return;
 
     try {
-      localStorage.removeItem('workoutProgress');
+      // Clear data from local storage
+      localStorage.removeItem('currentPlan');
+      localStorage.removeItem('currentSets');
+      localStorage.removeItem('currentExerciseIndex');
+      localStorage.removeItem('workoutStartTime');
+      localStorage.removeItem('workoutNotes');
+      localStorage.removeItem('lastSetValues');
+
+      // Clear progress from the database
       await axios.delete(`${API_URL}/workouts/progress`, getAuthConfig());
+      
       console.log('Workout cleared successfully');
       addNotification('Workout cleared', 'success');
     } catch (error) {
       console.error('Error clearing workout:', error);
       addNotification('Failed to clear workout', 'error');
+      throw error;
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 
