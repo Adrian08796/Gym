@@ -37,7 +37,7 @@ function WorkoutTracker() {
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
 
-  const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
+  const { addWorkout, getLastWorkoutByPlan, workoutHistory, saveProgress, updateProgress } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
