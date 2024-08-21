@@ -37,7 +37,7 @@ function WorkoutTracker() {
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
 
-  const { addWorkout, getLastWorkoutByPlan, workoutHistory, saveProgress, updateProgress, clearProgress } = useGymContext();
+  const { addWorkout, getLastWorkoutByPlan, workoutHistory, saveProgress, updateProgress, clearWorkout } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
@@ -297,21 +297,8 @@ function WorkoutTracker() {
     try {
       await addWorkout(completedWorkout);
       addNotification('Workout completed and saved!', 'success');
-      await clearProgress();
-      // Clear local state
-      setCurrentPlan(null);
-      setSets([]);
-      setNotes([]);
-      setStartTime(null);
-      setElapsedTime(0);
-      setLastSetValues({});
-      // Clear local storage
-      localStorage.removeItem('currentPlan');
-      localStorage.removeItem('currentSets');
-      localStorage.removeItem('currentExerciseIndex');
-      localStorage.removeItem('workoutStartTime');
-      localStorage.removeItem('workoutNotes');
-      localStorage.removeItem('lastSetValues');
+      await clearWorkout();
+      resetWorkoutState();
       navigate('/');
     } catch (error) {
       console.error('Error saving workout:', error);
@@ -320,7 +307,7 @@ function WorkoutTracker() {
   };
 
   const handleCancelWorkout = () => {
-    if (isConfirmingCancel) return; // Prevent multiple confirmation dialogs
+    if (isConfirmingCancel) return;
 
     setIsConfirmingCancel(true);
     addNotification(
@@ -329,17 +316,17 @@ function WorkoutTracker() {
       [
         {
           label: 'Yes, Cancel',
-          onClick: () => {
-            clearLocalStorage();
-            setCurrentPlan(null);
-            setSets([]);
-            setNotes([]);
-            setStartTime(null);
-            setElapsedTime(0);
-            setLastSetValues({});
-            addNotification('Workout cancelled', 'info');
-            setIsConfirmingCancel(false);
-            navigate('/plans'); // Navigate away after canceling
+          onClick: async () => {
+            try {
+              await clearWorkout();
+              resetWorkoutState();
+              addNotification('Workout cancelled', 'info');
+              setIsConfirmingCancel(false);
+              navigate('/plans');
+            } catch (error) {
+              console.error('Error cancelling workout:', error);
+              addNotification('Failed to cancel workout. Please try again.', 'error');
+            }
           },
         },
         {
@@ -349,17 +336,28 @@ function WorkoutTracker() {
           },
         },
       ],
-      0 // Set duration to 0 to prevent auto-dismissal
+      0
     );
   };
 
-  const clearLocalStorage = () => {
-    localStorage.removeItem('currentPlan');
-    localStorage.removeItem('currentSets');
-    localStorage.removeItem('currentExerciseIndex');
-    localStorage.removeItem('workoutStartTime');
-    localStorage.removeItem('workoutNotes');
-    localStorage.removeItem('lastSetValues');
+  const resetWorkoutState = () => {
+    setCurrentPlan(null);
+    setSets([]);
+    setNotes([]);
+    setStartTime(null);
+    setElapsedTime(0);
+    setLastSetValues({});
+    setCurrentExerciseIndex(0);
+    setWeight('');
+    setReps('');
+    setRestTime(60);
+    setIsResting(false);
+    setRemainingRestTime(0);
+    setPreviousWorkout(null);
+    setTotalPauseTime(0);
+    setSkippedPauses(0);
+    setProgression(0);
+    setRequiredSets({});
   };
 
   const formatTime = (seconds) => {

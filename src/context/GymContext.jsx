@@ -395,10 +395,11 @@ export function GymProvider({ children }) {
     }
   }, [user, API_URL, getAuthConfig, addNotification, saveProgress]);
 
-  const clearProgress = useCallback(async () => {
+  const clearWorkout = useCallback(async () => {
     if (!user) return;
 
     try {
+      // Clear local storage
       localStorage.removeItem('workoutProgress');
       localStorage.removeItem('currentPlan');
       localStorage.removeItem('currentSets');
@@ -407,13 +408,14 @@ export function GymProvider({ children }) {
       localStorage.removeItem('workoutNotes');
       localStorage.removeItem('lastSetValues');
 
+      // Clear progress from the database
       await axios.delete(`${API_URL}/workouts/progress`, getAuthConfig());
       
-      console.log('Progress cleared successfully');
-      addNotification('Workout progress cleared', 'success');
+      console.log('Workout cleared successfully');
+      addNotification('Workout cleared', 'success');
     } catch (error) {
-      console.error('Error clearing progress:', error);
-      addNotification('Failed to clear workout progress', 'error');
+      console.error('Error clearing workout:', error);
+      addNotification('Failed to clear workout', 'error');
       throw error;
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
@@ -438,7 +440,7 @@ export function GymProvider({ children }) {
     getLastWorkoutByPlan,
     saveProgress,
     updateProgress,
-    clearProgress
+    clearWorkout
   }), [
     workouts, 
     exercises, 
@@ -459,7 +461,7 @@ export function GymProvider({ children }) {
     getLastWorkoutByPlan,
     saveProgress,
     updateProgress,
-    clearProgress
+    clearWorkout
   ]);
 
   return (
