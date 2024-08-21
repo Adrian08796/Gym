@@ -31,11 +31,13 @@ function WorkoutTracker() {
   const [swipeDirection, setSwipeDirection] = useState(null);
   const [isExerciseDetailsOpen, setIsExerciseDetailsOpen] = useState(false);
   const [isExerciseOptionsOpen, setIsExerciseOptionsOpen] = useState(false);
+  const [isPreviousWorkoutOpen, setIsPreviousWorkoutOpen] = useState(false);
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
 
   const { 
     addWorkout, 
+    getLastWorkoutByPlan, 
     saveProgress, 
     clearWorkout,
     getExerciseHistory 
@@ -309,6 +311,7 @@ function WorkoutTracker() {
     setRestTime(60);
     setIsResting(false);
     setRemainingRestTime(0);
+    setPreviousWorkout(null);
     setTotalPauseTime(0);
     setSkippedPauses(0);
     setProgression(0);
