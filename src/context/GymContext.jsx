@@ -52,7 +52,7 @@ export function GymProvider({ children }) {
   }, [user, API_URL, getAuthConfig, addNotification]);
 
   const updateProgress = useCallback(async () => {
-    if(!user) return null;
+    if (!user) return null;
 
     try {
       // Check for active plan in the database
@@ -87,12 +87,12 @@ export function GymProvider({ children }) {
 
     // No progress data found
     return null;
-    } catch (error) {
-      console.error('Error updating progress:', error);
-      addNotification('Failed to update progress', 'error');
-      throw error;
-    }
-  }, [user, API_URL, getAuthConfig, addNotification, saveProgress]);
+  } catch (error) {
+    console.error('Error updating progress:', error);
+    addNotification('Failed to update progress', 'error');
+    throw error;
+  }
+}, [user, API_URL, getAuthConfig, addNotification, saveProgress]);
 
   const toTitleCase = (str) => {
     if (typeof str !== 'string') return str;
