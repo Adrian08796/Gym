@@ -183,11 +183,12 @@ function WorkoutTracker() {
     setIsPreviousWorkoutLoading(true);
     try {
       if (currentPlan && currentPlan._id) {
+        console.log('Fetching workout for plan ID:', currentPlan._id);
         const lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
         if (lastWorkout) {
           setPreviousWorkout(lastWorkout);
         } else {
-          console.log('No previous workout found for this plan');
+          console.log('No previous workout found for plan ID:', currentPlan._id);
         }
       } else {
         console.log('No current plan or plan ID available');
