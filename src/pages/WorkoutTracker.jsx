@@ -21,8 +21,6 @@ function WorkoutTracker() {
   const [isResting, setIsResting] = useState(false);
   const [remainingRestTime, setRemainingRestTime] = useState(0);
   const [notes, setNotes] = useState([]);
-  const [previousWorkout, setPreviousWorkout] = useState(null);
-  const [isPreviousWorkoutLoading, setIsPreviousWorkoutLoading] = useState(false);
   const [totalPauseTime, setTotalPauseTime] = useState(0);
   const [skippedPauses, setSkippedPauses] = useState(0);
   const [progression, setProgression] = useState(0);
@@ -40,9 +38,7 @@ function WorkoutTracker() {
   const { 
     addWorkout, 
     getLastWorkoutByPlan, 
-    workoutHistory, 
     saveProgress, 
-    updateProgress, 
     clearWorkout,
     getExerciseHistory 
   } = useGymContext();
@@ -51,13 +47,29 @@ function WorkoutTracker() {
   const navigate = useNavigate();
   const nodeRef = useRef(null);
 
+  seEffect(() => {
+    const saveInterval = setInterval(() => {
+      if (currentPlan) {
+        saveProgress({
+          plan: currentPlan,
+          sets,
+          currentExerciseIndex,
+          startTime,
+          notes,
+          lastSetValues,
+        });
+      }
+    }, 30000); // Save every 30 seconds
+
+    return () => clearInterval(saveInterval);
+  }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress]);
+
   useEffect(() => {
     const loadWorkout = async () => {
       const storedPlan = localStorage.getItem('currentPlan');
       if (storedPlan) {
         const plan = JSON.parse(storedPlan);
         setCurrentPlan(plan);
-        await fetchPreviousWorkout(plan._id);
         loadStoredData(plan);
       } else {
         addNotification('No workout plan selected', 'error');
@@ -67,22 +79,6 @@ function WorkoutTracker() {
 
     loadWorkout();
   }, [navigate, addNotification]);
-
-  const fetchPreviousWorkout = async (planId) => {
-    setIsPreviousWorkoutLoading(true);
-    try {
-      const lastWorkout = await getLastWorkoutByPlan(planId);
-      if (lastWorkout) {
-        setPreviousWorkout(lastWorkout);
-      } else {
-        console.log('No previous workout found for plan ID:', planId);
-      }
-    } catch (error) {
-      console.error('Error fetching previous workout:', error);
-    } finally {
-      setIsPreviousWorkoutLoading(false);
-    }
-  };
 
   const loadStoredData = (plan) => {
     const storedSets = localStorage.getItem('currentSets');
@@ -417,10 +413,6 @@ function WorkoutTracker() {
     setIsExerciseOptionsOpen(!isExerciseOptionsOpen);
   };
 
-  const togglePreviousWorkout = () => {
-    setIsPreviousWorkoutOpen(!isPreviousWorkoutOpen);
-  };
-
   const toggleCurrentSetLog = () => {
     setIsCurrentSetLogOpen(!isCurrentSetLogOpen);
   };
@@ -638,38 +630,43 @@ function WorkoutTracker() {
       </div>
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
-        <button 
-          onClick={togglePreviousWorkout}
-          className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
-        >
-          <span>Previous Exercise Performance</span>
-          {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
-        </button>
-        <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
-          {currentExercise && exerciseHistory[currentExercise._id] ? (
-            <div className="p-4">
-              <h4 className="text-lg font-semibold mb-2">{currentExercise.name} History</h4>
-              {exerciseHistory[currentExercise._id].map((workout, index) => (
-                <div key={index} className="mb-4">
-                  <p><strong>Date:</strong> {new Date(workout.date).toLocaleDateString()}</p>
-                  <ul className="list-disc pl-5">
-                    {workout.sets.map((set, setIndex) => (
-                      <li key={setIndex}>
-                        Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
-                      </li>
-                    ))}
-                  </ul>
-                  {workout.notes && (
-                    <p className="mt-2 italic">Notes: {workout.notes}</p>
-                  )}
-                </div>
+  <button 
+    onClick={togglePreviousWorkout}
+    className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
+  >
+    <span>Previous Workout Performance</span>
+    {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
+  </button>
+  <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
+    {isPreviousWorkoutLoading ? (
+      <p className="p-4">Loading previous workout data...</p>
+    ) : previousWorkout ? (
+      <div className="p-4">
+        <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
+        <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
+        {previousWorkout.exercises.map((exercise, index) => (
+          <div key={index} className="mb-4">
+            <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+              {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
+            </h4>
+            <ul className="list-disc pl-5">
+              {exercise.sets.map((set, setIndex) => (
+                <li key={setIndex}>
+                  Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
+                </li>
               ))}
-            </div>
-          ) : (
-            <p className="p-4">No previous data available for this exercise.</p>
-          )}
-        </div>
+            </ul>
+            {exercise.notes && (
+              <p className="mt-2 italic">Notes: {exercise.notes}</p>
+            )}
+          </div>
+        ))}
       </div>
+    ) : (
+      <p className="p-4">No previous workout data available for this plan. This will be your first workout!</p>
+    )}
+  </div>
+</div>
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
         <button 

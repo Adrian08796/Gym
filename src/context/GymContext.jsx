@@ -370,26 +370,6 @@ export function GymProvider({ children }) {
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 
-  const updateProgress = useCallback(async () => {
-    if (!user) return null;
-
-    try {
-      const dbResponse = await axios.get(`${API_URL}/workouts/progress`, getAuthConfig());
-      const dbProgress = dbResponse.data;
-
-      if (dbProgress) {
-        localStorage.setItem('workoutProgress', JSON.stringify(dbProgress));
-        return dbProgress;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error updating progress:', error);
-      addNotification('Failed to update progress', 'error');
-      return null;
-    }
-  }, [user, API_URL, getAuthConfig, addNotification]);
-
   const clearWorkout = useCallback(async () => {
     if (!user) return;
 
@@ -433,7 +413,6 @@ export function GymProvider({ children }) {
     addExerciseToPlan,
     getLastWorkoutByPlan,
     saveProgress,
-    updateProgress,
     clearWorkout,
     getExerciseHistory
   }), [
@@ -455,7 +434,6 @@ export function GymProvider({ children }) {
     addExerciseToPlan,
     getLastWorkoutByPlan,
     saveProgress,
-    updateProgress,
     clearWorkout,
     getExerciseHistory
   ]);
