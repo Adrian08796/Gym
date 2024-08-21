@@ -143,3 +143,6 @@ venv/
 *.merged
 
 # Local git configuration
+
+codebase.md
+.aidigestignore
