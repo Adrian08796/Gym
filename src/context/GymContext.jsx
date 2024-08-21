@@ -337,7 +337,7 @@ export function GymProvider({ children }) {
       return response.data;
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        console.log('No previous workout found for this plan');
+        console.log('No previous workout found for plan ID:', planId);
         return null;
       }
       console.error('Error fetching last workout:', error);

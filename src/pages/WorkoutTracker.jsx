@@ -189,6 +189,7 @@ function WorkoutTracker() {
           setPreviousWorkout(lastWorkout);
         } else {
           console.log('No previous workout found for plan ID:', currentPlan._id);
+          setPreviousWorkout(null);
         }
       } else {
         console.log('No current plan or plan ID available');
