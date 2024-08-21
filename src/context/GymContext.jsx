@@ -342,21 +342,6 @@ export function GymProvider({ children }) {
     }
   };
 
-  const getLastWorkoutByPlan = useCallback(async (planId) => {
-    try {
-      const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
-      return response.data;
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        console.log('No previous workout found for plan ID:', planId);
-        return null;
-      }
-      console.error('Error fetching last workout:', error);
-      addNotification('Failed to fetch last workout', 'error');
-      throw error;
-    }
-  }, [API_URL, getAuthConfig, addNotification]);
-
   const saveProgress = useCallback(async (progressData) => {
     if (!user) return;
 
@@ -411,7 +396,6 @@ export function GymProvider({ children }) {
     fetchWorkoutHistory,
     fetchWorkoutPlans,
     addExerciseToPlan,
-    getLastWorkoutByPlan,
     saveProgress,
     clearWorkout,
     getExerciseHistory
@@ -432,7 +416,6 @@ export function GymProvider({ children }) {
     fetchWorkoutHistory,
     fetchWorkoutPlans,
     addExerciseToPlan,
-    getLastWorkoutByPlan,
     saveProgress,
     clearWorkout,
     getExerciseHistory
