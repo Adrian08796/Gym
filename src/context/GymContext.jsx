@@ -369,7 +369,7 @@ export function GymProvider({ children }) {
 
   const clearWorkout = useCallback(async () => {
     if (!user) return;
-
+  
     try {
       // Clear data from local storage
       localStorage.removeItem('currentPlan');
@@ -378,7 +378,7 @@ export function GymProvider({ children }) {
       localStorage.removeItem('workoutStartTime');
       localStorage.removeItem('workoutNotes');
       localStorage.removeItem('lastSetValues');
-
+  
       // Clear progress from the database
       await axios.delete(`${API_URL}/workouts/progress`, getAuthConfig());
       
@@ -386,8 +386,8 @@ export function GymProvider({ children }) {
       addNotification('Workout cleared', 'success');
     } catch (error) {
       console.error('Error clearing workout:', error);
-      addNotification('Failed to clear workout', 'error');
-      throw error;
+      addNotification('Failed to clear workout: ' + (error.response?.data?.message || error.message), 'error');
+      throw error; // Re-throw the error so the component can handle it
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 
