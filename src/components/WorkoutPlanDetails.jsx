@@ -3,17 +3,23 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
+import { formatTime } from '../utils/timeUtils';
 
 function WorkoutPlanDetails() {
   const { id } = useParams();
-  const { workoutPlans, updateWorkoutPlan, deleteWorkoutPlan } = useGymContext();
+  const { workoutPlans, updateWorkoutPlan, deleteWorkoutPlan, getLastWorkoutForPlan } = useGymContext();
   const [plan, setPlan] = useState(null);
+  const [lastWorkout, setLastWorkout] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const foundPlan = workoutPlans.find(p => p._id === id);
     setPlan(foundPlan);
-  }, [id, workoutPlans]);
+
+    if (foundPlan) {
+      getLastWorkoutForPlan(foundPlan._id).then(setLastWorkout);
+    }
+  }, [id, workoutPlans, getLastWorkoutForPlan]);
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this workout plan?')) {
@@ -54,6 +60,15 @@ function WorkoutPlanDetails() {
         <button onClick={handleDelete} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
           Delete Plan
         </button>
+        
+        {lastWorkout && (
+        <div className="mt-4">
+          <h3 className="text-xl font-semibold">Last Workout</h3>
+          <p>Date: {new Date(lastWorkout.startTime).toLocaleDateString()}</p>
+          <p>Duration: {formatTime((new Date(lastWorkout.endTime) - new Date(lastWorkout.startTime)) / 1000)}</p>
+          {/* Add more details as needed */}
+        </div>
+      )}
       </div>
     </div>
   );
