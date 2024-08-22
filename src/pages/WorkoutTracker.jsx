@@ -1,6 +1,6 @@
 // src/pages/WorkoutTracker.jsx
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
@@ -12,6 +12,45 @@ import PreviousWorkoutDisplay from '../components/PreviousWorkoutDisplay';
 import { formatTime } from '../utils/timeUtils';
 import './WorkoutTracker.css';
 
+// Custom hook for managing rest timer
+const useRestTimer = (initialTime, onTimerEnd) => {
+  const [isResting, setIsResting] = useState(false);
+  const [remainingRestTime, setRemainingRestTime] = useState(initialTime);
+
+  useEffect(() => {
+    let timer;
+    if (isResting && remainingRestTime > 0) {
+      timer = setInterval(() => {
+        setRemainingRestTime(prevTime => prevTime - 1);
+      }, 1000);
+    } else if (remainingRestTime === 0 && isResting) {
+      setIsResting(false);
+      onTimerEnd();
+      
+      // Trigger vibration if supported
+      if ('vibrate' in navigator) {
+        navigator.vibrate(1000); // Vibrate for 1 second
+      }
+
+      // Show alert
+      alert('Rest time is over. Ready for the next set!');
+    }
+    return () => clearInterval(timer);
+  }, [isResting, remainingRestTime, onTimerEnd]);
+
+  const startRestTimer = useCallback(() => {
+    setIsResting(true);
+    setRemainingRestTime(initialTime);
+  }, [initialTime]);
+
+  const skipRestTimer = useCallback(() => {
+    setIsResting(false);
+    setRemainingRestTime(0);
+  }, []);
+
+  return { isResting, remainingRestTime, startRestTimer, skipRestTimer };
+};
+
 function WorkoutTracker() {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -21,8 +60,6 @@ function WorkoutTracker() {
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
   const [restTime, setRestTime] = useState(60);
-  const [isResting, setIsResting] = useState(false);
-  const [remainingRestTime, setRemainingRestTime] = useState(0);
   const [notes, setNotes] = useState([]);
   const [totalPauseTime, setTotalPauseTime] = useState(0);
   const [skippedPauses, setSkippedPauses] = useState(0);
@@ -54,26 +91,34 @@ function WorkoutTracker() {
   const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan?._id, API_URL, addNotification);
+
+  const { isResting, remainingRestTime, startRestTimer, skipRestTimer } = useRestTimer(restTime, () => {
+    addNotification('Rest time is over. Ready for the next set!', 'info');
+  });
   
-  // Fetch exercise history when currentPlan changes
   // Fetch exercise history when currentPlan changes
   useEffect(() => {
     const fetchExerciseHistory = async () => {
       if (currentPlan && currentPlan.exercises) {
-        const historyPromises = currentPlan.exercises.map(exercise => 
-          getExerciseHistory(exercise._id)
-        );
-        const histories = await Promise.all(historyPromises);
-        const historyMap = {};
-        currentPlan.exercises.forEach((exercise, index) => {
-          historyMap[exercise._id] = histories[index];
-        });
-        setExerciseHistory(historyMap);
+        try {
+          const historyPromises = currentPlan.exercises.map(exercise => 
+            getExerciseHistory(exercise._id)
+          );
+          const histories = await Promise.all(historyPromises);
+          const historyMap = {};
+          currentPlan.exercises.forEach((exercise, index) => {
+            historyMap[exercise._id] = histories[index];
+          });
+          setExerciseHistory(historyMap);
+        } catch (error) {
+          console.error('Error fetching exercise history:', error);
+          addNotification('Failed to fetch exercise history', 'error');
+        }
       }
     };
 
     fetchExerciseHistory();
-  }, [currentPlan, getExerciseHistory]);
+  }, [currentPlan, getExerciseHistory, addNotification]);
 
   useEffect(() => {
     const loadWorkout = async () => {
@@ -117,13 +162,13 @@ function WorkoutTracker() {
           });
         } catch (error) {
           console.error('Failed to save progress:', error);
-          // Optionally, you can add a notification here or handle the error in another way
+          addNotification('Failed to save progress', 'error');
         }
       }
     }, 30000); // Save every 30 seconds
   
     return () => clearInterval(saveInterval);
-  }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress]);
+  }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress, addNotification]);
 
   useEffect(() => {
     let timer;
@@ -136,33 +181,13 @@ function WorkoutTracker() {
   }, [startTime]);
 
   useEffect(() => {
-    let restTimer;
-    if (isResting && remainingRestTime > 0) {
-      restTimer = setInterval(() => {
-        setRemainingRestTime(prevTime => prevTime - 1);
-      }, 1000);
-    } else if (remainingRestTime === 0 && isResting) {
-      setIsResting(false);
-      addNotification('Rest time is over. Ready for the next set!', 'info');
-    }
-    return () => clearInterval(restTimer);
-  }, [isResting, remainingRestTime, addNotification]);
-
-  useEffect(() => {
     saveDataToLocalStorage();
   }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
 
-  const loadStoredData = (plan) => {
+  const loadStoredData = useCallback((plan) => {
     const storedSets = localStorage.getItem('currentSets');
     const storedIndex = localStorage.getItem('currentExerciseIndex');
     const storedStartTime = localStorage.getItem('workoutStartTime');
-      if (storedStartTime) {
-        setStartTime(new Date(storedStartTime));
-      } else {
-        const newStartTime = new Date();
-        setStartTime(newStartTime);
-        localStorage.setItem('workoutStartTime', newStartTime.toISOString());
-      }
     const storedNotes = localStorage.getItem('workoutNotes');
     const storedLastSetValues = localStorage.getItem('lastSetValues');
 
@@ -199,9 +224,9 @@ function WorkoutTracker() {
     if (storedLastSetValues) {
       setLastSetValues(JSON.parse(storedLastSetValues));
     }
-  };
+  }, []);
 
-  const saveDataToLocalStorage = () => {
+  const saveDataToLocalStorage = useCallback(() => {
     if (currentPlan) {
       localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
     }
@@ -211,9 +236,9 @@ function WorkoutTracker() {
     localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
     localStorage.setItem('workoutNotes', JSON.stringify(notes));
     localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
-  };
+  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
 
-  const handleSetComplete = async () => {
+  const handleSetComplete = useCallback(async () => {
     if (!weight || !reps) {
       addNotification('Please enter both weight and reps', 'error');
       return;
@@ -240,7 +265,6 @@ function WorkoutTracker() {
       [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
     }));
   
-    // Save progress to database
     try {
       await saveProgress({
         plan: currentPlan._id,
@@ -251,7 +275,7 @@ function WorkoutTracker() {
           ...lastSetValues,
           [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
         },
-        startTime: startTime.toISOString() // Add this line
+        startTime: startTime.toISOString()
       });
       addNotification('Set completed and progress saved!', 'success');
     } catch (error) {
@@ -261,64 +285,52 @@ function WorkoutTracker() {
   
     startRestTimer();
     updateProgression();
-  };
+  }, [weight, reps, isResting, currentExerciseIndex, currentPlan, lastSetValues, startTime, saveProgress, addNotification, startRestTimer]);
 
-  const startRestTimer = () => {
-    setIsResting(true);
-    setRemainingRestTime(restTime);
-  };
-
-  const skipRestTimer = () => {
-    setIsResting(false);
-    setRemainingRestTime(0);
-    setSkippedPauses(prevSkipped => prevSkipped + 1);
-    addNotification('Rest timer skipped', 'info');
-  };
-
-  const updateProgression = () => {
+  const updateProgression = useCallback(() => {
     const totalExercises = currentPlan.exercises.length;
     const completedExercises = currentPlan.exercises.filter((exercise, index) => 
       isExerciseComplete(exercise._id, sets[index] || [])
     ).length;
     const newProgression = (completedExercises / totalExercises) * 100;
     setProgression(newProgression);
-  };
+  }, [currentPlan, sets, isExerciseComplete]);
 
-  const handleFinishWorkout = async () => {
-    // Ensure the final exercise progress is saved
-    await saveProgress({
-      plan: currentPlan._id,
-      exercise: currentPlan.exercises[currentExerciseIndex]._id,
-      sets: sets[currentExerciseIndex] || [],
-      notes: notes[currentExerciseIndex],
-      currentExerciseIndex,
-      lastSetValues,
-      startTime: startTime.toISOString()
-    });
-  
-    // Recalculate the final progression
-    const finalProgression = calculateProgress();
-  
-    const endTime = new Date();
-    const completedWorkout = {
-      plan: currentPlan._id,
-      planName: currentPlan.name,
-      exercises: currentPlan.exercises.map((exercise, index) => ({
-        exercise: exercise._id,
-        sets: sets[index] || [],
-        completedAt: sets[index] && sets[index].length > 0 
-          ? sets[index][sets[index].length - 1].completedAt 
-          : endTime.toISOString(),
-        notes: notes[index]
-      })),
-      startTime: startTime.toISOString(),
-      endTime: endTime.toISOString(),
-      totalPauseTime,
-      skippedPauses,
-      progression: finalProgression  // Use the recalculated progression
-    };
-    
+  const handleFinishWorkout = useCallback(async () => {
     try {
+      // Ensure the final exercise progress is saved
+      await saveProgress({
+        plan: currentPlan._id,
+        exercise: currentPlan.exercises[currentExerciseIndex]._id,
+        sets: sets[currentExerciseIndex] || [],
+        notes: notes[currentExerciseIndex],
+        currentExerciseIndex,
+        lastSetValues,
+        startTime: startTime.toISOString()
+      });
+    
+      // Recalculate the final progression
+      const finalProgression = calculateProgress();
+    
+      const endTime = new Date();
+      const completedWorkout = {
+        plan: currentPlan._id,
+        planName: currentPlan.name,
+        exercises: currentPlan.exercises.map((exercise, index) => ({
+          exercise: exercise._id,
+          sets: sets[index] || [],
+          completedAt: sets[index] && sets[index].length > 0 
+            ? sets[index][sets[index].length - 1].completedAt 
+            : endTime.toISOString(),
+          notes: notes[index]
+        })),
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        totalPauseTime,
+        skippedPauses,
+        progression: finalProgression
+      };
+      
       await addWorkout(completedWorkout);
       await clearWorkout();
       addNotification('Workout completed and saved!', 'success');
@@ -329,9 +341,9 @@ function WorkoutTracker() {
       console.error('Error saving workout:', error);
       addNotification('Failed to save workout. Please try again.', 'error');
     }
-  };
+  }, [currentPlan, currentExerciseIndex, sets, notes, lastSetValues, startTime, totalPauseTime, skippedPauses, saveProgress, addWorkout, clearWorkout, addNotification, navigate, calculateProgress]);
 
-  const handleCancelWorkout = () => {
+  const handleCancelWorkout = useCallback(() => {
     if (isConfirmingCancel) return;
 
     setIsConfirmingCancel(true);
@@ -364,9 +376,9 @@ function WorkoutTracker() {
       ],
       0
     );
-  };
+  }, [isConfirmingCancel, clearWorkout, addNotification, navigate]);
 
-  const resetWorkoutState = () => {
+  const resetWorkoutState = useCallback(() => {
     setCurrentPlan(null);
     setSets([]);
     setNotes([]);
@@ -377,30 +389,28 @@ function WorkoutTracker() {
     setWeight('');
     setReps('');
     setRestTime(60);
-    setIsResting(false);
-    setRemainingRestTime(0);
     setTotalPauseTime(0);
     setSkippedPauses(0);
     setProgression(0);
     setRequiredSets({});
-  };
+  }, []);
 
-  const clearLocalStorage = () => {
+  const clearLocalStorage = useCallback(() => {
     localStorage.removeItem('currentPlan');
     localStorage.removeItem('currentSets');
     localStorage.removeItem('currentExerciseIndex');
     localStorage.removeItem('workoutStartTime');
     localStorage.removeItem('workoutNotes');
     localStorage.removeItem('lastSetValues');
-  };
+  }, []);
 
-  const safelyFormatNumber = (value, decimalPlaces = 2) => {
+  const safelyFormatNumber = useCallback((value, decimalPlaces = 2) => {
     return typeof value === 'number' ? value.toFixed(decimalPlaces) : '0.00';
-  };
+  }, []);
 
-  const isExerciseComplete = (exerciseId, exerciseSets) => {
+  const isExerciseComplete = useCallback((exerciseId, exerciseSets) => {
     return exerciseSets.length >= (requiredSets[exerciseId] || 0);
-  };
+  }, [requiredSets]);
 
   const calculateProgress = useCallback(() => {
     if (!currentPlan || !currentPlan.exercises || currentPlan.exercises.length === 0) {
@@ -411,17 +421,17 @@ function WorkoutTracker() {
       isExerciseComplete(exercise._id, sets[index] || [])
     ).length;
     return (completedExercises / totalExercises) * 100;
-  }, [currentPlan, sets, isExerciseComplete, requiredSets]);
+  }, [currentPlan, sets, isExerciseComplete]);
 
-  const handleNoteChange = (index, value) => {
+  const handleNoteChange = useCallback((index, value) => {
     setNotes(prevNotes => {
       const newNotes = [...prevNotes];
       newNotes[index] = value;
       return newNotes;
     });
-  };
+  }, []);
 
-  const handleExerciseChange = async (newIndex) => {
+  const handleExerciseChange = useCallback(async (newIndex) => {
     try {
       await saveProgress({
         plan: currentPlan._id,
@@ -430,7 +440,7 @@ function WorkoutTracker() {
         notes: notes[currentExerciseIndex],
         currentExerciseIndex,
         lastSetValues,
-        startTime: startTime.toISOString() // Add this line
+        startTime: startTime.toISOString()
       });
     } catch (error) {
       console.error('Error saving progress before switching exercise:', error);
@@ -448,18 +458,18 @@ function WorkoutTracker() {
       setWeight('');
       setReps('');
     }
-  };
+  }, [currentPlan, currentExerciseIndex, sets, notes, lastSetValues, startTime, saveProgress, addNotification]);
 
-  const handleTouchStart = (e) => {
+  const handleTouchStart = useCallback((e) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
-  };
+  }, []);
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = useCallback((e) => {
     setTouchEnd(e.targetTouches[0].clientX);
-  };
+  }, []);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     if (!touchStart || !touchEnd) return;
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > 50;
@@ -473,23 +483,23 @@ function WorkoutTracker() {
 
     setTouchStart(null);
     setTouchEnd(null);
-  };
+  }, [touchStart, touchEnd, currentExerciseIndex, currentPlan, handleExerciseChange]);
 
-  const toggleExerciseDetails = () => {
+  const toggleExerciseDetails = useCallback(() => {
     setIsExerciseDetailsOpen(!isExerciseDetailsOpen);
-  };
+  }, [isExerciseDetailsOpen]);
 
-  const toggleExerciseOptions = () => {
+  const toggleExerciseOptions = useCallback(() => {
     setIsExerciseOptionsOpen(!isExerciseOptionsOpen);
-  };
+  }, [isExerciseOptionsOpen]);
 
-  const togglePreviousWorkout = () => {
+  const togglePreviousWorkout = useCallback(() => {
     setIsPreviousWorkoutOpen(!isPreviousWorkoutOpen);
-  };
+  }, [isPreviousWorkoutOpen]);
 
-  const toggleCurrentSetLog = () => {
+  const toggleCurrentSetLog = useCallback(() => {
     setIsCurrentSetLogOpen(!isCurrentSetLogOpen);
-  };
+  }, [isCurrentSetLogOpen]);
 
   if (isLoading) {
     return <div className="text-center mt-8">Loading workout...</div>;
