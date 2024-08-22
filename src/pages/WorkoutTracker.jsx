@@ -144,6 +144,9 @@ function WorkoutTracker() {
     } else if (remainingRestTime === 0 && isResting) {
       setIsResting(false);
       addNotification('Rest time is over. Ready for the next set!', 'info');
+      if (canVibrate()) {
+        vibrateDevice();
+      }
     }
     return () => clearInterval(restTimer);
   }, [isResting, remainingRestTime, addNotification]);
@@ -673,6 +676,7 @@ function WorkoutTracker() {
                     >
                       Skip Rest
                     </button>
+                    <p className="text-sm mt-2">Your device will vibrate when the rest time is over (if supported).</p>
                   </div>
                 )}
               </>
