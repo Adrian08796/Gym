@@ -285,6 +285,20 @@ function WorkoutTracker() {
   };
 
   const handleFinishWorkout = async () => {
+    // Ensure the final exercise progress is saved
+    await saveProgress({
+      plan: currentPlan._id,
+      exercise: currentPlan.exercises[currentExerciseIndex]._id,
+      sets: sets[currentExerciseIndex] || [],
+      notes: notes[currentExerciseIndex],
+      currentExerciseIndex,
+      lastSetValues,
+      startTime: startTime.toISOString()
+    });
+  
+    // Recalculate the final progression
+    const finalProgression = calculateProgress();
+  
     const endTime = new Date();
     const completedWorkout = {
       plan: currentPlan._id,
@@ -301,12 +315,12 @@ function WorkoutTracker() {
       endTime: endTime.toISOString(),
       totalPauseTime,
       skippedPauses,
-      progression
+      progression: finalProgression  // Use the recalculated progression
     };
     
     try {
       await addWorkout(completedWorkout);
-      await clearWorkout(); // This should clear the saved progress in the database
+      await clearWorkout();
       addNotification('Workout completed and saved!', 'success');
       resetWorkoutState();
       clearLocalStorage();
