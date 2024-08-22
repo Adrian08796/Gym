@@ -384,7 +384,7 @@ function WorkoutTracker() {
     setCurrentExerciseIndex(0);
     setWeight('');
     setReps('');
-    setRestTime(60);
+    setRestTime(null);
     setIsResting(false);
     setRemainingRestTime(0);
     setTotalPauseTime(0);
