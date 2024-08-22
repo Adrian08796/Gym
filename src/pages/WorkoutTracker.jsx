@@ -7,7 +7,6 @@ import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { CSSTransition, SwitchTransition } from 'react-transition-group';
 import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings, FiX } from 'react-icons/fi';
-import axios from 'axios';
 import { usePreviousWorkout } from '../hooks/usePreviousWorkout';
 import PreviousWorkoutDisplay from '../components/PreviousWorkoutDisplay';
 import { formatTime } from '../utils/timeUtils';
@@ -38,6 +37,7 @@ function WorkoutTracker() {
   const [isPreviousWorkoutOpen, setIsPreviousWorkoutOpen] = useState(false);
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { 
     addWorkout, 
@@ -57,15 +57,27 @@ function WorkoutTracker() {
   // Load workout data from local storage or API
   useEffect(() => {
     const loadWorkout = async () => {
+      setIsLoading(true);
       const storedPlan = localStorage.getItem('currentPlan');
       if (storedPlan) {
-        const plan = JSON.parse(storedPlan);
-        setCurrentPlan(plan);
-        loadStoredData(plan);
+        try {
+          const plan = JSON.parse(storedPlan);
+          if (plan && plan.exercises && plan.exercises.length > 0) {
+            setCurrentPlan(plan);
+            loadStoredData(plan);
+          } else {
+            throw new Error('Invalid plan data');
+          }
+        } catch (error) {
+          console.error('Error loading workout plan:', error);
+          addNotification('Error loading workout plan. Please select a new plan.', 'error');
+          navigate('/plans');
+        }
       } else {
         addNotification('No workout plan selected', 'error');
         navigate('/plans');
       }
+      setIsLoading(false);
     };
 
     loadWorkout();
@@ -219,6 +231,26 @@ function WorkoutTracker() {
     // ... (implementation remains the same)
   };
 
+  const currentExercise = currentPlan?.exercises[currentExerciseIndex];
+
+  if (isLoading) {
+    return <div className="text-center mt-8">Loading workout...</div>;
+  }
+
+  if (!currentPlan || !currentExercise) {
+    return (
+      <div className="text-center mt-8">
+        <p>No workout plan or exercises found. Please select a plan.</p>
+        <button
+          onClick={() => navigate('/plans')}
+          className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Go to Plans
+        </button>
+      </div>
+    );
+  }
+
   // Render function
   return (
     <div 
@@ -237,10 +269,6 @@ function WorkoutTracker() {
         </button>
         <h2 className="text-3xl font-bold text-center">Workout Tracker</h2>
         <h3 className="text-xl text-center mt-2">{currentPlan.name}</h3>
-      </div>
-      
-      <div className="mb-4 text-lg text-center">
-        Elapsed Time: {formatTime(elapsedTime)}
       </div>
 
       <div className="mb-4">
