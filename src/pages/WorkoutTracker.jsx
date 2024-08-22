@@ -9,6 +9,7 @@ import { CSSTransition, SwitchTransition } from 'react-transition-group';
 import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings, FiX } from 'react-icons/fi';
 import { usePreviousWorkout } from '../hooks/usePreviousWorkout';
 import PreviousWorkoutDisplay from '../components/PreviousWorkoutDisplay';
+import useRestTimer from '../hooks/useRestTimer';
 import { formatTime } from '../utils/timeUtils';
 import './WorkoutTracker.css';
 
@@ -38,6 +39,7 @@ function WorkoutTracker() {
   const [isLoading, setIsLoading] = useState(true);
   const [exerciseHistory, setExerciseHistory] = useState({});
 
+
   const { 
     addWorkout, 
     saveProgress, 
@@ -53,48 +55,9 @@ function WorkoutTracker() {
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan?._id, API_URL, addNotification);
 
-  const { isResting, remainingRestTime, startRestTimer, skipRestTimer } = useRestTimer(restTime, () => {
+  const { isResting, remainingRestTime, startRestTimer, skipRestTimer } = useRestTimer(restTime, useRestTimer) (() => {
     addNotification('Rest time is over. Ready for the next set!', 'info');
   });
-
-  // Custom hook for managing rest timer
-const useRestTimer = (initialTime, onTimerEnd) => {
-  const [isResting, setIsResting] = useState(false);
-  const [remainingRestTime, setRemainingRestTime] = useState(initialTime);
-
-  useEffect(() => {
-    let timer;
-    if (isResting && remainingRestTime > 0) {
-      timer = setInterval(() => {
-        setRemainingRestTime(prevTime => prevTime - 1);
-      }, 1000);
-    } else if (remainingRestTime === 0 && isResting) {
-      setIsResting(false);
-      onTimerEnd();
-      
-      // Trigger vibration if supported
-      if ('vibrate' in navigator) {
-        navigator.vibrate(1000); // Vibrate for 1 second
-      }
-
-      // Show alert
-      alert('Rest time is over. Ready for the next set!');
-    }
-    return () => clearInterval(timer);
-  }, [isResting, remainingRestTime, onTimerEnd]);
-
-  const startRestTimer = useCallback(() => {
-    setIsResting(true);
-    setRemainingRestTime(initialTime);
-  }, [initialTime]);
-
-  const skipRestTimer = useCallback(() => {
-    setIsResting(false);
-    setRemainingRestTime(0);
-  }, []);
-
-  return { isResting, remainingRestTime, startRestTimer, skipRestTimer };
-};
   
   // Fetch exercise history when currentPlan changes
   useEffect(() => {
