@@ -38,6 +38,7 @@ function WorkoutTracker() {
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [exerciseHistory, setExerciseHistory] = useState({});
 
   const { 
     addWorkout, 
@@ -52,8 +53,9 @@ function WorkoutTracker() {
 
   const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
 
-  const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan, API_URL, addNotification);
+  const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan?._id, API_URL, addNotification);
   
+  // Fetch exercise history when currentPlan changes
   // Fetch exercise history when currentPlan changes
   useEffect(() => {
     const fetchExerciseHistory = async () => {
@@ -658,13 +660,14 @@ function WorkoutTracker() {
         onClick={togglePreviousWorkout}
         className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
       >
-        <span>Previous Exercise Performance</span>
+        <span>Previous Workout and Exercise Performance</span>
         {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
       </button>
       <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
         <PreviousWorkoutDisplay 
-          exerciseHistory={exerciseHistory[currentExercise?._id] || []}
-          isLoading={false}
+          previousWorkout={previousWorkout}
+          exerciseHistory={exerciseHistory[currentExercise?._id]}
+          isLoading={isPreviousWorkoutLoading}
           formatTime={formatTime}
           darkMode={darkMode}
         />
