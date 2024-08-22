@@ -20,7 +20,7 @@ const PreviousWorkoutDisplay = ({ previousWorkout, isLoading, formatTime, darkMo
           <h4 className="text-lg font-medium">
             {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
           </h4>
-          {exercise.sets && (
+          {exercise.sets && exercise.sets.length > 0 ? (
             <ul className="list-disc pl-5">
               {exercise.sets.map((set, setIndex) => (
                 <li key={setIndex}>
@@ -28,6 +28,8 @@ const PreviousWorkoutDisplay = ({ previousWorkout, isLoading, formatTime, darkMo
                 </li>
               ))}
             </ul>
+          ) : (
+            <p>No sets recorded for this exercise.</p>
           )}
           {exercise.notes && (
             <p className="mt-2 italic">Notes: {exercise.notes}</p>
