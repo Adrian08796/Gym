@@ -9,7 +9,7 @@ import { CSSTransition, SwitchTransition } from 'react-transition-group';
 import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings, FiX } from 'react-icons/fi';
 import { usePreviousWorkout } from '../hooks/usePreviousWorkout';
 import PreviousWorkoutDisplay from '../components/PreviousWorkoutDisplay';
-import useRestTimer from '../hooks/useRestTimer';
+import useRestTimer from '../hooks/useRestTimer.js';
 import { formatTime } from '../utils/timeUtils';
 import './WorkoutTracker.css';
 
@@ -55,7 +55,7 @@ function WorkoutTracker() {
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan?._id, API_URL, addNotification);
 
-  const { isResting, remainingRestTime, startRestTimer, skipRestTimer } = useRestTimer(restTime, useRestTimer) (() => {
+  const { isResting, remainingRestTime, startRestTimer, skipRestTimer } = useRestTimer(restTime, () => {
     addNotification('Rest time is over. Ready for the next set!', 'info');
   });
   
