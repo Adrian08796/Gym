@@ -315,6 +315,8 @@ venv/
 
 # Local git configuration
 
+codebase.md
+.aidigestignore
 ```
 
 # .eslintrc.cjs
@@ -349,6 +351,8 @@ module.exports = {
 ```
 node_modules/
 public/
+dist/
+codebase.md
 ```
 
 # src/main.jsx
@@ -418,43 +422,43 @@ function AppContent() {
   }
 
   return (
-    <Router>
-      <div className={`App min-h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
-        <Header />
-        <main className="flex-grow bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-          <div className="container mx-auto px-4 py-8">
-            <Routes>
-              <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-              <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
-              <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
-              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-              <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
-              <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
-              <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
-              <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
-              <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
-              <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
-            </Routes>
-          </div>
-        </main>
-        <Footer />
-        <NotificationToast />
-      </div>
-    </Router>
+    <div className={`App min-h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
+      <Header />
+      <main className="flex-grow bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <div className="container mx-auto px-4 py-8">
+          <Routes>
+            <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+            <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+            <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
+            <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
+            <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
+            <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
+            <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
+            <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
+          </Routes>
+        </div>
+      </main>
+      <Footer />
+      <NotificationToast />
+    </div>
   );
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <GymProvider>
-          <ThemeProvider>
-            <AppContent />
-          </ThemeProvider>
-        </GymProvider>
-      </NotificationProvider>
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <NotificationProvider>
+          <GymProvider>
+            <ThemeProvider>
+              <AppContent />
+            </ThemeProvider>
+          </GymProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
@@ -512,7 +516,7 @@ export default App;
 # src/pages/WorkoutTracker.jsx
 
 ```jsx
-// src/pages/WorkoutTracker.jsx 
+// src/pages/WorkoutTracker.jsx
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -535,8 +539,6 @@ function WorkoutTracker() {
   const [isResting, setIsResting] = useState(false);
   const [remainingRestTime, setRemainingRestTime] = useState(0);
   const [notes, setNotes] = useState([]);
-  const [previousWorkout, setPreviousWorkout] = useState(null);
-  const [isPreviousWorkoutLoading, setIsPreviousWorkoutLoading] = useState(false);
   const [totalPauseTime, setTotalPauseTime] = useState(0);
   const [skippedPauses, setSkippedPauses] = useState(0);
   const [progression, setProgression] = useState(0);
@@ -551,25 +553,109 @@ function WorkoutTracker() {
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
 
-  const { addWorkout, getLastWorkoutByPlan, workoutHistory } = useGymContext();
+  const { 
+    addWorkout, 
+    saveProgress, 
+    clearWorkout,
+    getExerciseHistory 
+  } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
   const nodeRef = useRef(null);
 
   useEffect(() => {
-    loadStoredData();
-  }, []);
+    const saveInterval = setInterval(() => {
+      if (currentPlan) {
+        saveProgress({
+          plan: currentPlan,
+          sets,
+          currentExerciseIndex,
+          startTime,
+          notes,
+          lastSetValues,
+        });
+      }
+    }, 30000); // Save every 30 seconds
+
+    return () => clearInterval(saveInterval);
+  }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress]);
 
   useEffect(() => {
-    if (currentPlan) {
-      fetchPreviousWorkout();
+    const loadWorkout = async () => {
+      const storedPlan = localStorage.getItem('currentPlan');
+      if (storedPlan) {
+        const plan = JSON.parse(storedPlan);
+        setCurrentPlan(plan);
+        loadStoredData(plan);
+      } else {
+        addNotification('No workout plan selected', 'error');
+        navigate('/plans');
+      }
+    };
+
+    loadWorkout();
+  }, [navigate, addNotification]);
+
+  const loadStoredData = (plan) => {
+    const storedSets = localStorage.getItem('currentSets');
+    const storedIndex = localStorage.getItem('currentExerciseIndex');
+    const storedStartTime = localStorage.getItem('workoutStartTime');
+    const storedNotes = localStorage.getItem('workoutNotes');
+    const storedLastSetValues = localStorage.getItem('lastSetValues');
+
+    const initialRequiredSets = {};
+    plan.exercises.forEach(exercise => {
+      initialRequiredSets[exercise._id] = exercise.requiredSets || 3;
+    });
+    setRequiredSets(initialRequiredSets);
+
+    if (storedSets) {
+      setSets(JSON.parse(storedSets));
+    } else {
+      setSets(plan.exercises.map(() => []));
     }
-  }, [currentPlan]);
+    
+    if (storedIndex !== null) {
+      setCurrentExerciseIndex(parseInt(storedIndex, 10));
+    }
+
+    if (storedStartTime) {
+      setStartTime(new Date(storedStartTime));
+    } else {
+      const newStartTime = new Date();
+      setStartTime(newStartTime);
+      localStorage.setItem('workoutStartTime', newStartTime.toISOString());
+    }
+
+    if (storedNotes) {
+      setNotes(JSON.parse(storedNotes));
+    } else {
+      setNotes(plan.exercises.map(() => ''));
+    }
+
+    if (storedLastSetValues) {
+      setLastSetValues(JSON.parse(storedLastSetValues));
+    }
+  };
 
   useEffect(() => {
-    saveDataToLocalStorage();
-  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
+    const fetchExerciseHistory = async () => {
+      if (currentPlan) {
+        const historyPromises = currentPlan.exercises.map(exercise => 
+          getExerciseHistory(exercise._id)
+        );
+        const histories = await Promise.all(historyPromises);
+        const historyMap = {};
+        currentPlan.exercises.forEach((exercise, index) => {
+          historyMap[exercise._id] = histories[index];
+        });
+        setExerciseHistory(historyMap);
+      }
+    };
+
+    fetchExerciseHistory();
+  }, [currentPlan, getExerciseHistory]);
 
   useEffect(() => {
     let timer;
@@ -594,83 +680,9 @@ function WorkoutTracker() {
     return () => clearInterval(restTimer);
   }, [isResting, remainingRestTime, addNotification]);
 
-  const loadStoredData = useCallback(() => {
-    const storedPlan = localStorage.getItem('currentPlan');
-    const storedSets = localStorage.getItem('currentSets');
-    const storedIndex = localStorage.getItem('currentExerciseIndex');
-    const storedStartTime = localStorage.getItem('workoutStartTime');
-    const storedNotes = localStorage.getItem('workoutNotes');
-    const storedLastSetValues = localStorage.getItem('lastSetValues');
-
-    if (storedPlan) {
-      try {
-        const parsedPlan = JSON.parse(storedPlan);
-        setCurrentPlan(parsedPlan);
-        
-        const initialRequiredSets = {};
-        parsedPlan.exercises.forEach(exercise => {
-          initialRequiredSets[exercise._id] = exercise.requiredSets || 3;
-        });
-        setRequiredSets(initialRequiredSets);
-
-        if (storedSets) {
-          setSets(JSON.parse(storedSets));
-        } else {
-          setSets(parsedPlan.exercises.map(() => []));
-        }
-        
-        if (storedIndex !== null) {
-          setCurrentExerciseIndex(parseInt(storedIndex, 10));
-        }
-
-        if (storedStartTime) {
-          setStartTime(new Date(storedStartTime));
-        } else {
-          const newStartTime = new Date();
-          setStartTime(newStartTime);
-          localStorage.setItem('workoutStartTime', newStartTime.toISOString());
-        }
-
-        if (storedNotes) {
-          setNotes(JSON.parse(storedNotes));
-        } else {
-          setNotes(parsedPlan.exercises.map(() => ''));
-        }
-
-        if (storedLastSetValues) {
-          setLastSetValues(JSON.parse(storedLastSetValues));
-        }
-      } catch (error) {
-        console.error('Error parsing stored data:', error);
-        clearLocalStorage();
-        addNotification('Error loading workout data. Starting a new workout.', 'error');
-      }
-    }
-  }, [addNotification]);
-
-  const fetchPreviousWorkout = async () => {
-    setIsPreviousWorkoutLoading(true);
-    try {
-      let lastWorkout;
-      if (currentPlan._id) {
-        lastWorkout = await getLastWorkoutByPlan(currentPlan._id);
-      }
-      if (!lastWorkout) {
-        lastWorkout = workoutHistory.find(workout => 
-          workout.exercises.some(ex => 
-            currentPlan.exercises.some(planEx => 
-              planEx._id === ex.exercise._id
-            )
-          )
-        );
-      }
-      setPreviousWorkout(lastWorkout);
-    } catch (error) {
-      console.error('Error fetching previous workout:', error);
-    } finally {
-      setIsPreviousWorkoutLoading(false);
-    }
-  };
+  useEffect(() => {
+    saveDataToLocalStorage();
+  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
 
   const saveDataToLocalStorage = () => {
     if (currentPlan) {
@@ -682,6 +694,10 @@ function WorkoutTracker() {
     localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
     localStorage.setItem('workoutNotes', JSON.stringify(notes));
     localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
+  };
+
+  const togglePreviousWorkout = () => {
+    setIsPreviousWorkoutOpen(prev => !prev);
   };
 
   const handleSetComplete = () => {
@@ -758,6 +774,8 @@ function WorkoutTracker() {
     try {
       await addWorkout(completedWorkout);
       addNotification('Workout completed and saved!', 'success');
+      await clearWorkout();
+      resetWorkoutState();
       clearLocalStorage();
       navigate('/');
     } catch (error) {
@@ -767,7 +785,7 @@ function WorkoutTracker() {
   };
 
   const handleCancelWorkout = () => {
-    if (isConfirmingCancel) return; // Prevent multiple confirmation dialogs
+    if (isConfirmingCancel) return;
 
     setIsConfirmingCancel(true);
     addNotification(
@@ -776,17 +794,18 @@ function WorkoutTracker() {
       [
         {
           label: 'Yes, Cancel',
-          onClick: () => {
-            clearLocalStorage();
-            setCurrentPlan(null);
-            setSets([]);
-            setNotes([]);
-            setStartTime(null);
-            setElapsedTime(0);
-            setLastSetValues({});
-            addNotification('Workout cancelled', 'info');
-            setIsConfirmingCancel(false);
-            navigate('/plans'); // Navigate away after canceling
+          onClick: async () => {
+            try {
+              await clearWorkout();
+              resetWorkoutState();
+              clearLocalStorage();
+              addNotification('Workout cancelled', 'info');
+              setIsConfirmingCancel(false);
+              navigate('/plans');
+            } catch (error) {
+              console.error('Error cancelling workout:', error);
+              addNotification('Failed to cancel workout. Please try again.', 'error');
+            }
           },
         },
         {
@@ -796,8 +815,28 @@ function WorkoutTracker() {
           },
         },
       ],
-      0 // Set duration to 0 to prevent auto-dismissal
+      0
     );
+  };
+
+  const resetWorkoutState = () => {
+    setCurrentPlan(null);
+    setSets([]);
+    setNotes([]);
+    setStartTime(null);
+    setElapsedTime(0);
+    setLastSetValues({});
+    setCurrentExerciseIndex(0);
+    setWeight('');
+    setReps('');
+    setRestTime(60);
+    setIsResting(false);
+    setRemainingRestTime(0);
+    setPreviousWorkout(null);
+    setTotalPauseTime(0);
+    setSkippedPauses(0);
+    setProgression(0);
+    setRequiredSets({});
   };
 
   const clearLocalStorage = () => {
@@ -895,10 +934,6 @@ function WorkoutTracker() {
     setIsExerciseOptionsOpen(!isExerciseOptionsOpen);
   };
 
-  const togglePreviousWorkout = () => {
-    setIsPreviousWorkoutOpen(!isPreviousWorkoutOpen);
-  };
-
   const toggleCurrentSetLog = () => {
     setIsCurrentSetLogOpen(!isCurrentSetLogOpen);
   };
@@ -911,7 +946,7 @@ function WorkoutTracker() {
         <p className="mb-4">To start a new workout, please select a workout plan from the Workout Plans page.</p>
         <button
           onClick={() => navigate('/plans')}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4rounded focus:outline-none focus:shadow-outline"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         >
           Go to Workout Plans
         </button>
@@ -1116,43 +1151,43 @@ function WorkoutTracker() {
       </div>
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
-        <button 
-          onClick={togglePreviousWorkout}
-          className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
-        >
-          <span>Previous Workout Performance</span>
-          {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
-        </button>
-        <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
-          {isPreviousWorkoutLoading ? (
-            <p className="p-4">Loading previous workout data...</p>
-          ) : previousWorkout ? (
-            <div className="p-4">
-              <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
-              <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
-              {previousWorkout.exercises.map((exercise, index) => (
-                <div key={index} className="mb-4">
-                  <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
-                    {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
-                  </h4>
-                  <ul className="list-disc pl-5">
-                    {exercise.sets.map((set, setIndex) => (
-                      <li key={setIndex}>
-                        Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
-                      </li>
-                    ))}
-                  </ul>
-                  {exercise.notes && (
-                    <p className="mt-2 italic">Notes: {exercise.notes}</p>
-                  )}
-                </div>
+  <button 
+    onClick={togglePreviousWorkout}  // Keep this if you're still using the toggle functionality
+    className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
+  >
+    <span>Previous Exercise Performance</span>
+    {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
+  </button>
+  <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
+    {isPreviousWorkoutLoading ? (
+      <p className="p-4">Loading previous workout data...</p>
+    ) : previousWorkout ? (
+      <div className="p-4">
+        <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
+        <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
+        {previousWorkout.exercises.map((exercise, index) => (
+          <div key={index} className="mb-4">
+            <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+              {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
+            </h4>
+            <ul className="list-disc pl-5">
+              {exercise.sets.map((set, setIndex) => (
+                <li key={setIndex}>
+                  Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
+                </li>
               ))}
-            </div>
-          ) : (
-            <p className="p-4">No previous workout data available for this plan.</p>
-          )}
-        </div>
+            </ul>
+            {exercise.notes && (
+              <p className="mt-2 italic">Notes: {exercise.notes}</p>
+            )}
+          </div>
+        ))}
       </div>
+    ) : (
+      <p className="p-4">No previous workout data available for this plan. This will be your first workout!</p>
+    )}
+  </div>
+</div>
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
         <button 
@@ -1806,7 +1841,7 @@ function WorkoutPlans() {
         </div>
       )}
 
-<div className="mb-4 flex flex-wrap items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between">
         <button
           onClick={() => {
             setShowForm(!showForm);
@@ -2178,6 +2213,619 @@ function ExerciseLibrary() {
 }
 
 export default ExerciseLibrary;
+```
+
+# src/context/ThemeContext.jsx
+
+```jsx
+// src/context/ThemeContext.jsx
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+const ThemeContext = createContext();
+
+export const useTheme = () => useContext(ThemeContext);
+
+export const ThemeProvider = ({ children }) => {
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(isDarkMode);
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode);
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  return (
+    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+```
+
+# src/context/NotificationContext.jsx
+
+```jsx
+// src/context/NotificationContext.jsx
+
+import React, { createContext, useContext, useState, useCallback } from 'react';
+
+const NotificationContext = createContext();
+
+export const useNotification = () => useContext(NotificationContext);
+
+export function NotificationProvider({ children }) {
+  const [notifications, setNotifications] = useState([]);
+
+  const addNotification = useCallback((message, type = 'info', actions = [], duration = 5000) => {
+    const id = Date.now() + Math.random();
+    setNotifications(prev => [...prev, { id, message, type, actions }]);
+    if (duration > 0) {
+      setTimeout(() => removeNotification(id), duration);
+    }
+  }, []);
+
+  const removeNotification = useCallback((id) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  }, []);
+
+  const contextValue = {
+    notifications,
+    addNotification,
+    removeNotification
+  };
+
+  return (
+    <NotificationContext.Provider value={contextValue}>
+      {children}
+    </NotificationContext.Provider>
+  );
+}
+```
+
+# src/context/GymContext.jsx
+
+```jsx
+// src/context/GymContext.jsx
+
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import axios from 'axios';
+import { useAuth } from './AuthContext';
+import { useNotification } from './NotificationContext';
+
+export const hostName = 'https://walrus-app-lqhsg.ondigitalocean.app/backend';
+
+const GymContext = createContext();
+
+export function useGymContext() {
+  return useContext(GymContext);
+}
+
+export function GymProvider({ children }) {
+  const [workouts, setWorkouts] = useState([]);
+  const [exercises, setExercises] = useState([]);
+  const [workoutPlans, setWorkoutPlans] = useState([]);
+  const [workoutHistory, setWorkoutHistory] = useState([]);
+  const { user } = useAuth();
+  const { addNotification } = useNotification();
+  
+  const API_URL = `${hostName}/api`;
+
+  const getAuthConfig = useCallback(() => {
+    const token = localStorage.getItem('token');
+    return {
+      headers: { 'x-auth-token': token }
+    };
+  }, []);
+
+  const toTitleCase = (str) => {
+    if (typeof str !== 'string') return str;
+    return str.replace(
+      /\w\S*/g,
+      function(txt) {
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+      }
+    );
+  };
+
+  const getExerciseHistory = useCallback(async (exerciseId) => {
+    try {
+      const response = await axios.get(`${API_URL}/workouts/exercise-history/${exerciseId}`, getAuthConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching exercise history:', error);
+      addNotification('Failed to fetch exercise history', 'error');
+      return [];
+    }
+  }, [API_URL, getAuthConfig, addNotification]);
+
+  const fetchWorkoutHistory = useCallback(async () => {
+    if (user) {
+      try {
+        const response = await axios.get(`${API_URL}/workouts/user`, getAuthConfig());
+        setWorkoutHistory(response.data);
+      } catch (error) {
+        console.error('Error fetching workout history:', error);
+        addNotification('Failed to fetch workout history', 'error');
+      }
+    }
+  }, [user, addNotification, API_URL, getAuthConfig]);
+
+  const fetchExercises = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/exercises`, getAuthConfig());
+      const formattedExercises = response.data.map(exercise => ({
+        ...exercise,
+        name: toTitleCase(exercise.name),
+        description: toTitleCase(exercise.description),
+        target: Array.isArray(exercise.target) 
+          ? exercise.target.map(toTitleCase) 
+          : toTitleCase(exercise.target)
+      }));
+      setExercises(formattedExercises);
+    } catch (error) {
+      console.error('Error fetching exercises:', error);
+      addNotification('Failed to fetch exercises', 'error');
+    }
+  }, [API_URL, getAuthConfig, addNotification]);
+
+  const fetchWorkoutPlans = useCallback(async () => {
+    if (user) {
+      try {
+        const response = await axios.get(`${API_URL}/workoutplans`, getAuthConfig());
+        const plansWithFullExerciseDetails = await Promise.all(response.data.map(async (plan) => {
+          const fullExercises = await Promise.all(plan.exercises.map(async (exercise) => {
+            if (!exercise.description || !exercise.imageUrl) {
+              const fullExercise = await axios.get(`${API_URL}/exercises/${exercise._id}`, getAuthConfig());
+              return fullExercise.data;
+            }
+            return exercise;
+          }));
+          return { ...plan, exercises: fullExercises };
+        }));
+        setWorkoutPlans(plansWithFullExerciseDetails);
+        return plansWithFullExerciseDetails;
+      } catch (error) {
+        console.error('Error fetching workout plans:', error);
+        addNotification('Failed to fetch workout plans', 'error');
+        return [];
+      }
+    }
+    return [];
+  }, [user, API_URL, getAuthConfig, addNotification]);
+
+  useEffect(() => {
+    if (user) {
+      fetchWorkoutHistory();
+      fetchExercises();
+      fetchWorkoutPlans();
+    }
+  }, [user, fetchWorkoutHistory, fetchExercises, fetchWorkoutPlans]);
+
+  const addWorkout = async (workout) => {
+    try {
+      console.log('Sending workout data:', JSON.stringify(workout, null, 2));
+      const response = await axios.post(`${API_URL}/workouts`, workout, getAuthConfig());
+      console.log('Server response:', response.data);
+      setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
+      setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
+      addNotification('Workout added successfully', 'success');
+    } catch (error) {
+      console.error('Error adding workout:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
+      addNotification('Failed to add workout', 'error');
+      throw error;
+    }
+  };
+
+  const updateWorkout = async (id, updatedWorkout) => {
+    try {
+      const response = await axios.put(`${API_URL}/workouts/${id}`, updatedWorkout, getAuthConfig());
+      setWorkouts(prevWorkouts =>
+        prevWorkouts.map(workout =>
+          workout._id === id ? response.data : workout
+        )
+      );
+      setWorkoutHistory(prevHistory =>
+        prevHistory.map(workout =>
+          workout._id === id ? response.data : workout
+        )
+      );
+      addNotification('Workout updated successfully', 'success');
+      return response.data;
+    } catch (error) {
+      console.error('Error updating workout:', error);
+      addNotification('Failed to update workout', 'error');
+      throw error;
+    }
+  };
+
+  const deleteWorkout = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/workouts/${id}`, getAuthConfig());
+      setWorkouts(prevWorkouts => prevWorkouts.filter(workout => workout._id !== id));
+      setWorkoutHistory(prevHistory => prevHistory.filter(workout => workout._id !== id));
+      addNotification('Workout deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting workout:', error);
+      addNotification('Failed to delete workout', 'error');
+      throw error;
+    }
+  };
+
+  const addExercise = async (exercise) => {
+    try {
+      const exerciseWithTitleCase = {
+        ...exercise,
+        name: toTitleCase(exercise.name),
+        description: toTitleCase(exercise.description),
+        target: toTitleCase(exercise.target)
+      };
+      const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
+      setExercises(prevExercises => [...prevExercises, response.data]);
+      return response.data;
+    } catch (error) {
+      console.error('Error adding exercise:', error);
+      addNotification('Failed to add exercise', 'error');
+      throw error;
+    }
+  };
+
+  const updateExercise = async (id, updatedExercise) => {
+    try {
+      const exerciseWithTitleCase = {
+        ...updatedExercise,
+        name: toTitleCase(updatedExercise.name),
+        description: toTitleCase(updatedExercise.description),
+        target: toTitleCase(updatedExercise.target)
+      };
+      const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
+      setExercises(prevExercises =>
+        prevExercises.map(exercise =>
+          exercise._id === id ? response.data : exercise
+        )
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error updating exercise:', error);
+      addNotification('Failed to update exercise', 'error');
+      throw error;
+    }
+  };
+
+  const deleteExercise = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
+      setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
+      addNotification('Exercise deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      addNotification('Failed to delete exercise', 'error');
+      throw error;
+    }
+  };
+
+  const addWorkoutPlan = async (plan) => {
+    try {
+      const planToSend = {
+        ...plan,
+        exercises: plan.exercises.map(exercise => 
+          typeof exercise === 'string' ? exercise : exercise._id
+        )
+      };
+
+      const response = await axios.post(`${API_URL}/workoutplans`, planToSend, getAuthConfig());
+      
+      const fullPlan = {
+        ...response.data,
+        exercises: await Promise.all(response.data.exercises.map(async (exerciseId) => {
+          if (typeof exerciseId === 'string') {
+            try {
+              const exerciseResponse = await axios.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
+              return exerciseResponse.data;
+            } catch (error) {
+              console.error(`Error fetching exercise ${exerciseId}:`, error);
+              return null;
+            }
+          }
+          return exerciseId;
+        }))
+      };
+
+      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan]);
+      addNotification('Workout plan added successfully', 'success');
+      return fullPlan;
+    } catch (error) {
+      console.error('Error adding workout plan:', error);
+      addNotification('Failed to add workout plan', 'error');
+      throw error;
+    }
+  };
+
+  const updateWorkoutPlan = async (id, updatedPlan) => {
+    try {
+      if (!id) {
+        return addWorkoutPlan(updatedPlan);
+      }
+      const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
+      setWorkoutPlans(prevPlans =>
+        prevPlans.map(plan =>
+          plan._id === id ? response.data : plan
+        )
+      );
+      addNotification('Workout plan updated successfully', 'success');
+      return response.data;
+    } catch (error) {
+      console.error('Error updating workout plan:', error);
+      addNotification('Failed to update workout plan', 'error');
+      throw error;
+    }
+  };
+
+  const deleteWorkoutPlan = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
+      setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
+      setWorkoutHistory(prevHistory => 
+        prevHistory.map(workout => 
+          workout.plan && workout.plan._id === id 
+            ? { ...workout, planDeleted: true, planName: workout.planName || 'Deleted Plan' } 
+            : workout
+        )
+      );
+      addNotification('Workout plan deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting workout plan:', error);
+      addNotification('Failed to delete workout plan', 'error');
+      throw error;
+    }
+  };
+
+  const addExerciseToPlan = async (planId, exerciseId) => {
+    if (!planId || !exerciseId) {
+      throw new Error('Plan ID and Exercise ID are required');
+    }
+    console.log(`Attempting to add exercise ${exerciseId} to plan ${planId}`);
+    
+    const plan = workoutPlans.find(p => p._id === planId);
+    if (!plan) {
+      console.error('Plan not found');
+      addNotification('Plan not found', 'error');
+      return { success: false, error: 'Plan not found' };
+    }
+
+    if (plan.exercises.some(e => e._id === exerciseId)) {
+      console.log('Exercise is already in the workout plan');
+      addNotification('This exercise is already in the workout plan', 'info');
+      return { success: false, alreadyInPlan: true };
+    }
+
+    try {
+      const response = await axios.post(
+        `${API_URL}/workoutplans/${planId}/exercises`,
+        { exerciseId },
+        getAuthConfig()
+      );
+      
+      console.log('Server response:', response.data);
+      setWorkoutPlans(prevPlans =>
+        prevPlans.map(p =>
+          p._id === planId ? response.data : p
+        )
+      );
+      addNotification('Exercise added to plan successfully', 'success');
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Error adding exercise to plan:', error);
+      addNotification(`Failed to add exercise to plan: ${error.response ? error.response.data.message : error.message}`, 'error');
+      return { success: false, error };
+    }
+  };
+
+  const saveProgress = useCallback(async (progressData) => {
+    if (!user) return;
+
+    try {
+      await axios.post(`${API_URL}/workouts/progress`, progressData, getAuthConfig());
+      localStorage.setItem('workoutProgress', JSON.stringify(progressData));
+      console.log('Progress saved successfully');
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      addNotification('Failed to save progress', 'error');
+    }
+  }, [user, API_URL, getAuthConfig, addNotification]);
+
+  const clearWorkout = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      // Clear data from local storage
+      localStorage.removeItem('currentPlan');
+      localStorage.removeItem('currentSets');
+      localStorage.removeItem('currentExerciseIndex');
+      localStorage.removeItem('workoutStartTime');
+      localStorage.removeItem('workoutNotes');
+      localStorage.removeItem('lastSetValues');
+
+      // Clear progress from the database
+      await axios.delete(`${API_URL}/workouts/progress`, getAuthConfig());
+      
+      console.log('Workout cleared successfully');
+      addNotification('Workout cleared', 'success');
+    } catch (error) {
+      console.error('Error clearing workout:', error);
+      addNotification('Failed to clear workout', 'error');
+      throw error;
+    }
+  }, [user, API_URL, getAuthConfig, addNotification]);
+
+  const contextValue = useMemo(() => ({
+    workouts,
+    exercises,
+    workoutPlans,
+    workoutHistory,
+    addWorkout,
+    updateWorkout,
+    deleteWorkout,
+    addExercise,
+    updateExercise,
+    deleteExercise,
+    addWorkoutPlan,
+    updateWorkoutPlan,
+    deleteWorkoutPlan,
+    fetchWorkoutHistory,
+    fetchWorkoutPlans,
+    addExerciseToPlan,
+    saveProgress,
+    clearWorkout,
+    getExerciseHistory
+  }), [
+    workouts, 
+    exercises, 
+    workoutPlans, 
+    workoutHistory, 
+    addWorkout,
+    updateWorkout,
+    deleteWorkout,
+    addExercise,
+    updateExercise,
+    deleteExercise,
+    addWorkoutPlan,
+    updateWorkoutPlan,
+    deleteWorkoutPlan,
+    fetchWorkoutHistory,
+    fetchWorkoutPlans,
+    addExerciseToPlan,
+    saveProgress,
+    clearWorkout,
+    getExerciseHistory
+  ]);
+
+  return (
+    <GymContext.Provider value={contextValue}>
+      {children}
+    </GymContext.Provider>
+  );
+}
+
+export default GymProvider;
+```
+
+# src/context/AuthContext.jsx
+
+```jsx
+// src/context/AuthContext.jsx
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
+import { hostName } from './GymContext';
+
+const AuthContext = createContext();
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkLoggedIn = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          console.log('Checking logged in status with token');
+          const response = await axios.get(`${hostName}/api/auth/user`, {
+            headers: { 'x-auth-token': token }
+          });
+          console.log('User data received:', response.data);
+          setUser(response.data);
+        } catch (error) {
+          console.error('Error fetching user:', error);
+          localStorage.removeItem('token');
+        }
+      }
+      setLoading(false);
+    };
+
+    checkLoggedIn();
+  }, []);
+
+  const register = async (username, email, password) => {
+    try {
+      console.log('Attempting to register user:', username);
+      await axios.post(`${hostName}/api/auth/register`, { username, email, password });
+      console.log('Registration successful');
+      return true;
+    } catch (error) {
+      console.error('Registration error:', error.response?.data || error.message);
+      throw error;
+    }
+  };
+
+  const login = async (username, password) => {
+    try {
+      console.log('Attempting to log in user:', username);
+      const response = await axios.post(`${hostName}/api/auth/login`, { username, password });
+      console.log('Login response:', response.data);
+      localStorage.setItem('token', response.data.token);
+      setUser(response.data.user);
+      return response.data;
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+      throw error;
+    }
+  };
+
+  const logout = () => {
+    console.log('Logging out user');
+    localStorage.removeItem('token');
+    setUser(null);
+  };
+
+  const value = {
+    user,
+    register,
+    login,
+    logout,
+    loading
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export default AuthProvider;
 ```
 
 # src/components/WorkoutPlanSelector.jsx
@@ -4278,582 +4926,6 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
 }
 
 export default AddExerciseForm;
-```
-
-# src/context/ThemeContext.jsx
-
-```jsx
-// src/context/ThemeContext.jsx
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
-const ThemeContext = createContext();
-
-export const useTheme = () => useContext(ThemeContext);
-
-export const ThemeProvider = ({ children }) => {
-  const [darkMode, setDarkMode] = useState(false);
-
-  useEffect(() => {
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(isDarkMode);
-  }, []);
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode);
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
-
-  return (
-    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-};
-```
-
-# src/context/NotificationContext.jsx
-
-```jsx
-// src/context/NotificationContext.jsx
-
-import React, { createContext, useContext, useState, useCallback } from 'react';
-
-const NotificationContext = createContext();
-
-export const useNotification = () => useContext(NotificationContext);
-
-export function NotificationProvider({ children }) {
-  const [notifications, setNotifications] = useState([]);
-
-  const addNotification = useCallback((message, type = 'info', actions = [], duration = 5000) => {
-    const id = Date.now() + Math.random();
-    setNotifications(prev => [...prev, { id, message, type, actions }]);
-    if (duration > 0) {
-      setTimeout(() => removeNotification(id), duration);
-    }
-  }, []);
-
-  const removeNotification = useCallback((id) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
-  }, []);
-
-  const contextValue = {
-    notifications,
-    addNotification,
-    removeNotification
-  };
-
-  return (
-    <NotificationContext.Provider value={contextValue}>
-      {children}
-    </NotificationContext.Provider>
-  );
-}
-```
-
-# src/context/GymContext.jsx
-
-```jsx
-// src/context/GymContext.jsx
-
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import axios from 'axios';
-import { useAuth } from './AuthContext';
-import { useNotification } from './NotificationContext';
-
-// Update this line to use HTTPS and your DigitalOcean app URL
-// export const hostName = 'http://192.168.178.42:3000';
-export const hostName = 'https://walrus-app-lqhsg.ondigitalocean.app/backend';
-
-const GymContext = createContext();
-
-export function useGymContext() {
-  return useContext(GymContext);
-}
-
-export function GymProvider({ children }) {
-  const [workouts, setWorkouts] = useState([]);
-  const [exercises, setExercises] = useState([]);
-  const [workoutPlans, setWorkoutPlans] = useState([]);
-  const [workoutHistory, setWorkoutHistory] = useState([]);
-  const { user } = useAuth();
-  const { addNotification } = useNotification();
-  
-  const API_URL = `${hostName}/api`;
-
-  const getAuthConfig = useCallback(() => {
-    const token = localStorage.getItem('token');
-    return {
-      headers: { 'x-auth-token': token }
-    };
-  }, []);
-
-  const toTitleCase = (str) => {
-    if (typeof str !== 'string') return str;
-    return str.replace(
-      /\w\S*/g,
-      function(txt) {
-        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-      }
-    );
-  };
-
-  // Fetch workout history
-  const fetchWorkoutHistory = useCallback(async () => {
-    if (user) {
-      try {
-        const response = await axios.get(`${API_URL}/workouts/user`, getAuthConfig());
-        setWorkoutHistory(response.data);
-      } catch (error) {
-        console.error('Error fetching workout history:', error);
-        addNotification('Failed to fetch workout history', 'error');
-      }
-    }
-  }, [user, addNotification, API_URL, getAuthConfig]);
-
-  // Fetch exercises
-  const fetchExercises = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API_URL}/exercises`, getAuthConfig());
-      const formattedExercises = response.data.map(exercise => ({
-        ...exercise,
-        name: toTitleCase(exercise.name),
-        description: toTitleCase(exercise.description),
-        target: Array.isArray(exercise.target) 
-          ? exercise.target.map(toTitleCase) 
-          : toTitleCase(exercise.target)
-      }));
-      setExercises(formattedExercises);
-    } catch (error) {
-      console.error('Error fetching exercises:', error);
-      addNotification('Failed to fetch exercises', 'error');
-    }
-  }, [API_URL, getAuthConfig, addNotification]);
-
-  // Fetch workout plans
-  const fetchWorkoutPlans = useCallback(async () => {
-    if (user) {
-      try {
-        const response = await axios.get(`${API_URL}/workoutplans`, getAuthConfig());
-        const plansWithFullExerciseDetails = await Promise.all(response.data.map(async (plan) => {
-          const fullExercises = await Promise.all(plan.exercises.map(async (exercise) => {
-            if (!exercise.description || !exercise.imageUrl) {
-              const fullExercise = await axios.get(`${API_URL}/exercises/${exercise._id}`, getAuthConfig());
-              return fullExercise.data;
-            }
-            return exercise;
-          }));
-          return { ...plan, exercises: fullExercises };
-        }));
-        setWorkoutPlans(plansWithFullExerciseDetails);
-        return plansWithFullExerciseDetails;
-      } catch (error) {
-        console.error('Error fetching workout plans:', error);
-        addNotification('Failed to fetch workout plans', 'error');
-        return [];
-      }
-    }
-    return [];
-  }, [user, API_URL, getAuthConfig, addNotification]);
-
-  useEffect(() => {
-    if (user) {
-      fetchWorkoutHistory();
-      fetchExercises();
-      fetchWorkoutPlans();
-    }
-  }, [user, fetchWorkoutHistory, fetchExercises, fetchWorkoutPlans]);
-
-  // Add a workout (updated to include notes)
-  const addWorkout = async (workout) => {
-    try {
-      console.log('Sending workout data:', JSON.stringify(workout, null, 2));
-      const response = await axios.post(`${API_URL}/workouts`, workout, getAuthConfig());
-      console.log('Server response:', response.data);
-      setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
-      setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
-      addNotification('Workout added successfully', 'success');
-    } catch (error) {
-      console.error('Error adding workout:', error);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-        console.error('Response headers:', error.response.headers);
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-      } else {
-        console.error('Error setting up request:', error.message);
-      }
-      addNotification('Failed to add workout', 'error');
-      throw error;
-    }
-  };
-
-  // Update a workout
-  const updateWorkout = async (id, updatedWorkout) => {
-    try {
-      const response = await axios.put(`${API_URL}/workouts/${id}`, updatedWorkout, getAuthConfig());
-      setWorkouts(prevWorkouts =>
-        prevWorkouts.map(workout =>
-          workout._id === id ? response.data : workout
-        )
-      );
-      setWorkoutHistory(prevHistory =>
-        prevHistory.map(workout =>
-          workout._id === id ? response.data : workout
-        )
-      );
-      addNotification('Workout updated successfully', 'success');
-      return response.data;
-    } catch (error) {
-      console.error('Error updating workout:', error);
-      addNotification('Failed to update workout', 'error');
-      throw error;
-    }
-  };
-
-  // Delete a workout
-  const deleteWorkout = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/workouts/${id}`, getAuthConfig());
-      setWorkouts(prevWorkouts => prevWorkouts.filter(workout => workout._id !== id));
-      setWorkoutHistory(prevHistory => prevHistory.filter(workout => workout._id !== id));
-      addNotification('Workout deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting workout:', error);
-      addNotification('Failed to delete workout', 'error');
-      throw error;
-    }
-  };
-
-  // Add an exercise
-  const addExercise = async (exercise) => {
-    try {
-      const exerciseWithTitleCase = {
-        ...exercise,
-        name: toTitleCase(exercise.name),
-        description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target)
-      };
-      const response = await axios.post(`${API_URL}/exercises`, exerciseWithTitleCase, getAuthConfig());
-      setExercises(prevExercises => [...prevExercises, response.data]);
-      return response.data;
-    } catch (error) {
-      console.error('Error adding exercise:', error);
-      addNotification('Failed to add exercise', 'error');
-      throw error;
-    }
-  };
-
-  // Update an exercise
-  const updateExercise = async (id, updatedExercise) => {
-    try {
-      const exerciseWithTitleCase = {
-        ...updatedExercise,
-        name: toTitleCase(updatedExercise.name),
-        description: toTitleCase(updatedExercise.description),
-        target: toTitleCase(updatedExercise.target)
-      };
-      const response = await axios.put(`${API_URL}/exercises/${id}`, exerciseWithTitleCase, getAuthConfig());
-      setExercises(prevExercises =>
-        prevExercises.map(exercise =>
-          exercise._id === id ? response.data : exercise
-        )
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error updating exercise:', error);
-      addNotification('Failed to update exercise', 'error');
-      throw error;
-    }
-  };
-
-  // Delete an exercise
-  const deleteExercise = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
-      setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
-      addNotification('Exercise deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting exercise:', error);
-      addNotification('Failed to delete exercise', 'error');
-      throw error;
-    }
-  };
-
-  // Add a workout plan
-  const addWorkoutPlan = async (plan) => {
-    try {
-      const planToSend = {
-        ...plan,
-        exercises: plan.exercises.map(exercise => 
-          typeof exercise === 'string' ? exercise : exercise._id
-        )
-      };
-
-      const response = await axios.post(`${API_URL}/workoutplans`, planToSend, getAuthConfig());
-      
-      const fullPlan = {
-        ...response.data,
-        exercises: await Promise.all(response.data.exercises.map(async (exerciseId) => {
-          if (typeof exerciseId === 'string') {
-            try {
-              const exerciseResponse = await axios.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
-              return exerciseResponse.data;
-            } catch (error) {
-              console.error(`Error fetching exercise ${exerciseId}:`, error);
-              return null;
-            }
-          }
-          return exerciseId;
-        }))
-      };
-
-      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan]);
-      addNotification('Workout plan added successfully', 'success');
-      return fullPlan;
-    } catch (error) {
-      console.error('Error adding workout plan:', error);
-      addNotification('Failed to add workout plan', 'error');
-      throw error;
-    }
-  };
-
-  // Update a workout plan
-  const updateWorkoutPlan = async (id, updatedPlan) => {
-    try {
-      if (!id) {
-        return addWorkoutPlan(updatedPlan);
-      }
-      const response = await axios.put(`${API_URL}/workoutplans/${id}`, updatedPlan, getAuthConfig());
-      setWorkoutPlans(prevPlans =>
-        prevPlans.map(plan =>
-          plan._id === id ? response.data : plan
-        )
-      );
-      addNotification('Workout plan updated successfully', 'success');
-      return response.data;
-    } catch (error) {
-      console.error('Error updating workout plan:', error);
-      addNotification('Failed to update workout plan', 'error');
-      throw error;
-    }
-  };
-
-  // Delete a workout plan
-  const deleteWorkoutPlan = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/workoutplans/${id}`, getAuthConfig());
-      setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
-      // Update workouts to mark the plan as deleted instead of removing the association
-      setWorkoutHistory(prevHistory => 
-        prevHistory.map(workout => 
-          workout.plan && workout.plan._id === id 
-            ? { ...workout, planDeleted: true, planName: workout.planName || 'Deleted Plan' } 
-            : workout
-        )
-      );
-      addNotification('Workout plan deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting workout plan:', error);
-      addNotification('Failed to delete workout plan', 'error');
-      throw error;
-    }
-  };
-
-  // Add an exercise to a workout plan
-  const addExerciseToPlan = async (planId, exerciseId) => {
-    if (!planId || !exerciseId) {
-      throw new Error('Plan ID and Exercise ID are required');
-    }
-    console.log(`Attempting to add exercise ${exerciseId} to plan ${planId}`);
-    
-    const plan = workoutPlans.find(p => p._id === planId);
-    if (!plan) {
-      console.error('Plan not found');
-      addNotification('Plan not found', 'error');
-      return { success: false, error: 'Plan not found' };
-    }
-
-    if (plan.exercises.some(e => e._id === exerciseId)) {
-      console.log('Exercise is already in the workout plan');
-      addNotification('This exercise is already in the workout plan', 'info');
-      return { success: false, alreadyInPlan: true };
-    }
-
-    try {
-      const response = await axios.post(
-        `${API_URL}/workoutplans/${planId}/exercises`,
-        { exerciseId },
-        getAuthConfig()
-      );
-      
-      console.log('Server response:', response.data);
-      setWorkoutPlans(prevPlans =>
-        prevPlans.map(p =>
-          p._id === planId ? response.data : p
-        )
-      );
-      addNotification('Exercise added to plan successfully', 'success');
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('Error adding exercise to plan:', error);
-      addNotification(`Failed to add exercise to plan: ${error.response ? error.response.data.message : error.message}`, 'error');
-      return { success: false, error };
-    }
-  };
-
-  // Get the last workout for a given plan
-  const getLastWorkoutByPlan = useCallback(async (planId) => {
-    try {
-      const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
-      return response.data;
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        // No previous workout found, this is not an error
-        console.log('No previous workout found for this plan');
-        return null;
-      }
-      console.error('Error fetching last workout:', error);
-      addNotification('Failed to fetch last workout', 'error');
-      return null;
-    }
-  }, [API_URL, getAuthConfig, addNotification]);
-
-  const contextValue = useMemo(() => ({
-    workouts,
-    exercises,
-    workoutPlans,
-    workoutHistory,
-    addWorkout,
-    updateWorkout,
-    deleteWorkout,
-    addExercise,
-    updateExercise,
-    deleteExercise,
-    addWorkoutPlan,
-    updateWorkoutPlan,
-    deleteWorkoutPlan,
-    fetchWorkoutHistory,
-    fetchWorkoutPlans,
-    addExerciseToPlan,
-    getLastWorkoutByPlan
-  }), [workouts, exercises, workoutPlans, workoutHistory, getLastWorkoutByPlan, fetchWorkoutPlans, fetchWorkoutHistory]);
-
-  return (
-    <GymContext.Provider value={contextValue}>
-      {children}
-    </GymContext.Provider>
-  );
-}
-
-export default GymProvider;
-```
-
-# src/context/AuthContext.jsx
-
-```jsx
-// src/context/AuthContext.jsx
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { hostName } from './GymContext';
-
-const AuthContext = createContext();
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkLoggedIn = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          console.log('Checking logged in status with token');
-          const response = await axios.get(`${hostName}/api/auth/user`, {
-            headers: { 'x-auth-token': token }
-          });
-          console.log('User data received:', response.data);
-          setUser(response.data);
-        } catch (error) {
-          console.error('Error fetching user:', error);
-          localStorage.removeItem('token');
-        }
-      }
-      setLoading(false);
-    };
-
-    checkLoggedIn();
-  }, []);
-
-  const register = async (username, email, password) => {
-    try {
-      console.log('Attempting to register user:', username);
-      await axios.post(`${hostName}/api/auth/register`, { username, email, password });
-      console.log('Registration successful');
-      return true;
-    } catch (error) {
-      console.error('Registration error:', error.response?.data || error.message);
-      throw error;
-    }
-  };
-
-  const login = async (username, password) => {
-    try {
-      console.log('Attempting to log in user:', username);
-      const response = await axios.post(`${hostName}/api/auth/login`, { username, password });
-      console.log('Login response:', response.data);
-      localStorage.setItem('token', response.data.token);
-      setUser(response.data.user);
-      return response.data;
-    } catch (error) {
-      console.error('Login error:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        console.error('Error status:', error.response.status);
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-      } else {
-        console.error('Error message:', error.message);
-      }
-      throw error;
-    }
-  };
-
-  const logout = () => {
-    console.log('Logging out user');
-    localStorage.removeItem('token');
-    setUser(null);
-  };
-
-  const value = {
-    user,
-    register,
-    login,
-    logout,
-    loading
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export default AuthProvider;
 ```
 
 # src/assets/react.svg
