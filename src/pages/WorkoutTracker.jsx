@@ -50,11 +50,10 @@ function WorkoutTracker() {
   const navigate = useNavigate();
   const nodeRef = useRef(null);
 
-  const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app'; // Updated API URL
+  const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan, API_URL, addNotification);
 
-  // Load workout data from local storage or API
   useEffect(() => {
     const loadWorkout = async () => {
       setIsLoading(true);
@@ -83,7 +82,6 @@ function WorkoutTracker() {
     loadWorkout();
   }, [navigate, addNotification]);
 
-  // Save progress periodically
   useEffect(() => {
     const saveInterval = setInterval(() => {
       if (currentPlan) {
@@ -96,12 +94,11 @@ function WorkoutTracker() {
           lastSetValues,
         });
       }
-    }, 30000); // Save every 30 seconds
+    }, 30000);
 
     return () => clearInterval(saveInterval);
   }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress]);
 
-  // Handle workout timer
   useEffect(() => {
     let timer;
     if (startTime) {
@@ -112,7 +109,6 @@ function WorkoutTracker() {
     return () => clearInterval(timer);
   }, [startTime]);
 
-  // Handle rest timer
   useEffect(() => {
     let restTimer;
     if (isResting && remainingRestTime > 0) {
@@ -126,118 +122,298 @@ function WorkoutTracker() {
     return () => clearInterval(restTimer);
   }, [isResting, remainingRestTime, addNotification]);
 
-  // Save data to local storage
   useEffect(() => {
     saveDataToLocalStorage();
   }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
 
-  // Function to load stored data
   const loadStoredData = (plan) => {
-    // ... (implementation remains the same)
+    const storedSets = localStorage.getItem('currentSets');
+    const storedIndex = localStorage.getItem('currentExerciseIndex');
+    const storedStartTime = localStorage.getItem('workoutStartTime');
+    const storedNotes = localStorage.getItem('workoutNotes');
+    const storedLastSetValues = localStorage.getItem('lastSetValues');
+
+    const initialRequiredSets = {};
+    plan.exercises.forEach(exercise => {
+      initialRequiredSets[exercise._id] = exercise.requiredSets || 3;
+    });
+    setRequiredSets(initialRequiredSets);
+
+    if (storedSets) {
+      setSets(JSON.parse(storedSets));
+    } else {
+      setSets(plan.exercises.map(() => []));
+    }
+    
+    if (storedIndex !== null) {
+      setCurrentExerciseIndex(parseInt(storedIndex, 10));
+    }
+
+    if (storedStartTime) {
+      setStartTime(new Date(storedStartTime));
+    } else {
+      const newStartTime = new Date();
+      setStartTime(newStartTime);
+      localStorage.setItem('workoutStartTime', newStartTime.toISOString());
+    }
+
+    if (storedNotes) {
+      setNotes(JSON.parse(storedNotes));
+    } else {
+      setNotes(plan.exercises.map(() => ''));
+    }
+
+    if (storedLastSetValues) {
+      setLastSetValues(JSON.parse(storedLastSetValues));
+    }
   };
 
-  // Function to save data to local storage
   const saveDataToLocalStorage = () => {
-    // ... (implementation remains the same)
+    if (currentPlan) {
+      localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
+    }
+    if (sets.length > 0) {
+      localStorage.setItem('currentSets', JSON.stringify(sets));
+    }
+    localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
+    localStorage.setItem('workoutNotes', JSON.stringify(notes));
+    localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
   };
 
-  // Function to handle set completion
   const handleSetComplete = () => {
-    // ... (implementation remains the same)
+    if (!weight || !reps) {
+      addNotification('Please enter both weight and reps', 'error');
+      return;
+    }
+
+    setSets(prevSets => {
+      const newSets = [...prevSets];
+      newSets[currentExerciseIndex] = [
+        ...(newSets[currentExerciseIndex] || []),
+        { 
+          weight: Number(weight), 
+          reps: Number(reps), 
+          completedAt: new Date().toISOString(),
+          skippedRest: isResting
+        }
+      ];
+      return newSets;
+    });
+
+    setLastSetValues(prev => ({
+      ...prev,
+      [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
+    }));
+
+    addNotification('Set completed!', 'success');
+    startRestTimer();
+    updateProgression();
   };
 
-  // Function to start rest timer
   const startRestTimer = () => {
-    // ... (implementation remains the same)
+    setIsResting(true);
+    setRemainingRestTime(restTime);
   };
 
-  // Function to skip rest timer
   const skipRestTimer = () => {
-    // ... (implementation remains the same)
+    setIsResting(false);
+    setRemainingRestTime(0);
+    setSkippedPauses(prevSkipped => prevSkipped + 1);
+    addNotification('Rest timer skipped', 'info');
   };
 
-  // Function to update progression
   const updateProgression = () => {
-    // ... (implementation remains the same)
+    const totalExercises = currentPlan.exercises.length;
+    const completedExercises = currentPlan.exercises.filter((exercise, index) => 
+      isExerciseComplete(exercise._id, sets[index] || [])
+    ).length;
+    const newProgression = (completedExercises / totalExercises) * 100;
+    setProgression(newProgression);
   };
 
-  // Function to handle finishing the workout
   const handleFinishWorkout = async () => {
-    // ... (implementation remains the same)
+    const endTime = new Date();
+    const completedWorkout = {
+      plan: currentPlan._id,
+      planName: currentPlan.name,
+      exercises: currentPlan.exercises.map((exercise, index) => ({
+        exercise: exercise._id,
+        sets: sets[index] || [],
+        completedAt: sets[index] && sets[index].length > 0 
+          ? sets[index][sets[index].length - 1].completedAt 
+          : endTime.toISOString(),
+        notes: notes[index]
+      })),
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      totalPauseTime,
+      skippedPauses,
+      progression
+    };
+    
+    try {
+      await addWorkout(completedWorkout);
+      addNotification('Workout completed and saved!', 'success');
+      await clearWorkout();
+      resetWorkoutState();
+      clearLocalStorage();
+      navigate('/');
+    } catch (error) {
+      console.error('Error saving workout:', error);
+      addNotification('Failed to save workout. Please try again.', 'error');
+    }
   };
 
-  // Function to handle cancelling the workout
   const handleCancelWorkout = () => {
-    // ... (implementation remains the same)
+    if (isConfirmingCancel) return;
+
+    setIsConfirmingCancel(true);
+    addNotification(
+      'Are you sure you want to cancel this workout? All progress will be lost.',
+      'warning',
+      [
+        {
+          label: 'Yes, Cancel',
+          onClick: async () => {
+            try {
+              await clearWorkout();
+              resetWorkoutState();
+              clearLocalStorage();
+              addNotification('Workout cancelled', 'info');
+              setIsConfirmingCancel(false);
+              navigate('/plans');
+            } catch (error) {
+              console.error('Error cancelling workout:', error);
+              addNotification('Failed to cancel workout. Please try again.', 'error');
+            }
+          },
+        },
+        {
+          label: 'No, Continue',
+          onClick: () => {
+            setIsConfirmingCancel(false);
+          },
+        },
+      ],
+      0
+    );
   };
 
-  // Function to reset workout state
   const resetWorkoutState = () => {
-    // ... (implementation remains the same)
+    setCurrentPlan(null);
+    setSets([]);
+    setNotes([]);
+    setStartTime(null);
+    setElapsedTime(0);
+    setLastSetValues({});
+    setCurrentExerciseIndex(0);
+    setWeight('');
+    setReps('');
+    setRestTime(60);
+    setIsResting(false);
+    setRemainingRestTime(0);
+    setTotalPauseTime(0);
+    setSkippedPauses(0);
+    setProgression(0);
+    setRequiredSets({});
   };
 
-  // Function to clear local storage
   const clearLocalStorage = () => {
-    // ... (implementation remains the same)
+    localStorage.removeItem('currentPlan');
+    localStorage.removeItem('currentSets');
+    localStorage.removeItem('currentExerciseIndex');
+    localStorage.removeItem('workoutStartTime');
+    localStorage.removeItem('workoutNotes');
+    localStorage.removeItem('lastSetValues');
   };
 
-  // Function to check if an exercise is complete
+  const safelyFormatNumber = (value, decimalPlaces = 2) => {
+    return typeof value === 'number' ? value.toFixed(decimalPlaces) : '0.00';
+  };
+
   const isExerciseComplete = (exerciseId, exerciseSets) => {
-    // ... (implementation remains the same)
+    return exerciseSets.length >= (requiredSets[exerciseId] || 0);
   };
 
-  // Function to calculate overall progress
-  const calculateProgress = () => {
-    // ... (implementation remains the same)
-  };
+  const calculateProgress = useCallback(() => {
+    if (!currentPlan || !currentPlan.exercises || currentPlan.exercises.length === 0) {
+      return 0;
+    }
+    const totalExercises = currentPlan.exercises.length;
+    const completedExercises = currentPlan.exercises.filter((exercise, index) => 
+      isExerciseComplete(exercise._id, sets[index] || [])
+    ).length;
+    return (completedExercises / totalExercises) * 100;
+  }, [currentPlan, sets, isExerciseComplete, requiredSets]);
 
-  // Function to handle note changes
   const handleNoteChange = (index, value) => {
-    // ... (implementation remains the same)
+    setNotes(prevNotes => {
+      const newNotes = [...prevNotes];
+      newNotes[index] = value;
+      return newNotes;
+    });
   };
 
-  // Function to handle exercise changes
   const handleExerciseChange = (newIndex) => {
-    // ... (implementation remains the same)
+    setCurrentExerciseIndex(newIndex);
+    
+    const newExercise = currentPlan.exercises[newIndex];
+    const lastValues = lastSetValues[newExercise._id];
+    if (lastValues) {
+      setWeight(lastValues.weight);
+      setReps(lastValues.reps);
+    } else {
+      setWeight('');
+      setReps('');
+    }
   };
 
-  // Touch event handlers for swipe functionality
   const handleTouchStart = (e) => {
-    // ... (implementation remains the same)
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
   };
 
   const handleTouchMove = (e) => {
-    // ... (implementation remains the same)
+    setTouchEnd(e.targetTouches[0].clientX);
   };
 
   const handleTouchEnd = () => {
-    // ... (implementation remains the same)
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentExerciseIndex < currentPlan.exercises.length - 1) {
+      handleExerciseChange(currentExerciseIndex + 1);
+    } else if (isRightSwipe && currentExerciseIndex > 0) {
+      handleExerciseChange(currentExerciseIndex - 1);
+    }
+
+    setTouchStart(null);
+    setTouchEnd(null);
   };
 
-  // Toggle functions for various UI elements
   const toggleExerciseDetails = () => {
-    // ... (implementation remains the same)
+    setIsExerciseDetailsOpen(!isExerciseDetailsOpen);
   };
 
   const toggleExerciseOptions = () => {
-    // ... (implementation remains the same)
+    setIsExerciseOptionsOpen(!isExerciseOptionsOpen);
   };
 
   const togglePreviousWorkout = () => {
-    // ... (implementation remains the same)
+    setIsPreviousWorkoutOpen(!isPreviousWorkoutOpen);
   };
 
   const toggleCurrentSetLog = () => {
-    // ... (implementation remains the same)
+    setIsCurrentSetLogOpen(!isCurrentSetLogOpen);
   };
-
-  const currentExercise = currentPlan?.exercises[currentExerciseIndex];
 
   if (isLoading) {
     return <div className="text-center mt-8">Loading workout...</div>;
   }
 
-  if (!currentPlan || !currentExercise) {
+  if (!currentPlan || !currentPlan.exercises || currentPlan.exercises.length === 0) {
     return (
       <div className="text-center mt-8">
         <p>No workout plan or exercises found. Please select a plan.</p>
@@ -251,7 +427,8 @@ function WorkoutTracker() {
     );
   }
 
-  // Render function
+  const currentExercise = currentPlan.exercises[currentExerciseIndex];
+
   return (
     <div 
       className={`workout-tracker container mx-auto mt-8 p-4 ${darkMode ? 'dark-mode bg-gray-800 text-white' : 'bg-white text-gray-800'}`}
@@ -270,12 +447,16 @@ function WorkoutTracker() {
         <h2 className="text-3xl font-bold text-center">Workout Tracker</h2>
         <h3 className="text-xl text-center mt-2">{currentPlan.name}</h3>
       </div>
+      
+      <div className="mb-4 text-lg text-center">
+        Elapsed Time: {formatTime(elapsedTime)}
+      </div>
 
       <div className="mb-4">
         <div className="progress-bar">
-          <div className="progress-bar-fill" style={{width: `${calculateProgress()}%`}}></div>
+          <div className="progress-bar-fill" style={{width: `${safelyFormatNumber(calculateProgress())}%`}}></div>
         </div>
-        <p className="text-sm mt-2 text-center">Overall Progress: {calculateProgress().toFixed(2)}%</p>
+        <p className="text-sm mt-2 text-center">Overall Progress: {safelyFormatNumber(calculateProgress())}%</p>
       </div>
 
       <div className="mb-4 flex justify-center items-center">
@@ -309,106 +490,112 @@ function WorkoutTracker() {
             ref={nodeRef} 
             className="exercise-container bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4"
           >
-            <div className="flex flex-col md:flex-row mb-4">
-              <img 
-                src={currentExercise.imageUrl} 
-                alt={currentExercise.name} 
-                className="w-full md:w-1/3 h-48 object-cover rounded-lg mr-0 md:mr-4 mb-4 md:mb-0"
-              />
-              <div className="flex-grow">
-                <div 
-                  className="flex justify-between items-center cursor-pointer"
-                  onClick={toggleExerciseDetails}
-                >
-                  <h4 className="text-lg font-semibold mb-2">{currentExercise.name}</h4>
-                  {isExerciseDetailsOpen ? <FiChevronUp /> : <FiChevronDown />}
+            {currentExercise ? (
+              <>
+                <div className="flex flex-col md:flex-row mb-4">
+                  <img 
+                    src={currentExercise.imageUrl} 
+                    alt={currentExercise.name} 
+                    className="w-full md:w-1/3 h-48 object-cover rounded-lg mr-0 md:mr-4 mb-4 md:mb-0"
+                  />
+                  <div className="flex-grow">
+                    <div 
+                      className="flex justify-between items-center cursor-pointer"
+                      onClick={toggleExerciseDetails}
+                    >
+                      <h4 className="text-lg font-semibold mb-2">{currentExercise.name}</h4>
+                      {isExerciseDetailsOpen ? <FiChevronUp /> : <FiChevronDown />}
+                    </div>
+                    <div className={`collapsible-content ${isExerciseDetailsOpen ? 'open' : ''}`}>
+                      <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
+                      <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+                    </div>
+                    <p className="mb-2">
+                      <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id] || 0}
+                    </p>
+                  </div>
                 </div>
-                <div className={`collapsible-content ${isExerciseDetailsOpen ? 'open' : ''}`}>
-                  <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
-                  <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+
+                <div className="mb-4 flex">
+                  <input
+                    type="number"
+                    placeholder="Weight (kg)"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Reps"
+                    value={reps}
+                    onChange={(e) => setReps(e.target.value)}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  />
                 </div>
-                <p className="mb-2">
-                  <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id]}
-                </p>
-              </div>
-            </div>
 
-            <div className="mb-4 flex">
-              <input
-                type="number"
-                placeholder="Weight (kg)"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
-              />
-              <input
-                type="number"
-                placeholder="Reps"
-                value={reps}
-                onChange={(e) => setReps(e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              />
-            </div>
-
-            <div className="mb-4 flex justify-between items-center">
-              <button
-                onClick={handleSetComplete}
-                className="btn btn-primary"
-              >
-                Complete Set
-              </button>
-              <button
-                onClick={toggleExerciseOptions}
-                className="btn btn-secondary flex items-center"
-              >
-                <FiSettings className="mr-2" /> Options
-                {isExerciseOptionsOpen ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
-              </button>
-            </div>
-
-            <div className={`collapsible-content ${isExerciseOptionsOpen ? 'open' : ''}`}>
-              <div className="mb-4">
-                <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
-                  Rest Time (seconds):
-                </label>
-                <input
-                  type="number"
-                  id="restTime"
-                  value={restTime}
-                  onChange={(e) => setRestTime(Number(e.target.value))}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
-                  Exercise Notes:
-                </label>
-                <textarea
-                  id={`notes-${currentExerciseIndex}`}
-                  value={notes[currentExerciseIndex] || ''}
-                  onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  rows="3"
-                ></textarea>
-              </div>
-            </div>
-
-            {isResting && (
-              <div className="rest-timer mb-4">
-                <p>Rest Time Remaining: {formatTime(remainingRestTime)}</p>
-                <div className="rest-timer-bar">
-                  <div 
-                    className="rest-timer-fill"
-                    style={{width: `${(remainingRestTime / restTime) * 100}%`}}
-                  ></div>
+                <div className="mb-4 flex justify-between items-center">
+                  <button
+                    onClick={handleSetComplete}
+                    className="btn btn-primary"
+                  >
+                    Complete Set
+                  </button>
+                  <button
+                    onClick={toggleExerciseOptions}
+                    className="btn btn-secondary flex items-center"
+                  >
+                    <FiSettings className="mr-2" /> Options
+                    {isExerciseOptionsOpen ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
+                  </button>
                 </div>
-                <button
-                  onClick={skipRestTimer}
-                  className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
-                >
-                  Skip Rest
-                </button>
-              </div>
+
+                <div className={`collapsible-content ${isExerciseOptionsOpen ? 'open' : ''}`}>
+                  <div className="mb-4">
+                    <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
+                      Rest Time (seconds):
+                    </label>
+                    <input
+                      type="number"
+                      id="restTime"
+                      value={restTime}
+                      onChange={(e) => setRestTime(Number(e.target.value))}
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
+                      Exercise Notes:
+                    </label>
+                    <textarea
+                      id={`notes-${currentExerciseIndex}`}
+                      value={notes[currentExerciseIndex] || ''}
+                      onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                      rows="3"
+                    ></textarea>
+                  </div>
+                </div>
+
+                {isResting && (
+                  <div className="rest-timer mb-4">
+                    <p>Rest Time Remaining: {formatTime(remainingRestTime)}</p>
+                    <div className="rest-timer-bar">
+                      <div 
+                        className="rest-timer-fill"
+                        style={{width: `${(remainingRestTime / restTime) * 100}%`}}
+                      ></div>
+                    </div>
+                    <button
+                      onClick={skipRestTimer}
+                      className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+                    >
+                      Skip Rest
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p>No exercise data available for this index.</p>
             )}
           </div>
         </CSSTransition>
@@ -488,7 +675,7 @@ function WorkoutTracker() {
                   <p>No sets completed yet</p>
                 )}
                 <p>
-                  {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id]} sets completed
+                  {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id] || 0} sets completed
                 </p>
                 {notes[index] && (
                   <p className="mt-2 italic">Notes: {notes[index]}</p>
