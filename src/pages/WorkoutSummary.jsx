@@ -1,40 +1,25 @@
 // src/pages/WorkoutSummary.jsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { formatDuration, formatTime, formatDate } from '../utils/dateUtils';
 
 function WorkoutSummary() {
   const { workoutHistory, fetchWorkoutHistory } = useGymContext();
   const { user } = useAuth();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [filterPlan, setFilterPlan] = useState('');
 
   useEffect(() => {
     if (user) {
       fetchWorkoutHistory();
     }
   }, [user, fetchWorkoutHistory]);
-
-  const formatDuration = (start, end) => {
-    if (!start || !end) return 'N/A';
-    const duration = new Date(end) - new Date(start);
-    const hours = Math.floor(duration / 3600000);
-    const minutes = Math.floor((duration % 3600000) / 60000);
-    return `${hours}h ${minutes}m`;
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
 
   if (!user) {
     return <div className="container mx-auto mt-8">Please log in to view your workout history.</div>;
@@ -44,10 +29,39 @@ function WorkoutSummary() {
     return <div className="container mx-auto mt-8">No workout history available.</div>;
   }
 
+  const sortedWorkouts = [...workoutHistory].sort((a, b) => {
+    const dateA = new Date(a.startTime);
+    const dateB = new Date(b.startTime);
+    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+  });
+
+  const filteredWorkouts = filterPlan
+    ? sortedWorkouts.filter(workout => workout.planName.toLowerCase().includes(filterPlan.toLowerCase()))
+    : sortedWorkouts;
+
+  const toggleSortOrder = () => {
+    setSortOrder(prevOrder => prevOrder === 'desc' ? 'asc' : 'desc');
+  };
+
   return (
     <div className={`container mx-auto mt-8 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
       <h2 className="text-2xl font-bold mb-4">Workout History</h2>
-      {workoutHistory.map((workout) => (
+      <div className="mb-4 flex justify-between items-center">
+        <button
+          onClick={toggleSortOrder}
+          className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
+        >
+          Sort {sortOrder === 'desc' ? 'Oldest First' : 'Newest First'}
+        </button>
+        <input
+          type="text"
+          placeholder="Filter by plan name"
+          value={filterPlan}
+          onChange={(e) => setFilterPlan(e.target.value)}
+          className={`px-2 py-1 border rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+        />
+      </div>
+      {filteredWorkouts.map((workout) => (
         <div key={workout._id} className={`mb-8 p-4 border rounded shadow ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}>
           <h3 className="text-xl mb-2">
             {workout.planName} {workout.planDeleted && <span className="text-red-500">(Deleted)</span>}

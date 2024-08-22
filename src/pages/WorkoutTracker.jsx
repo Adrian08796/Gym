@@ -53,6 +53,25 @@ function WorkoutTracker() {
   const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan, API_URL, addNotification);
+  
+  // Fetch exercise history when currentPlan changes
+  useEffect(() => {
+    const fetchExerciseHistory = async () => {
+      if (currentPlan && currentPlan.exercises) {
+        const historyPromises = currentPlan.exercises.map(exercise => 
+          getExerciseHistory(exercise._id)
+        );
+        const histories = await Promise.all(historyPromises);
+        const historyMap = {};
+        currentPlan.exercises.forEach((exercise, index) => {
+          historyMap[exercise._id] = histories[index];
+        });
+        setExerciseHistory(historyMap);
+      }
+    };
+
+    fetchExerciseHistory();
+  }, [currentPlan, getExerciseHistory]);
 
   useEffect(() => {
     const loadWorkout = async () => {
@@ -635,22 +654,22 @@ function WorkoutTracker() {
       </div>
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
-        <button 
-          onClick={togglePreviousWorkout}
-          className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
-        >
-          <span>Previous Exercise Performance</span>
-          {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
-        </button>
-        <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
-          <PreviousWorkoutDisplay 
-            previousWorkout={previousWorkout} 
-            isLoading={isPreviousWorkoutLoading} 
-            formatTime={formatTime}
-            darkMode={darkMode}
-          />
-        </div>
+      <button 
+        onClick={togglePreviousWorkout}
+        className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
+      >
+        <span>Previous Exercise Performance</span>
+        {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
+      </button>
+      <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
+        <PreviousWorkoutDisplay 
+          exerciseHistory={exerciseHistory[currentExercise?._id] || []}
+          isLoading={false}
+          formatTime={formatTime}
+          darkMode={darkMode}
+        />
       </div>
+    </div>
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
         <button 
