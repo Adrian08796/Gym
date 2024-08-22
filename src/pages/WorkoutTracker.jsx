@@ -1,5 +1,3 @@
-// src/pages/WorkoutTracker.jsx
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
@@ -9,11 +7,22 @@ import { CSSTransition, SwitchTransition } from 'react-transition-group';
 import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings, FiX } from 'react-icons/fi';
 import { usePreviousWorkout } from '../hooks/usePreviousWorkout';
 import PreviousWorkoutDisplay from '../components/PreviousWorkoutDisplay';
-import useRestTimer from '../hooks/useRestTimer.js';
+import useRestTimer from '../hooks/useRestTimer';
 import { formatTime } from '../utils/timeUtils';
 import './WorkoutTracker.css';
 
 function WorkoutTracker() {
+  const { 
+    addWorkout, 
+    saveProgress, 
+    clearWorkout,
+    getExerciseHistory 
+  } = useGymContext();
+  const { addNotification } = useNotification();
+  const { darkMode } = useTheme();
+  const navigate = useNavigate();
+  const nodeRef = useRef(null);
+
   const [currentPlan, setCurrentPlan] = useState(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [sets, setSets] = useState([]);
@@ -39,25 +48,15 @@ function WorkoutTracker() {
   const [isLoading, setIsLoading] = useState(true);
   const [exerciseHistory, setExerciseHistory] = useState({});
 
-
-  const { 
-    addWorkout, 
-    saveProgress, 
-    clearWorkout,
-    getExerciseHistory 
-  } = useGymContext();
-  const { addNotification } = useNotification();
-  const { darkMode } = useTheme();
-  const navigate = useNavigate();
-  const nodeRef = useRef(null);
-
   const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan?._id, API_URL, addNotification);
 
-  const { isResting, remainingRestTime, startRestTimer, skipRestTimer } = useRestTimer(restTime, () => {
+  const handleRestTimerEnd = useCallback(() => {
     addNotification('Rest time is over. Ready for the next set!', 'info');
-  });
+  }, [addNotification]);
+
+  const { isResting, remainingRestTime, startRestTimer, skipRestTimer } = useRestTimer(restTime, handleRestTimerEnd);
   
   // Fetch exercise history when currentPlan changes
   useEffect(() => {
