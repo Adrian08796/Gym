@@ -363,7 +363,7 @@ export function GymProvider({ children }) {
     } catch (error) {
       console.error('Error saving progress:', error);
       addNotification('Failed to save progress: ' + (error.response?.data?.message || error.message), 'error');
-      throw error; // Re-throw the error so the component can handle it
+      throw error;
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 
@@ -371,7 +371,6 @@ export function GymProvider({ children }) {
     if (!user) return;
   
     try {
-      // Clear data from local storage
       localStorage.removeItem('currentPlan');
       localStorage.removeItem('currentSets');
       localStorage.removeItem('currentExerciseIndex');
@@ -379,7 +378,6 @@ export function GymProvider({ children }) {
       localStorage.removeItem('workoutNotes');
       localStorage.removeItem('lastSetValues');
   
-      // Clear progress from the database
       await axios.delete(`${API_URL}/workouts/progress`, getAuthConfig());
       
       console.log('Workout cleared successfully');
@@ -387,7 +385,7 @@ export function GymProvider({ children }) {
     } catch (error) {
       console.error('Error clearing workout:', error);
       addNotification('Failed to clear workout: ' + (error.response?.data?.message || error.message), 'error');
-      throw error; // Re-throw the error so the component can handle it
+      throw error;
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 

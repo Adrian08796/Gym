@@ -206,32 +206,51 @@ function WorkoutTracker() {
     localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
   };
 
-  const handleSetComplete = () => {
+  const handleSetComplete = async () => {
     if (!weight || !reps) {
       addNotification('Please enter both weight and reps', 'error');
       return;
     }
-
+  
+    const newSet = {
+      weight: Number(weight),
+      reps: Number(reps),
+      completedAt: new Date().toISOString(),
+      skippedRest: isResting
+    };
+  
     setSets(prevSets => {
       const newSets = [...prevSets];
       newSets[currentExerciseIndex] = [
         ...(newSets[currentExerciseIndex] || []),
-        { 
-          weight: Number(weight), 
-          reps: Number(reps), 
-          completedAt: new Date().toISOString(),
-          skippedRest: isResting
-        }
+        newSet
       ];
       return newSets;
     });
-
+  
     setLastSetValues(prev => ({
       ...prev,
       [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
     }));
-
-    addNotification('Set completed!', 'success');
+  
+    // Save progress to database
+    try {
+      await saveProgress({
+        plan: currentPlan._id,
+        exercise: currentPlan.exercises[currentExerciseIndex]._id,
+        set: newSet,
+        currentExerciseIndex,
+        lastSetValues: {
+          ...lastSetValues,
+          [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
+        }
+      });
+      addNotification('Set completed and progress saved!', 'success');
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      addNotification('Failed to save progress', 'error');
+    }
+  
     startRestTimer();
     updateProgression();
   };
@@ -279,8 +298,8 @@ function WorkoutTracker() {
     
     try {
       await addWorkout(completedWorkout);
+      await clearWorkout(); // This should clear the saved progress in the database
       addNotification('Workout completed and saved!', 'success');
-      await clearWorkout();
       resetWorkoutState();
       clearLocalStorage();
       navigate('/');
@@ -380,7 +399,22 @@ function WorkoutTracker() {
     });
   };
 
-  const handleExerciseChange = (newIndex) => {
+  const handleExerciseChange = async (newIndex) => {
+    // Save current exercise progress before switching
+    try {
+      await saveProgress({
+        plan: currentPlan._id,
+        exercise: currentPlan.exercises[currentExerciseIndex]._id,
+        sets: sets[currentExerciseIndex] || [],
+        notes: notes[currentExerciseIndex],
+        currentExerciseIndex,
+        lastSetValues
+      });
+    } catch (error) {
+      console.error('Error saving progress before switching exercise:', error);
+      addNotification('Failed to save progress', 'error');
+    }
+  
     setCurrentExerciseIndex(newIndex);
     
     const newExercise = currentPlan.exercises[newIndex];
