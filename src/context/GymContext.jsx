@@ -362,7 +362,8 @@ export function GymProvider({ children }) {
       console.log('Progress saved successfully');
     } catch (error) {
       console.error('Error saving progress:', error);
-      addNotification('Failed to save progress', 'error');
+      addNotification('Failed to save progress: ' + (error.response?.data?.message || error.message), 'error');
+      throw error; // Re-throw the error so the component can handle it
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 

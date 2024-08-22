@@ -83,19 +83,24 @@ function WorkoutTracker() {
   }, [navigate, addNotification]);
 
   useEffect(() => {
-    const saveInterval = setInterval(() => {
+    const saveInterval = setInterval(async () => {
       if (currentPlan) {
-        saveProgress({
-          plan: currentPlan,
-          sets,
-          currentExerciseIndex,
-          startTime,
-          notes,
-          lastSetValues,
-        });
+        try {
+          await saveProgress({
+            plan: currentPlan,
+            sets,
+            currentExerciseIndex,
+            startTime,
+            notes,
+            lastSetValues,
+          });
+        } catch (error) {
+          console.error('Failed to save progress:', error);
+          // Optionally, you can add a notification here or handle the error in another way
+        }
       }
-    }, 30000);
-
+    }, 30000); // Save every 30 seconds
+  
     return () => clearInterval(saveInterval);
   }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress]);
 
