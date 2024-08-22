@@ -21,7 +21,7 @@ function WorkoutTracker() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
-  const [restTime, setRestTime] = useState(60);
+  const [restTime, setRestTime] = useState(null);
   const [isResting, setIsResting] = useState(false);
   const [remainingRestTime, setRemainingRestTime] = useState(0);
   const [notes, setNotes] = useState([]);
