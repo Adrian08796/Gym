@@ -6,6 +6,10 @@ export const canVibrate = () => {
   
   export const vibrateDevice = (pattern = [200, 100, 200]) => {
     if (canVibrate()) {
-      navigator.vibrate(pattern);
+      try {
+        navigator.vibrate(pattern);
+      } catch (error) {
+        console.error('Error while trying to vibrate:', error);
+      }
     }
   };

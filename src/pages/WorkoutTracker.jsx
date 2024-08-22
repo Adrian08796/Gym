@@ -10,6 +10,7 @@ import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings, 
 import { usePreviousWorkout } from '../hooks/usePreviousWorkout';
 import PreviousWorkoutDisplay from '../components/PreviousWorkoutDisplay';
 import { formatTime } from '../utils/timeUtils';
+import { canVibrate, vibrateDevice } from '../utils/deviceUtils';
 import './WorkoutTracker.css';
 
 function WorkoutTracker() {
@@ -144,8 +145,12 @@ function WorkoutTracker() {
     } else if (remainingRestTime === 0 && isResting) {
       setIsResting(false);
       addNotification('Rest time is over. Ready for the next set!', 'info');
-      if (canVibrate()) {
-        vibrateDevice();
+      try {
+        if (canVibrate()) {
+          vibrateDevice();
+        }
+      } catch (error) {
+        console.error('Error with vibration:', error);
       }
     }
     return () => clearInterval(restTimer);
@@ -676,7 +681,9 @@ function WorkoutTracker() {
                     >
                       Skip Rest
                     </button>
-                    <p className="text-sm mt-2">Your device will vibrate when the rest time is over (if supported).</p>
+                    {canVibrate() && (
+                      <p className="text-sm mt-2">Your device will vibrate when the rest time is over.</p>
+                    )}
                   </div>
                 )}
               </>
