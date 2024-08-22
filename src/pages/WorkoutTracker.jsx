@@ -12,45 +12,6 @@ import PreviousWorkoutDisplay from '../components/PreviousWorkoutDisplay';
 import { formatTime } from '../utils/timeUtils';
 import './WorkoutTracker.css';
 
-// Custom hook for managing rest timer
-const useRestTimer = (initialTime, onTimerEnd) => {
-  const [isResting, setIsResting] = useState(false);
-  const [remainingRestTime, setRemainingRestTime] = useState(initialTime);
-
-  useEffect(() => {
-    let timer;
-    if (isResting && remainingRestTime > 0) {
-      timer = setInterval(() => {
-        setRemainingRestTime(prevTime => prevTime - 1);
-      }, 1000);
-    } else if (remainingRestTime === 0 && isResting) {
-      setIsResting(false);
-      onTimerEnd();
-      
-      // Trigger vibration if supported
-      if ('vibrate' in navigator) {
-        navigator.vibrate(1000); // Vibrate for 1 second
-      }
-
-      // Show alert
-      alert('Rest time is over. Ready for the next set!');
-    }
-    return () => clearInterval(timer);
-  }, [isResting, remainingRestTime, onTimerEnd]);
-
-  const startRestTimer = useCallback(() => {
-    setIsResting(true);
-    setRemainingRestTime(initialTime);
-  }, [initialTime]);
-
-  const skipRestTimer = useCallback(() => {
-    setIsResting(false);
-    setRemainingRestTime(0);
-  }, []);
-
-  return { isResting, remainingRestTime, startRestTimer, skipRestTimer };
-};
-
 function WorkoutTracker() {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -95,6 +56,45 @@ function WorkoutTracker() {
   const { isResting, remainingRestTime, startRestTimer, skipRestTimer } = useRestTimer(restTime, () => {
     addNotification('Rest time is over. Ready for the next set!', 'info');
   });
+
+  // Custom hook for managing rest timer
+const useRestTimer = (initialTime, onTimerEnd) => {
+  const [isResting, setIsResting] = useState(false);
+  const [remainingRestTime, setRemainingRestTime] = useState(initialTime);
+
+  useEffect(() => {
+    let timer;
+    if (isResting && remainingRestTime > 0) {
+      timer = setInterval(() => {
+        setRemainingRestTime(prevTime => prevTime - 1);
+      }, 1000);
+    } else if (remainingRestTime === 0 && isResting) {
+      setIsResting(false);
+      onTimerEnd();
+      
+      // Trigger vibration if supported
+      if ('vibrate' in navigator) {
+        navigator.vibrate(1000); // Vibrate for 1 second
+      }
+
+      // Show alert
+      alert('Rest time is over. Ready for the next set!');
+    }
+    return () => clearInterval(timer);
+  }, [isResting, remainingRestTime, onTimerEnd]);
+
+  const startRestTimer = useCallback(() => {
+    setIsResting(true);
+    setRemainingRestTime(initialTime);
+  }, [initialTime]);
+
+  const skipRestTimer = useCallback(() => {
+    setIsResting(false);
+    setRemainingRestTime(0);
+  }, []);
+
+  return { isResting, remainingRestTime, startRestTimer, skipRestTimer };
+};
   
   // Fetch exercise history when currentPlan changes
   useEffect(() => {
