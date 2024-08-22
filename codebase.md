@@ -386,6 +386,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 ```jsx
 // src/App.jsx
 
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import WorkoutTracker from './pages/WorkoutTracker';
@@ -404,6 +405,7 @@ import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import NotificationToast from './components/NotificationToast';
+import ErrorBoundary from './components/ErrorBoundary';  // Import the ErrorBoundary
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -431,7 +433,13 @@ function AppContent() {
             <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
             <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
+            <Route path="/tracker" element={
+              <PrivateRoute>
+                <ErrorBoundary>
+                  <WorkoutTracker />
+                </ErrorBoundary>
+              </PrivateRoute>
+            } />
             <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
             <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
             <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
@@ -513,6 +521,48 @@ export default App;
 
 ```
 
+# src/utils/timeUtils.js
+
+```js
+// src/utils/timeUtils.js
+
+/**
+ * Formats a number of seconds into a string representation of hours, minutes, and seconds
+ * @param {number} seconds - The number of seconds to format
+ * @returns {string} A formatted string in the format "HH:MM:SS"
+ */
+export const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+```
+
+# src/utils/dateUtils.js
+
+```js
+// src/utils/dateUtils.js
+
+export const formatDuration = (start, end) => {
+    if (!start || !end) return 'N/A';
+    const duration = new Date(end) - new Date(start);
+    const hours = Math.floor(duration / 3600000);
+    const minutes = Math.floor((duration % 3600000) / 60000);
+    return `${hours}h ${minutes}m`;
+  };
+  
+  export const formatTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  export const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
+```
+
 # src/pages/WorkoutTracker.jsx
 
 ```jsx
@@ -525,6 +575,9 @@ import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { CSSTransition, SwitchTransition } from 'react-transition-group';
 import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings, FiX } from 'react-icons/fi';
+import { usePreviousWorkout } from '../hooks/usePreviousWorkout';
+import PreviousWorkoutDisplay from '../components/PreviousWorkoutDisplay';
+import { formatTime } from '../utils/timeUtils';
 import './WorkoutTracker.css';
 
 function WorkoutTracker() {
@@ -552,6 +605,8 @@ function WorkoutTracker() {
   const [isPreviousWorkoutOpen, setIsPreviousWorkoutOpen] = useState(false);
   const [isCurrentSetLogOpen, setIsCurrentSetLogOpen] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [exerciseHistory, setExerciseHistory] = useState({});
 
   const { 
     addWorkout, 
@@ -564,43 +619,118 @@ function WorkoutTracker() {
   const navigate = useNavigate();
   const nodeRef = useRef(null);
 
-  useEffect(() => {
-    const saveInterval = setInterval(() => {
-      if (currentPlan) {
-        saveProgress({
-          plan: currentPlan,
-          sets,
-          currentExerciseIndex,
-          startTime,
-          notes,
-          lastSetValues,
-        });
-      }
-    }, 30000); // Save every 30 seconds
+  const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
 
-    return () => clearInterval(saveInterval);
-  }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress]);
+  const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan?._id, API_URL, addNotification);
+  
+  // Fetch exercise history when currentPlan changes
+  // Fetch exercise history when currentPlan changes
+  useEffect(() => {
+    const fetchExerciseHistory = async () => {
+      if (currentPlan && currentPlan.exercises) {
+        const historyPromises = currentPlan.exercises.map(exercise => 
+          getExerciseHistory(exercise._id)
+        );
+        const histories = await Promise.all(historyPromises);
+        const historyMap = {};
+        currentPlan.exercises.forEach((exercise, index) => {
+          historyMap[exercise._id] = histories[index];
+        });
+        setExerciseHistory(historyMap);
+      }
+    };
+
+    fetchExerciseHistory();
+  }, [currentPlan, getExerciseHistory]);
 
   useEffect(() => {
     const loadWorkout = async () => {
+      setIsLoading(true);
       const storedPlan = localStorage.getItem('currentPlan');
       if (storedPlan) {
-        const plan = JSON.parse(storedPlan);
-        setCurrentPlan(plan);
-        loadStoredData(plan);
+        try {
+          const plan = JSON.parse(storedPlan);
+          if (plan && plan.exercises && plan.exercises.length > 0) {
+            setCurrentPlan(plan);
+            loadStoredData(plan);
+          } else {
+            throw new Error('Invalid plan data');
+          }
+        } catch (error) {
+          console.error('Error loading workout plan:', error);
+          addNotification('Error loading workout plan. Please select a new plan.', 'error');
+          navigate('/plans');
+        }
       } else {
         addNotification('No workout plan selected', 'error');
         navigate('/plans');
       }
+      setIsLoading(false);
     };
-
+  
     loadWorkout();
   }, [navigate, addNotification]);
+
+  useEffect(() => {
+    const saveInterval = setInterval(async () => {
+      if (currentPlan) {
+        try {
+          await saveProgress({
+            plan: currentPlan,
+            sets,
+            currentExerciseIndex,
+            startTime,
+            notes,
+            lastSetValues,
+          });
+        } catch (error) {
+          console.error('Failed to save progress:', error);
+          // Optionally, you can add a notification here or handle the error in another way
+        }
+      }
+    }, 30000); // Save every 30 seconds
+  
+    return () => clearInterval(saveInterval);
+  }, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress]);
+
+  useEffect(() => {
+    let timer;
+    if (startTime) {
+      timer = setInterval(() => {
+        setElapsedTime(prevTime => prevTime + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [startTime]);
+
+  useEffect(() => {
+    let restTimer;
+    if (isResting && remainingRestTime > 0) {
+      restTimer = setInterval(() => {
+        setRemainingRestTime(prevTime => prevTime - 1);
+      }, 1000);
+    } else if (remainingRestTime === 0 && isResting) {
+      setIsResting(false);
+      addNotification('Rest time is over. Ready for the next set!', 'info');
+    }
+    return () => clearInterval(restTimer);
+  }, [isResting, remainingRestTime, addNotification]);
+
+  useEffect(() => {
+    saveDataToLocalStorage();
+  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
 
   const loadStoredData = (plan) => {
     const storedSets = localStorage.getItem('currentSets');
     const storedIndex = localStorage.getItem('currentExerciseIndex');
     const storedStartTime = localStorage.getItem('workoutStartTime');
+      if (storedStartTime) {
+        setStartTime(new Date(storedStartTime));
+      } else {
+        const newStartTime = new Date();
+        setStartTime(newStartTime);
+        localStorage.setItem('workoutStartTime', newStartTime.toISOString());
+      }
     const storedNotes = localStorage.getItem('workoutNotes');
     const storedLastSetValues = localStorage.getItem('lastSetValues');
 
@@ -639,51 +769,6 @@ function WorkoutTracker() {
     }
   };
 
-  useEffect(() => {
-    const fetchExerciseHistory = async () => {
-      if (currentPlan) {
-        const historyPromises = currentPlan.exercises.map(exercise => 
-          getExerciseHistory(exercise._id)
-        );
-        const histories = await Promise.all(historyPromises);
-        const historyMap = {};
-        currentPlan.exercises.forEach((exercise, index) => {
-          historyMap[exercise._id] = histories[index];
-        });
-        setExerciseHistory(historyMap);
-      }
-    };
-
-    fetchExerciseHistory();
-  }, [currentPlan, getExerciseHistory]);
-
-  useEffect(() => {
-    let timer;
-    if (startTime) {
-      timer = setInterval(() => {
-        setElapsedTime(prevTime => prevTime + 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [startTime]);
-
-  useEffect(() => {
-    let restTimer;
-    if (isResting && remainingRestTime > 0) {
-      restTimer = setInterval(() => {
-        setRemainingRestTime(prevTime => prevTime - 1);
-      }, 1000);
-    } else if (remainingRestTime === 0 && isResting) {
-      setIsResting(false);
-      addNotification('Rest time is over. Ready for the next set!', 'info');
-    }
-    return () => clearInterval(restTimer);
-  }, [isResting, remainingRestTime, addNotification]);
-
-  useEffect(() => {
-    saveDataToLocalStorage();
-  }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
-
   const saveDataToLocalStorage = () => {
     if (currentPlan) {
       localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
@@ -696,36 +781,52 @@ function WorkoutTracker() {
     localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
   };
 
-  const togglePreviousWorkout = () => {
-    setIsPreviousWorkoutOpen(prev => !prev);
-  };
-
-  const handleSetComplete = () => {
+  const handleSetComplete = async () => {
     if (!weight || !reps) {
       addNotification('Please enter both weight and reps', 'error');
       return;
     }
-
+  
+    const newSet = {
+      weight: Number(weight),
+      reps: Number(reps),
+      completedAt: new Date().toISOString(),
+      skippedRest: isResting
+    };
+  
     setSets(prevSets => {
       const newSets = [...prevSets];
       newSets[currentExerciseIndex] = [
         ...(newSets[currentExerciseIndex] || []),
-        { 
-          weight: Number(weight), 
-          reps: Number(reps), 
-          completedAt: new Date().toISOString(),
-          skippedRest: isResting
-        }
+        newSet
       ];
       return newSets;
     });
-
+  
     setLastSetValues(prev => ({
       ...prev,
       [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
     }));
-
-    addNotification('Set completed!', 'success');
+  
+    // Save progress to database
+    try {
+      await saveProgress({
+        plan: currentPlan._id,
+        exercise: currentPlan.exercises[currentExerciseIndex]._id,
+        set: newSet,
+        currentExerciseIndex,
+        lastSetValues: {
+          ...lastSetValues,
+          [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
+        },
+        startTime: startTime.toISOString() // Add this line
+      });
+      addNotification('Set completed and progress saved!', 'success');
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      addNotification('Failed to save progress', 'error');
+    }
+  
     startRestTimer();
     updateProgression();
   };
@@ -752,6 +853,20 @@ function WorkoutTracker() {
   };
 
   const handleFinishWorkout = async () => {
+    // Ensure the final exercise progress is saved
+    await saveProgress({
+      plan: currentPlan._id,
+      exercise: currentPlan.exercises[currentExerciseIndex]._id,
+      sets: sets[currentExerciseIndex] || [],
+      notes: notes[currentExerciseIndex],
+      currentExerciseIndex,
+      lastSetValues,
+      startTime: startTime.toISOString()
+    });
+  
+    // Recalculate the final progression
+    const finalProgression = calculateProgress();
+  
     const endTime = new Date();
     const completedWorkout = {
       plan: currentPlan._id,
@@ -768,13 +883,13 @@ function WorkoutTracker() {
       endTime: endTime.toISOString(),
       totalPauseTime,
       skippedPauses,
-      progression
+      progression: finalProgression  // Use the recalculated progression
     };
     
     try {
       await addWorkout(completedWorkout);
-      addNotification('Workout completed and saved!', 'success');
       await clearWorkout();
+      addNotification('Workout completed and saved!', 'success');
       resetWorkoutState();
       clearLocalStorage();
       navigate('/');
@@ -832,7 +947,6 @@ function WorkoutTracker() {
     setRestTime(60);
     setIsResting(false);
     setRemainingRestTime(0);
-    setPreviousWorkout(null);
     setTotalPauseTime(0);
     setSkippedPauses(0);
     setProgression(0);
@@ -848,25 +962,24 @@ function WorkoutTracker() {
     localStorage.removeItem('lastSetValues');
   };
 
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  const safelyFormatNumber = (value, decimalPlaces = 2) => {
+    return typeof value === 'number' ? value.toFixed(decimalPlaces) : '0.00';
   };
 
   const isExerciseComplete = (exerciseId, exerciseSets) => {
-    return exerciseSets.length >= requiredSets[exerciseId];
+    return exerciseSets.length >= (requiredSets[exerciseId] || 0);
   };
 
-  const calculateProgress = () => {
-    if (!currentPlan) return 0;
+  const calculateProgress = useCallback(() => {
+    if (!currentPlan || !currentPlan.exercises || currentPlan.exercises.length === 0) {
+      return 0;
+    }
     const totalExercises = currentPlan.exercises.length;
     const completedExercises = currentPlan.exercises.filter((exercise, index) => 
       isExerciseComplete(exercise._id, sets[index] || [])
     ).length;
     return (completedExercises / totalExercises) * 100;
-  };
+  }, [currentPlan, sets, isExerciseComplete, requiredSets]);
 
   const handleNoteChange = (index, value) => {
     setNotes(prevNotes => {
@@ -876,7 +989,22 @@ function WorkoutTracker() {
     });
   };
 
-  const handleExerciseChange = (newIndex) => {
+  const handleExerciseChange = async (newIndex) => {
+    try {
+      await saveProgress({
+        plan: currentPlan._id,
+        exercise: currentPlan.exercises[currentExerciseIndex]._id,
+        sets: sets[currentExerciseIndex] || [],
+        notes: notes[currentExerciseIndex],
+        currentExerciseIndex,
+        lastSetValues,
+        startTime: startTime.toISOString() // Add this line
+      });
+    } catch (error) {
+      console.error('Error saving progress before switching exercise:', error);
+      addNotification('Failed to save progress', 'error');
+    }
+  
     setCurrentExerciseIndex(newIndex);
     
     const newExercise = currentPlan.exercises[newIndex];
@@ -896,19 +1024,7 @@ function WorkoutTracker() {
   };
 
   const handleTouchMove = (e) => {
-    const currentTouch = e.targetTouches[0].clientX;
-    setTouchEnd(currentTouch);
-    
-    if (touchStart && currentTouch) {
-      const distance = touchStart - currentTouch;
-      if (distance > 20) {
-        setSwipeDirection('left');
-      } else if (distance < -20) {
-        setSwipeDirection('right');
-      } else {
-        setSwipeDirection(null);
-      }
-    }
+    setTouchEnd(e.targetTouches[0].clientX);
   };
 
   const handleTouchEnd = () => {
@@ -923,7 +1039,8 @@ function WorkoutTracker() {
       handleExerciseChange(currentExerciseIndex - 1);
     }
 
-    setSwipeDirection(null);
+    setTouchStart(null);
+    setTouchEnd(null);
   };
 
   const toggleExerciseDetails = () => {
@@ -934,21 +1051,27 @@ function WorkoutTracker() {
     setIsExerciseOptionsOpen(!isExerciseOptionsOpen);
   };
 
+  const togglePreviousWorkout = () => {
+    setIsPreviousWorkoutOpen(!isPreviousWorkoutOpen);
+  };
+
   const toggleCurrentSetLog = () => {
     setIsCurrentSetLogOpen(!isCurrentSetLogOpen);
   };
 
-  if (!currentPlan) {
+  if (isLoading) {
+    return <div className="text-center mt-8">Loading workout...</div>;
+  }
+
+  if (!currentPlan || !currentPlan.exercises || currentPlan.exercises.length === 0) {
     return (
-      <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
-        <h2 className="text-3xl font-bold mb-4">Workout Tracker</h2>
-        <p className="text-xl mb-4">No active workout</p>
-        <p className="mb-4">To start a new workout, please select a workout plan from the Workout Plans page.</p>
+      <div className="text-center mt-8">
+        <p>No workout plan or exercises found. Please select a plan.</p>
         <button
           onClick={() => navigate('/plans')}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
         >
-          Go to Workout Plans
+          Go to Plans
         </button>
       </div>
     );
@@ -981,9 +1104,9 @@ function WorkoutTracker() {
 
       <div className="mb-4">
         <div className="progress-bar">
-          <div className="progress-bar-fill" style={{width: `${calculateProgress()}%`}}></div>
+          <div className="progress-bar-fill" style={{width: `${safelyFormatNumber(calculateProgress())}%`}}></div>
         </div>
-        <p className="text-sm mt-2 text-center">Overall Progress: {calculateProgress().toFixed(2)}%</p>
+        <p className="text-sm mt-2 text-center">Overall Progress: {safelyFormatNumber(calculateProgress())}%</p>
       </div>
 
       <div className="mb-4 flex justify-center items-center">
@@ -1017,106 +1140,112 @@ function WorkoutTracker() {
             ref={nodeRef} 
             className="exercise-container bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4"
           >
-            <div className="flex flex-col md:flex-row mb-4">
-              <img 
-                src={currentExercise.imageUrl} 
-                alt={currentExercise.name} 
-                className="w-full md:w-1/3 h-48 object-cover rounded-lg mr-0 md:mr-4 mb-4 md:mb-0"
-              />
-              <div className="flex-grow">
-                <div 
-                  className="flex justify-between items-center cursor-pointer"
-                  onClick={toggleExerciseDetails}
-                >
-                  <h4 className="text-lg font-semibold mb-2">{currentExercise.name}</h4>
-                  {isExerciseDetailsOpen ? <FiChevronUp /> : <FiChevronDown />}
+            {currentExercise ? (
+              <>
+                <div className="flex flex-col md:flex-row mb-4">
+                  <img 
+                    src={currentExercise.imageUrl} 
+                    alt={currentExercise.name} 
+                    className="w-full md:w-1/3 h-48 object-cover rounded-lg mr-0 md:mr-4 mb-4 md:mb-0"
+                  />
+                  <div className="flex-grow">
+                    <div 
+                      className="flex justify-between items-center cursor-pointer"
+                      onClick={toggleExerciseDetails}
+                    >
+                      <h4 className="text-lg font-semibold mb-2">{currentExercise.name}</h4>
+                      {isExerciseDetailsOpen ? <FiChevronUp /> : <FiChevronDown />}
+                    </div>
+                    <div className={`collapsible-content ${isExerciseDetailsOpen ? 'open' : ''}`}>
+                      <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
+                      <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+                    </div>
+                    <p className="mb-2">
+                      <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id] || 0}
+                    </p>
+                  </div>
                 </div>
-                <div className={`collapsible-content ${isExerciseDetailsOpen ? 'open' : ''}`}>
-                  <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
-                  <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
+
+                <div className="mb-4 flex">
+                  <input
+                    type="number"
+                    placeholder="Weight (kg)"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Reps"
+                    value={reps}
+                    onChange={(e) => setReps(e.target.value)}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  />
                 </div>
-                <p className="mb-2">
-                  <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id]}
-                </p>
-              </div>
-            </div>
 
-            <div className="mb-4 flex">
-              <input
-                type="number"
-                placeholder="Weight (kg)"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
-              />
-              <input
-                type="number"
-                placeholder="Reps"
-                value={reps}
-                onChange={(e) => setReps(e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              />
-            </div>
-
-            <div className="mb-4 flex justify-between items-center">
-              <button
-                onClick={handleSetComplete}
-                className="btn btn-primary"
-              >
-                Complete Set
-              </button>
-              <button
-                onClick={toggleExerciseOptions}
-                className="btn btn-secondary flex items-center"
-              >
-                <FiSettings className="mr-2" /> Options
-                {isExerciseOptionsOpen ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
-              </button>
-            </div>
-
-            <div className={`collapsible-content ${isExerciseOptionsOpen ? 'open' : ''}`}>
-              <div className="mb-4">
-                <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
-                  Rest Time (seconds):
-                </label>
-                <input
-                  type="number"
-                  id="restTime"
-                  value={restTime}
-                  onChange={(e) => setRestTime(Number(e.target.value))}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
-                  Exercise Notes:
-                </label>
-                <textarea
-                  id={`notes-${currentExerciseIndex}`}
-                  value={notes[currentExerciseIndex] || ''}
-                  onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  rows="3"
-                ></textarea>
-              </div>
-            </div>
-
-            {isResting && (
-              <div className="rest-timer mb-4">
-                <p>Rest Time Remaining: {formatTime(remainingRestTime)}</p>
-                <div className="rest-timer-bar">
-                  <div 
-                    className="rest-timer-fill"
-                    style={{width: `${(remainingRestTime / restTime) * 100}%`}}
-                  ></div>
+                <div className="mb-4 flex justify-between items-center">
+                  <button
+                    onClick={handleSetComplete}
+                    className="btn btn-primary"
+                  >
+                    Complete Set
+                  </button>
+                  <button
+                    onClick={toggleExerciseOptions}
+                    className="btn btn-secondary flex items-center"
+                  >
+                    <FiSettings className="mr-2" /> Options
+                    {isExerciseOptionsOpen ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
+                  </button>
                 </div>
-                <button
-                  onClick={skipRestTimer}
-                  className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
-                >
-                  Skip Rest
-                </button>
-              </div>
+
+                <div className={`collapsible-content ${isExerciseOptionsOpen ? 'open' : ''}`}>
+                  <div className="mb-4">
+                    <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="restTime">
+                      Rest Time (seconds):
+                    </label>
+                    <input
+                      type="number"
+                      id="restTime"
+                      value={restTime}
+                      onChange={(e) => setRestTime(Number(e.target.value))}
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor={`notes-${currentExerciseIndex}`}>
+                      Exercise Notes:
+                    </label>
+                    <textarea
+                      id={`notes-${currentExerciseIndex}`}
+                      value={notes[currentExerciseIndex] || ''}
+                      onChange={(e) => handleNoteChange(currentExerciseIndex, e.target.value)}
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                      rows="3"
+                    ></textarea>
+                  </div>
+                </div>
+
+                {isResting && (
+                  <div className="rest-timer mb-4">
+                    <p>Rest Time Remaining: {formatTime(remainingRestTime)}</p>
+                    <div className="rest-timer-bar">
+                      <div 
+                        className="rest-timer-fill"
+                        style={{width: `${(remainingRestTime / restTime) * 100}%`}}
+                      ></div>
+                    </div>
+                    <button
+                      onClick={skipRestTimer}
+                      className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+                    >
+                      Skip Rest
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p>No exercise data available for this index.</p>
             )}
           </div>
         </CSSTransition>
@@ -1151,43 +1280,23 @@ function WorkoutTracker() {
       </div>
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
-  <button 
-    onClick={togglePreviousWorkout}  // Keep this if you're still using the toggle functionality
-    className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
-  >
-    <span>Previous Exercise Performance</span>
-    {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
-  </button>
-  <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
-    {isPreviousWorkoutLoading ? (
-      <p className="p-4">Loading previous workout data...</p>
-    ) : previousWorkout ? (
-      <div className="p-4">
-        <p><strong>Date:</strong> {new Date(previousWorkout.startTime).toLocaleDateString()}</p>
-        <p><strong>Duration:</strong> {formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000)}</p>
-        {previousWorkout.exercises.map((exercise, index) => (
-          <div key={index} className="mb-4">
-            <h4 className={`text-lg font-medium ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
-              {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
-            </h4>
-            <ul className="list-disc pl-5">
-              {exercise.sets.map((set, setIndex) => (
-                <li key={setIndex}>
-                  Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
-                </li>
-              ))}
-            </ul>
-            {exercise.notes && (
-              <p className="mt-2 italic">Notes: {exercise.notes}</p>
-            )}
-          </div>
-        ))}
+      <button 
+        onClick={togglePreviousWorkout}
+        className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
+      >
+        <span>Previous Workout and Exercise Performance</span>
+        {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
+      </button>
+      <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
+        <PreviousWorkoutDisplay 
+          previousWorkout={previousWorkout}
+          exerciseHistory={exerciseHistory[currentExercise?._id]}
+          isLoading={isPreviousWorkoutLoading}
+          formatTime={formatTime}
+          darkMode={darkMode}
+        />
       </div>
-    ) : (
-      <p className="p-4">No previous workout data available for this plan. This will be your first workout!</p>
-    )}
-  </div>
-</div>
+    </div>
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
         <button 
@@ -1217,7 +1326,7 @@ function WorkoutTracker() {
                   <p>No sets completed yet</p>
                 )}
                 <p>
-                  {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id]} sets completed
+                  {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id] || 0} sets completed
                 </p>
                 {notes[index] && (
                   <p className="mt-2 italic">Notes: {notes[index]}</p>
@@ -1497,41 +1606,26 @@ input[type="number"], textarea {
 ```jsx
 // src/pages/WorkoutSummary.jsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { formatDuration, formatTime, formatDate } from '../utils/dateUtils';
 
 function WorkoutSummary() {
   const { workoutHistory, fetchWorkoutHistory } = useGymContext();
   const { user } = useAuth();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [filterPlan, setFilterPlan] = useState('');
 
   useEffect(() => {
     if (user) {
       fetchWorkoutHistory();
     }
   }, [user, fetchWorkoutHistory]);
-
-  const formatDuration = (start, end) => {
-    if (!start || !end) return 'N/A';
-    const duration = new Date(end) - new Date(start);
-    const hours = Math.floor(duration / 3600000);
-    const minutes = Math.floor((duration % 3600000) / 60000);
-    return `${hours}h ${minutes}m`;
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
 
   if (!user) {
     return <div className="container mx-auto mt-8">Please log in to view your workout history.</div>;
@@ -1541,10 +1635,39 @@ function WorkoutSummary() {
     return <div className="container mx-auto mt-8">No workout history available.</div>;
   }
 
+  const sortedWorkouts = [...workoutHistory].sort((a, b) => {
+    const dateA = new Date(a.startTime);
+    const dateB = new Date(b.startTime);
+    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+  });
+
+  const filteredWorkouts = filterPlan
+    ? sortedWorkouts.filter(workout => workout.planName.toLowerCase().includes(filterPlan.toLowerCase()))
+    : sortedWorkouts;
+
+  const toggleSortOrder = () => {
+    setSortOrder(prevOrder => prevOrder === 'desc' ? 'asc' : 'desc');
+  };
+
   return (
     <div className={`container mx-auto mt-8 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
       <h2 className="text-2xl font-bold mb-4">Workout History</h2>
-      {workoutHistory.map((workout) => (
+      <div className="mb-4 flex justify-between items-center">
+        <button
+          onClick={toggleSortOrder}
+          className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
+        >
+          Sort {sortOrder === 'desc' ? 'Oldest First' : 'Newest First'}
+        </button>
+        <input
+          type="text"
+          placeholder="Filter by plan name"
+          value={filterPlan}
+          onChange={(e) => setFilterPlan(e.target.value)}
+          className={`px-2 py-1 border rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+        />
+      </div>
+      {filteredWorkouts.map((workout) => (
         <div key={workout._id} className={`mb-8 p-4 border rounded shadow ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}>
           <h3 className="text-xl mb-2">
             {workout.planName} {workout.planDeleted && <span className="text-red-500">(Deleted)</span>}
@@ -2215,6 +2338,43 @@ function ExerciseLibrary() {
 export default ExerciseLibrary;
 ```
 
+# src/hooks/usePreviousWorkout.js
+
+```js
+// src/hooks/usePreviousWorkout.js
+
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+export const usePreviousWorkout = (planId, API_URL, addNotification) => {
+  const [isPreviousWorkoutLoading, setIsPreviousWorkoutLoading] = useState(false);
+  const [previousWorkout, setPreviousWorkout] = useState(null);
+
+  useEffect(() => {
+    const fetchPreviousWorkout = async () => {
+      if (!planId) return;
+      
+      setIsPreviousWorkoutLoading(true);
+      try {
+        const response = await axios.get(`${API_URL}/workouts/last/${planId}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setPreviousWorkout(response.data);
+      } catch (error) {
+        console.error('Error fetching previous workout:', error);
+        addNotification('Failed to fetch previous workout data', 'error');
+      } finally {
+        setIsPreviousWorkoutLoading(false);
+      }
+    };
+
+    fetchPreviousWorkout();
+  }, [planId, API_URL, addNotification]);
+
+  return { isPreviousWorkoutLoading, previousWorkout };
+};
+```
+
 # src/context/ThemeContext.jsx
 
 ```jsx
@@ -2337,6 +2497,17 @@ export function GymProvider({ children }) {
       }
     );
   };
+
+  const getLastWorkoutForPlan = useCallback(async (planId) => {
+    try {
+      const response = await axios.get(`${API_URL}/workouts/last/${planId}`, getAuthConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching last workout for plan:', error);
+      addNotification('Failed to fetch last workout for plan', 'error');
+      return null;
+    }
+  }, [API_URL, getAuthConfig, addNotification]);
 
   const getExerciseHistory = useCallback(async (exerciseId) => {
     try {
@@ -2642,37 +2813,41 @@ export function GymProvider({ children }) {
 
   const saveProgress = useCallback(async (progressData) => {
     if (!user) return;
-
+  
     try {
+      // Ensure startTime is included in the progressData
+      if (!progressData.startTime) {
+        progressData.startTime = new Date().toISOString();
+      }
+      
       await axios.post(`${API_URL}/workouts/progress`, progressData, getAuthConfig());
       localStorage.setItem('workoutProgress', JSON.stringify(progressData));
       console.log('Progress saved successfully');
     } catch (error) {
       console.error('Error saving progress:', error);
-      addNotification('Failed to save progress', 'error');
+      addNotification('Failed to save progress: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 
   const clearWorkout = useCallback(async () => {
     if (!user) return;
-
+  
     try {
-      // Clear data from local storage
       localStorage.removeItem('currentPlan');
       localStorage.removeItem('currentSets');
       localStorage.removeItem('currentExerciseIndex');
       localStorage.removeItem('workoutStartTime');
       localStorage.removeItem('workoutNotes');
       localStorage.removeItem('lastSetValues');
-
-      // Clear progress from the database
+  
       await axios.delete(`${API_URL}/workouts/progress`, getAuthConfig());
       
       console.log('Workout cleared successfully');
       addNotification('Workout cleared', 'success');
     } catch (error) {
       console.error('Error clearing workout:', error);
-      addNotification('Failed to clear workout', 'error');
+      addNotification('Failed to clear workout: ' + (error.response?.data?.message || error.message), 'error');
       throw error;
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
@@ -2696,7 +2871,8 @@ export function GymProvider({ children }) {
     addExerciseToPlan,
     saveProgress,
     clearWorkout,
-    getExerciseHistory
+    getExerciseHistory,
+    getLastWorkoutForPlan
   }), [
     workouts, 
     exercises, 
@@ -2716,7 +2892,8 @@ export function GymProvider({ children }) {
     addExerciseToPlan,
     saveProgress,
     clearWorkout,
-    getExerciseHistory
+    getExerciseHistory,
+    getLastWorkoutForPlan
   ]);
 
   return (
@@ -3171,17 +3348,23 @@ export default WorkoutPlanForm;
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
+import { formatTime } from '../utils/timeUtils';
 
 function WorkoutPlanDetails() {
   const { id } = useParams();
-  const { workoutPlans, updateWorkoutPlan, deleteWorkoutPlan } = useGymContext();
+  const { workoutPlans, updateWorkoutPlan, deleteWorkoutPlan, getLastWorkoutForPlan } = useGymContext();
   const [plan, setPlan] = useState(null);
+  const [lastWorkout, setLastWorkout] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const foundPlan = workoutPlans.find(p => p._id === id);
     setPlan(foundPlan);
-  }, [id, workoutPlans]);
+
+    if (foundPlan) {
+      getLastWorkoutForPlan(foundPlan._id).then(setLastWorkout);
+    }
+  }, [id, workoutPlans, getLastWorkoutForPlan]);
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this workout plan?')) {
@@ -3222,6 +3405,15 @@ function WorkoutPlanDetails() {
         <button onClick={handleDelete} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
           Delete Plan
         </button>
+        
+        {lastWorkout && (
+        <div className="mt-4">
+          <h3 className="text-xl font-semibold">Last Workout</h3>
+          <p>Date: {new Date(lastWorkout.startTime).toLocaleDateString()}</p>
+          <p>Duration: {formatTime((new Date(lastWorkout.endTime) - new Date(lastWorkout.startTime)) / 1000)}</p>
+          {/* Add more details as needed */}
+        </div>
+      )}
       </div>
     </div>
   );
@@ -3935,6 +4127,95 @@ function Register() {
 export default Register;
 ```
 
+# src/components/PreviousWorkoutDisplay.jsx
+
+```jsx
+// src/components/PreviousWorkoutDisplay.jsx
+
+import React from 'react';
+
+const PreviousWorkoutDisplay = ({ previousWorkout, exerciseHistory, isLoading, formatTime, darkMode }) => {
+  if (isLoading) {
+    return <p className="p-4">Loading previous data...</p>;
+  }
+
+  const renderExerciseHistory = () => {
+    if (!exerciseHistory || exerciseHistory.length === 0) {
+      return <p className="p-4">No previous data available for this exercise.</p>;
+    }
+
+    const lastWorkout = exerciseHistory[0]; // Most recent workout
+
+    return (
+      <div className="mb-4">
+        <h3 className="text-xl font-bold mb-2">Last Exercise Performance</h3>
+        <p><strong>Date:</strong> {new Date(lastWorkout.date).toLocaleDateString()}</p>
+        <h4 className="text-lg font-medium mt-2">Sets:</h4>
+        <ul className="list-disc pl-5">
+          {lastWorkout.sets.map((set, index) => (
+            <li key={index} className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+              Set {index + 1}: {set.weight} kg x {set.reps} reps
+            </li>
+          ))}
+        </ul>
+        {lastWorkout.notes && (
+          <p className="mt-2 italic">Notes: {lastWorkout.notes}</p>
+        )}
+      </div>
+    );
+  };
+
+  const renderPreviousWorkout = () => {
+    if (!previousWorkout) {
+      return <p className="p-4">No previous workout data available for this plan.</p>;
+    }
+
+    return (
+      <div className="mb-4">
+        <h3 className="text-xl font-bold mb-2">Previous Full Workout</h3>
+        <p><strong>Date:</strong> {previousWorkout.startTime ? new Date(previousWorkout.startTime).toLocaleDateString() : 'N/A'}</p>
+        <p><strong>Duration:</strong> {previousWorkout.startTime && previousWorkout.endTime ? 
+          formatTime((new Date(previousWorkout.endTime) - new Date(previousWorkout.startTime)) / 1000) : 'N/A'}
+        </p>
+        {previousWorkout.exercises && previousWorkout.exercises.map((exercise, index) => (
+          <div key={index} className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <h4 className="text-lg font-medium">
+              {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
+            </h4>
+            {exercise.sets && exercise.sets.length > 0 ? (
+              <ul className="list-disc pl-5">
+                {exercise.sets.map((set, setIndex) => (
+                  <li key={setIndex}>
+                    Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No sets recorded for this exercise.</p>
+            )}
+            {exercise.notes && (
+              <p className="mt-2 italic">Notes: {exercise.notes}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-4">
+      {exerciseHistory && renderExerciseHistory()}
+      {previousWorkout && renderPreviousWorkout()}
+      {!exerciseHistory && !previousWorkout && (
+        <p className="p-4">No previous workout data available. This will be your first workout!</p>
+      )}
+    </div>
+  );
+};
+
+export default PreviousWorkoutDisplay;
+```
+
 # src/components/NotificationToast.jsx
 
 ```jsx
@@ -4558,6 +4839,51 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, viewMo
 }
 
 export default ExerciseItem;
+```
+
+# src/components/ErrorBoundary.jsx
+
+```jsx
+// src/components/ErrorBoundary.jsx
+
+import React from 'react';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+    // Here you could send the error to an error reporting service
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="text-center mt-8">
+          <h1 className="text-2xl font-bold mb-4">Oops! Something went wrong.</h1>
+          <p>We're sorry for the inconvenience. Please try refreshing the page or contact support if the problem persists.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Refresh Page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default ErrorBoundary;
 ```
 
 # src/components/Dashboard.jsx
