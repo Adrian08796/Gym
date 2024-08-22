@@ -355,8 +355,13 @@ export function GymProvider({ children }) {
 
   const saveProgress = useCallback(async (progressData) => {
     if (!user) return;
-
+  
     try {
+      // Ensure startTime is included in the progressData
+      if (!progressData.startTime) {
+        progressData.startTime = new Date().toISOString();
+      }
+      
       await axios.post(`${API_URL}/workouts/progress`, progressData, getAuthConfig());
       localStorage.setItem('workoutProgress', JSON.stringify(progressData));
       console.log('Progress saved successfully');

@@ -99,7 +99,7 @@ function WorkoutTracker() {
       }
       setIsLoading(false);
     };
-
+  
     loadWorkout();
   }, [navigate, addNotification]);
 
@@ -156,6 +156,13 @@ function WorkoutTracker() {
     const storedSets = localStorage.getItem('currentSets');
     const storedIndex = localStorage.getItem('currentExerciseIndex');
     const storedStartTime = localStorage.getItem('workoutStartTime');
+      if (storedStartTime) {
+        setStartTime(new Date(storedStartTime));
+      } else {
+        const newStartTime = new Date();
+        setStartTime(newStartTime);
+        localStorage.setItem('workoutStartTime', newStartTime.toISOString());
+      }
     const storedNotes = localStorage.getItem('workoutNotes');
     const storedLastSetValues = localStorage.getItem('lastSetValues');
 
@@ -243,7 +250,8 @@ function WorkoutTracker() {
         lastSetValues: {
           ...lastSetValues,
           [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
-        }
+        },
+        startTime: startTime.toISOString() // Add this line
       });
       addNotification('Set completed and progress saved!', 'success');
     } catch (error) {
@@ -400,7 +408,6 @@ function WorkoutTracker() {
   };
 
   const handleExerciseChange = async (newIndex) => {
-    // Save current exercise progress before switching
     try {
       await saveProgress({
         plan: currentPlan._id,
@@ -408,7 +415,8 @@ function WorkoutTracker() {
         sets: sets[currentExerciseIndex] || [],
         notes: notes[currentExerciseIndex],
         currentExerciseIndex,
-        lastSetValues
+        lastSetValues,
+        startTime: startTime.toISOString() // Add this line
       });
     } catch (error) {
       console.error('Error saving progress before switching exercise:', error);
