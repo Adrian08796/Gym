@@ -1,8 +1,7 @@
-// src/components/Dashboard.jsx
-
 import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { FiActivity, FiClock, FiBarChart, FiPieChart } from 'react-icons/fi';
 
 function Dashboard() {
   const { workoutHistory } = useGymContext();
@@ -11,85 +10,124 @@ function Dashboard() {
   const [workoutFrequencyData, setWorkoutFrequencyData] = useState([]);
   const [exerciseFrequencyData, setExerciseFrequencyData] = useState([]);
   const [workoutTypeData, setWorkoutTypeData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (workoutHistory.length > 0) {
-      // Calculate total workouts
+      setIsLoading(false);
       setTotalWorkouts(workoutHistory.length);
 
-      // Calculate average workout duration
       const totalDuration = workoutHistory.reduce((sum, workout) => {
         const duration = new Date(workout.endTime) - new Date(workout.startTime);
         return sum + duration;
       }, 0);
-      setAverageWorkoutDuration(totalDuration / workoutHistory.length / (1000 * 60)); // Convert to minutes
+      setAverageWorkoutDuration(totalDuration / workoutHistory.length / (1000 * 60));
 
-      // Prepare data for workout frequency chart
       const frequencyMap = {};
+      const exerciseMap = {};
+      const typeCount = {};
+
       workoutHistory.forEach(workout => {
         const date = new Date(workout.startTime).toLocaleDateString();
         frequencyMap[date] = (frequencyMap[date] || 0) + 1;
-      });
-      const frequencyData = Object.entries(frequencyMap).map(([date, count]) => ({ date, count }));
-      setWorkoutFrequencyData(frequencyData);
 
-      // Prepare data for exercise frequency chart
-      const exerciseMap = {};
-      workoutHistory.forEach(workout => {
         workout.exercises.forEach(exercise => {
           const exerciseName = exercise.exercise ? exercise.exercise.name : 'Unknown';
           exerciseMap[exerciseName] = (exerciseMap[exerciseName] || 0) + 1;
         });
+
+        const type = workout.plan ? workout.plan.type : 'other';
+        typeCount[type] = (typeCount[type] || 0) + 1;
       });
-      const exerciseData = Object.entries(exerciseMap)
+
+      setWorkoutFrequencyData(Object.entries(frequencyMap).map(([date, count]) => ({ date, count })));
+      setExerciseFrequencyData(Object.entries(exerciseMap)
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count)
-        .slice(0, 10); // Top 10 exercises
-      setExerciseFrequencyData(exerciseData);
+        .slice(0, 10));
+      setWorkoutTypeData(Object.entries(typeCount).map(([name, value]) => ({ name, value })));
+    } else {
+      setIsLoading(false);
     }
-
-      // Calculate workout types
-    const typeCount = {};
-    workoutHistory.forEach(workout => {
-      const type = workout.plan ? workout.plan.type : 'other';
-      typeCount[type] = (typeCount[type] || 0) + 1;
-    });
-    const typeData = Object.entries(typeCount).map(([name, value]) => ({ name, value }));
-    setWorkoutTypeData(typeData);
-
   }, [workoutHistory]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
+  const StatCard = ({ icon, title, value, color }) => (
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <div className={`p-3 rounded-full ${color} text-white mr-4`}>
+            {icon}
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
+            <p className="text-2xl font-semibold text-gray-700 dark:text-gray-200">{value}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ChartCard = ({ title, children }) => (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl">
+      <h3 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">{title}</h3>
+      {children}
+    </div>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (workoutHistory.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <FiActivity className="text-6xl text-gray-400 mb-4" />
+        <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-2">No Workout Data Yet</h2>
+        <p className="text-gray-500 dark:text-gray-400">Start logging your workouts to see your progress!</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-4 bg-background">
-      <h2 className="text-3xl font-heading font-bold mb-6 text-primary">Workout Dashboard</h2>
+    <div className="p-6 bg-gray-100 dark:bg-gray-900 min-h-screen">
+      <h2 className="text-3xl font-bold mb-8 text-gray-800 dark:text-white">Workout Dashboard</h2>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold mb-2 text-text">Total Workouts</h3>
-          <p className="text-4xl font-bold text-primary">{totalWorkouts}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold mb-2 text-text">Average Workout Duration</h3>
-          <p className="text-4xl font-bold text-primary">{averageWorkoutDuration.toFixed(1)} minutes</p>
-        </div>
+        <StatCard 
+          icon={<FiActivity className="h-6 w-6" />}
+          title="Total Workouts"
+          value={totalWorkouts}
+          color="bg-blue-500"
+        />
+        <StatCard 
+          icon={<FiClock className="h-6 w-6" />}
+          title="Average Workout Duration"
+          value={`${averageWorkoutDuration.toFixed(1)} minutes`}
+          color="bg-green-500"
+        />
       </div>
-      <div className="mb-8">
-        <h3 className="text-2xl font-semibold mb-4 text-text">Workout Frequency</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={workoutFrequencyData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis allowDecimals={false} domain={[0, 'dataMax + 1']} />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="count" stroke="#8884d8" activeDot={{ r: 8 }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <h3 className="text-2xl font-semibold mb-4 text-text">Top 10 Exercises</h3>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <ChartCard title="Workout Frequency">
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={workoutFrequencyData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="count" stroke="#8884d8" activeDot={{ r: 8 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Top 10 Exercises">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={exerciseFrequencyData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -100,9 +138,11 @@ function Dashboard() {
               <Bar dataKey="count" fill="#82ca9d" />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-        <div>
-          <h3 className="text-2xl font-semibold mb-4 text-text">Workout Types</h3>
+        </ChartCard>
+      </div>
+
+      <ChartCard title="Workout Types">
+        <div className="flex justify-center">
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -123,7 +163,7 @@ function Dashboard() {
             </PieChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartCard>
     </div>
   );
 }
