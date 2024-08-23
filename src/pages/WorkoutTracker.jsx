@@ -645,10 +645,11 @@ function WorkoutTracker() {
                       Rest Time (seconds):
                     </label>
                     <input
-                      type="number"
-                      placeholder='60 seconds'
+                      type="text"
+                      inputMode='numeric'
+                      pattern='[0-9]*'
                       id="restTime"
-                      value={Number(restTime).toString()}
+                      value={restTime || ''}
                       onChange={(e) => setRestTime(Number(e.target.value))}
                       className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     />
