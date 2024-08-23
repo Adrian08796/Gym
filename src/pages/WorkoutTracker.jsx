@@ -646,7 +646,7 @@ function WorkoutTracker() {
                     </label>
                     <input
                       type="number"
-                      placeholder='seconds'
+                      placeholder='60 seconds'
                       id="restTime"
                       value={restTime}
                       onChange={(e) => setRestTime(Number(e.target.value))}
