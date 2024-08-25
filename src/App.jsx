@@ -19,7 +19,8 @@ import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import NotificationToast from './components/NotificationToast';
-import ErrorBoundary from './components/ErrorBoundary';  // Import the ErrorBoundary
+import ErrorBoundary from './components/ErrorBoundary';
+import axiosInstance from './utils/axiosConfig';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
