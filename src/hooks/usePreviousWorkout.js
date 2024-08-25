@@ -1,7 +1,7 @@
 // src/hooks/usePreviousWorkout.js
 
 import { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "./../utils/axiosConfig";
 
 export const usePreviousWorkout = (planId, API_URL, addNotification) => {
   const [isPreviousWorkoutLoading, setIsPreviousWorkoutLoading] =
