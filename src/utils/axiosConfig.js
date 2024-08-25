@@ -1,10 +1,9 @@
 // src/utils/axiosConfig.js
 
 import axios from 'axios';
-import { hostName } from '../context/GymContext';
 
 const axiosInstance = axios.create({
-  baseURL: hostName,
+  baseURL: 'https://walrus-app-lqhsg.ondigitalocean.app/backend', // Update this with your actual backend URL
 });
 
 axiosInstance.interceptors.request.use(
@@ -26,15 +25,13 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post(`${hostName}/api/auth/refresh-token`, { refreshToken });
+        const response = await axios.post('/api/auth/refresh-token', { refreshToken });
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
         axios.defaults.headers.common['x-auth-token'] = response.data.accessToken;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        console.error('Error refreshing token:', refreshError);
         // Handle refresh token failure (e.g., redirect to login)
-        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }

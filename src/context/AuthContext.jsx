@@ -1,14 +1,7 @@
 // src/context/AuthContext.jsx
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
-import axiosInstance from './utils/axiosConfig';
-import { hostName } from "./GymContext";
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import axiosInstance from '../utils/axiosConfig';
 
 const AuthContext = createContext();
 
@@ -22,20 +15,17 @@ export function AuthProvider({ children }) {
 
   const refreshToken = useCallback(async () => {
     try {
-      const refreshToken = localStorage.getItem("refreshToken");
+      const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) {
-        throw new Error("No refresh token available");
+        throw new Error('No refresh token available');
       }
 
-      const response = await axiosInstance.post(
-        `${hostName}/api/auth/refresh-token`,
-        { refreshToken }
-      );
-      localStorage.setItem("token", response.data.accessToken);
-      localStorage.setItem("refreshToken", response.data.refreshToken);
+      const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken });
+      localStorage.setItem('token', response.data.accessToken);
+      localStorage.setItem('refreshToken', response.data.refreshToken);
       return response.data.accessToken;
     } catch (error) {
-      console.error("Error refreshing token:", error);
+      console.error('Error refreshing token:', error);
       logout();
       throw error;
     }
@@ -43,34 +33,23 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const checkLoggedIn = async () => {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem('token');
       if (token) {
         try {
-          console.log("Checking logged in status with token");
-          const response = await axiosInstance.get(
-            `${hostName}/api/auth/user`,
-            {
-              headers: { "x-auth-token": token },
-            }
-          );
-          console.log("User data received:", response.data);
+          console.log('Checking logged in status with token');
+          const response = await axiosInstance.get('/api/auth/user');
+          console.log('User data received:', response.data);
           setUser(response.data);
         } catch (error) {
-          console.error("Error fetching user:", error);
+          console.error('Error fetching user:', error);
           if (error.response && error.response.status === 401) {
             try {
               await refreshToken();
               // Retry fetching user data with new token
-              const newToken = localStorage.getItem("token");
-              const retryResponse = await axiosInstance.get(
-                `${hostName}/api/auth/user`,
-                {
-                  headers: { "x-auth-token": newToken },
-                }
-              );
+              const retryResponse = await axiosInstance.get('/api/auth/user');
               setUser(retryResponse.data);
             } catch (refreshError) {
-              console.error("Error refreshing token:", refreshError);
+              console.error('Error refreshing token:', refreshError);
               logout();
             }
           } else {
@@ -86,53 +65,35 @@ export function AuthProvider({ children }) {
 
   const register = async (username, email, password) => {
     try {
-      console.log("Attempting to register user:", username);
-      await axiosInstance.post(`${hostName}/api/auth/register`, {
-        username,
-        email,
-        password,
-      });
-      console.log("Registration successful");
+      console.log('Attempting to register user:', username);
+      await axiosInstance.post('/api/auth/register', { username, email, password });
+      console.log('Registration successful');
       return true;
     } catch (error) {
-      console.error(
-        "Registration error:",
-        error.response?.data || error.message
-      );
+      console.error('Registration error:', error.response?.data || error.message);
       throw error;
     }
   };
 
   const login = async (username, password) => {
     try {
-      console.log("Attempting to log in user:", username);
-      const response = await axiosInstance.post(`${hostName}/api/auth/login`, {
-        username,
-        password,
-      });
-      console.log("Login response:", response.data);
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("refreshToken", response.data.refreshToken);
+      console.log('Attempting to log in user:', username);
+      const response = await axiosInstance.post('/api/auth/login', { username, password });
+      console.log('Login response:', response.data);
+      localStorage.setItem('token', response.data.accessToken);
+      localStorage.setItem('refreshToken', response.data.refreshToken);
       setUser(response.data.user);
       return response.data;
     } catch (error) {
-      console.error("Login error:", error);
-      if (error.response) {
-        console.error("Error response:", error.response.data);
-        console.error("Error status:", error.response.status);
-      } else if (error.request) {
-        console.error("No response received:", error.request);
-      } else {
-        console.error("Error message:", error.message);
-      }
+      console.error('Login error:', error);
       throw error;
     }
   };
 
   const logout = useCallback(() => {
-    console.log("Logging out user");
-    localStorage.removeItem("token");
-    localStorage.removeItem("refreshToken");
+    console.log('Logging out user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     setUser(null);
   }, []);
 
@@ -142,10 +103,14 @@ export function AuthProvider({ children }) {
     login,
     logout,
     loading,
-    refreshToken,
+    refreshToken
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export default AuthProvider;
