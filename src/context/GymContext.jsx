@@ -8,7 +8,7 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import axiosInstance from '../utils/axiosConfig';
+import axiosInstance from "../utils/axiosConfig";
 import { useAuth } from "./AuthContext";
 import { useNotification } from "./NotificationContext";
 
@@ -32,9 +32,8 @@ export function GymProvider({ children }) {
 
   const getAuthConfig = useCallback(() => {
     const token = localStorage.getItem("token");
-    return {
-      headers: { "x-auth-token": token },
-    };
+    axiosInstance.defaults.headers.common['x-auth-token'] = token;
+    return axiosInstance;
   }, []);
 
   const toTitleCase = str => {
