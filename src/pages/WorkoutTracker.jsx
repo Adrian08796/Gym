@@ -21,7 +21,7 @@ function WorkoutTracker() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
-  const [restTime, setRestTime] = useState(null);
+  const [restTime, setRestTime] = useState(120);
   const [isResting, setIsResting] = useState(false);
   const [remainingRestTime, setRemainingRestTime] = useState(0);
   const [notes, setNotes] = useState([]);
@@ -384,7 +384,7 @@ function WorkoutTracker() {
     setCurrentExerciseIndex(0);
     setWeight('');
     setReps('');
-    setRestTime(null);
+    setRestTime(120);
     setIsResting(false);
     setRemainingRestTime(0);
     setTotalPauseTime(0);
