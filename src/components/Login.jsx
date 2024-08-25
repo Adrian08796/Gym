@@ -32,12 +32,11 @@ function Login() {
         console.log('Attempting to log in with username:', username);
         const result = await login(username, password);
         console.log('Login result:', result);
-        if (result && result.token) {
+        if (result && result.user) {
           addNotification('Logged in successfully', 'success');
           navigate('/');
         } else {
-          console.error('Login failed: No token received');
-          addNotification('Login failed: No token received', 'error');
+          addNotification('Login failed: Invalid response from server', 'error');
         }
       } catch (err) {
         console.error('Login error:', err);

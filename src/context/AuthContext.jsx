@@ -80,10 +80,16 @@ export function AuthProvider({ children }) {
       console.log('Attempting to log in user:', username);
       const response = await axiosInstance.post('/api/auth/login', { username, password });
       console.log('Login response:', response.data);
-      localStorage.setItem('token', response.data.accessToken);
-      localStorage.setItem('refreshToken', response.data.refreshToken);
-      setUser(response.data.user);
-      return response.data;
+      
+      if (response.data && response.data.accessToken && response.data.user) {
+        localStorage.setItem('token', response.data.accessToken);
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+        setUser(response.data.user);
+        console.log('User logged in successfully:', response.data.user);
+        return response.data;
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;
