@@ -8,7 +8,7 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import axiosInstance from './utils/axiosConfig';
+import axiosInstance from './utils/axiosConfig.js';
 import { useAuth } from "./AuthContext";
 import { useNotification } from "./NotificationContext";
 

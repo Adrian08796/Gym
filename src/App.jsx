@@ -20,7 +20,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import NotificationToast from './components/NotificationToast';
 import ErrorBoundary from './components/ErrorBoundary';
-import axiosInstance from './utils/axiosConfig';
+import axiosInstance from './utils/axiosConfig.js';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
