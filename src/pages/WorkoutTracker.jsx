@@ -165,7 +165,18 @@ function WorkoutTracker() {
   }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
 
   const loadStoredData = (plan) => {
+    const initialTotalSets = plan.exercises.reduce((total, exercise) => total + (exercise.requiredSets || 3), 0);
+    setTotalSets(initialTotalSets);
     const storedSets = localStorage.getItem('currentSets');
+  if (storedSets) {
+    const parsedSets = JSON.parse(storedSets);
+    const initialCompletedSets = parsedSets.flat().length;
+    setCompletedSets(initialCompletedSets);
+    setSets(parsedSets);
+  } else {
+    setCompletedSets(0);
+    setSets(plan.exercises.map(() => []));
+  }
     const storedIndex = localStorage.getItem('currentExerciseIndex');
     const storedStartTime = localStorage.getItem('workoutStartTime');
   if (storedStartTime) {
@@ -256,10 +267,16 @@ function WorkoutTracker() {
       return newSets;
     });
   
+    setCompletedSets(prevCompletedSets => prevCompletedSets + 1);
+  
     setLastSetValues(prev => ({
       ...prev,
       [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
     }));
+  
+    // Update progress
+    const newProgress = calculateProgress();
+    setProgression(newProgress);
   
     // Save progress to database
     try {
@@ -283,7 +300,6 @@ function WorkoutTracker() {
     }
   
     startRestTimer();
-    updateProgression();
   };
 
   const startRestTimer = () => {
@@ -427,16 +443,10 @@ function WorkoutTracker() {
     return exerciseSets.length >= (requiredSets[exerciseId] || 0);
   }, [requiredSets]);
 
-  const calculateProgress = useCallback(() => {
-    if (!currentPlan || !currentPlan.exercises || currentPlan.exercises.length === 0) {
-      return 0;
-    }
-    const totalExercises = currentPlan.exercises.length;
-    const completedExercises = currentPlan.exercises.filter((exercise, index) => 
-      isExerciseComplete(exercise._id, sets[index] || [])
-    ).length;
-    return (completedExercises / totalExercises) * 100;
-  }, [currentPlan, sets, isExerciseComplete, requiredSets]);
+  const calculateProgress = useMemo(() => {
+    if (totalSets === 0) return 0;
+    return (completedSets / totalSets) * 100;
+  }, [completedSets, totalSets]);
 
   const handleNoteChange = (index, value) => {
     setNotes(prevNotes => {
@@ -561,9 +571,9 @@ function WorkoutTracker() {
 
       <div className="mb-4">
         <div className="progress-bar">
-          <div className="progress-bar-fill" style={{width: `${safelyFormatNumber(calculateProgress())}%`}}></div>
+          <div className="progress-bar-fill" style={{width: `${calculateProgress.toFixed(2)}%`}}></div>
         </div>
-        <p className="text-sm mt-2 text-center">Overall Progress: {safelyFormatNumber(calculateProgress())}%</p>
+        <p className="text-sm mt-2 text-center">Overall Progress: {calculateProgress.toFixed(2)}%</p>
       </div>
 
       <div className="mb-4 flex justify-center items-center">
