@@ -75,40 +75,40 @@ function WorkoutSummary() {
 
           {workout.exercises.map((exercise, index) => (
             <div key={index} className={`mb-4 p-3 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <h4 className={`text-lg font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                {exercise.exercise ? exercise.exercise.name : 'Deleted Exercise'}
-              </h4>
-              {exercise.completedAt && (
-                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completed at: {formatTime(exercise.completedAt)}</p>
-              )}
-              {exercise.sets && exercise.sets.length > 0 ? (
-                <ul className="list-disc pl-5 mt-2">
-                  {exercise.sets.map((set, setIndex) => (
-                    <li key={setIndex} className={`mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Set {setIndex + 1}: {set.weight} lbs x {set.reps} reps
-                      {set.completedAt && (
-                        <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>
-                          (at {formatTime(set.completedAt)})
-                        </span>
-                      )}
-                      {set.skippedRest && (
-                        <span className="text-yellow-500 ml-2">(Rest Skipped)</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className={`mt-2 italic ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>No sets completed</p>
-              )}
-              {exercise.notes && (
-                <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <strong>Notes:</strong> {exercise.notes}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-      ))}
+            <h4 className={`text-lg font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+              {exercise.exercise ? exercise.exercise.name : 'Unknown Exercise'}
+            </h4>
+            {exercise.completedAt && (
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completed at: {formatTime(exercise.completedAt)}</p>
+            )}
+            {exercise.sets && exercise.sets.length > 0 ? (
+              <ul className="list-disc pl-5 mt-2">
+                {exercise.sets.map((set, setIndex) => (
+                  <li key={setIndex} className={`mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
+                    {set.completedAt && (
+                      <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>
+                        (at {formatTime(set.completedAt)})
+                      </span>
+                    )}
+                    {set.skippedRest && (
+                      <span className="text-yellow-500 ml-2">(Rest Skipped)</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={`mt-2 italic ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>No sets completed</p>
+            )}
+            {exercise.notes && (
+              <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <strong>Notes:</strong> {exercise.notes}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    ))}
       <button
         onClick={() => navigate('/')}
         className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4`}
