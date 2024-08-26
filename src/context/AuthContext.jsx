@@ -104,6 +104,30 @@ export function AuthProvider({ children }) {
     window.location.href = '/login';
   }, []);
 
+  const silentRefresh = useCallback(async () => {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) throw new Error('No refresh token');
+  
+      const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken });
+      localStorage.setItem('token', response.data.accessToken);
+      localStorage.setItem('refreshToken', response.data.refreshToken);
+      
+      // Schedule the next refresh
+      setTimeout(silentRefresh, (response.data.expiresIn - 60) * 1000); // Refresh 1 minute before expiration
+    } catch (error) {
+      console.error('Silent refresh failed:', error);
+      // Handle failed refresh (e.g., logout user)
+      logout();
+    }
+  }, [logout]);
+  
+  useEffect(() => {
+    if (user) {
+      silentRefresh();
+    }
+  }, [user, silentRefresh]);
+
   const value = {
     user,
     register,

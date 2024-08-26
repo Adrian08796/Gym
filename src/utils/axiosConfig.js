@@ -31,7 +31,7 @@ axiosInstance.interceptors.response.use(
         axiosInstance.defaults.headers.common['x-auth-token'] = response.data.accessToken;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        console.error('Error refreshing token:', refreshError);
+        // Refresh token has expired or is invalid
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         window.location.href = '/login';
