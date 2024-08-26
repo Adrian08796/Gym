@@ -125,11 +125,19 @@ function WorkoutTracker() {
   useEffect(() => {
     let timer;
     if (startTime) {
-      timer = setInterval(() => {
-        setElapsedTime(prevTime => prevTime + 1);
-      }, 1000);
+      const updateElapsedTime = () => {
+        const now = new Date();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        setElapsedTime(elapsed);
+      };
+  
+      updateElapsedTime(); // Update immediately
+      timer = setInterval(updateElapsedTime, 1000);
     }
-    return () => clearInterval(timer);
+  
+    return () => {
+      if (timer) clearInterval(timer);
+    };
   }, [startTime]);
 
   useEffect(() => {
@@ -160,13 +168,17 @@ function WorkoutTracker() {
     const storedSets = localStorage.getItem('currentSets');
     const storedIndex = localStorage.getItem('currentExerciseIndex');
     const storedStartTime = localStorage.getItem('workoutStartTime');
-      if (storedStartTime) {
-        setStartTime(new Date(storedStartTime));
-      } else {
-        const newStartTime = new Date();
-        setStartTime(newStartTime);
-        localStorage.setItem('workoutStartTime', newStartTime.toISOString());
-      }
+  if (storedStartTime) {
+    setStartTime(new Date(storedStartTime));
+    const now = new Date();
+    const elapsed = Math.floor((now - new Date(storedStartTime)) / 1000);
+    setElapsedTime(elapsed);
+  } else {
+    const newStartTime = new Date();
+    setStartTime(newStartTime);
+    localStorage.setItem('workoutStartTime', newStartTime.toISOString());
+    setElapsedTime(0);
+  }
     const storedNotes = localStorage.getItem('workoutNotes');
     const storedLastSetValues = localStorage.getItem('lastSetValues');
     const totalSetsCount = plan.exercises.reduce((total, exercise) => total + (exercise.requiredSets || 3), 0);
@@ -332,6 +344,7 @@ function WorkoutTracker() {
     try {
       await addWorkout(completedWorkout);
       await clearWorkout();
+      localStorage.removeItem('workoutStartTime'); // Add this line
       addNotification('Workout completed and saved!', 'success');
       resetWorkoutState();
       clearLocalStorage();
@@ -355,6 +368,7 @@ function WorkoutTracker() {
           onClick: async () => {
             try {
               await clearWorkout();
+              localStorage.removeItem('workoutStartTime'); // Add this line
               resetWorkoutState();
               clearLocalStorage();
               addNotification('Workout cancelled', 'info');
