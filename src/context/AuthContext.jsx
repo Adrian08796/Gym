@@ -97,10 +97,11 @@ export function AuthProvider({ children }) {
   };
 
   const logout = useCallback(() => {
-    console.log('Logging out user');
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     setUser(null);
+    // Redirect to login page
+    window.location.href = '/login';
   }, []);
 
   const value = {

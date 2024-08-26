@@ -1,4 +1,5 @@
 // src/utils/axiosConfig.js
+
 import axios from 'axios';
 
 const axiosInstance = axios.create({
@@ -20,7 +21,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response.status === 401 && error.response.data.tokenExpired && !originalRequest._retry) {
+    if (error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem('refreshToken');
