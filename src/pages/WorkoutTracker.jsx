@@ -40,6 +40,8 @@ function WorkoutTracker() {
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [exerciseHistory, setExerciseHistory] = useState({});
+  const [completedSets, setCompletedSets] = useState(0);
+  const [totalSets, setTotalSets] = useState(0);  
 
   const { addWorkout, saveProgress, clearWorkout, getExerciseHistory } = useGymContext();
   const { addNotification } = useNotification();
@@ -51,7 +53,6 @@ function WorkoutTracker() {
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan?._id, API_URL, addNotification);
   
-  // Fetch exercise history when currentPlan changes
   // Fetch exercise history when currentPlan changes
   useEffect(() => {
     const fetchExerciseHistory = async () => {
@@ -168,6 +169,11 @@ function WorkoutTracker() {
       }
     const storedNotes = localStorage.getItem('workoutNotes');
     const storedLastSetValues = localStorage.getItem('lastSetValues');
+    const totalSetsCount = plan.exercises.reduce((total, exercise) => total + (exercise.requiredSets || 3), 0);
+    setTotalSets(totalSetsCount);
+
+    const completedSetsCount = storedSets ? JSON.parse(storedSets).flat().length : 0;
+    setCompletedSets(completedSetsCount);
 
     const initialRequiredSets = {};
     plan.exercises.forEach(exercise => {
@@ -403,9 +409,9 @@ function WorkoutTracker() {
     return typeof value === 'number' ? value.toFixed(decimalPlaces) : '0.00';
   };
 
-  const isExerciseComplete = (exerciseId, exerciseSets) => {
+  const isExerciseComplete = useCallback((exerciseId, exerciseSets) => {
     return exerciseSets.length >= (requiredSets[exerciseId] || 0);
-  };
+  }, [requiredSets]);
 
   const calculateProgress = useCallback(() => {
     if (!currentPlan || !currentPlan.exercises || currentPlan.exercises.length === 0) {
