@@ -21,7 +21,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (error.response.status === 401 && !originalRequest._retry && localStorage.getItem('refreshToken')) {
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem('refreshToken');
@@ -31,7 +31,6 @@ axiosInstance.interceptors.response.use(
         axiosInstance.defaults.headers.common['x-auth-token'] = response.data.accessToken;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // Refresh token has expired or is invalid
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         window.location.href = '/login';

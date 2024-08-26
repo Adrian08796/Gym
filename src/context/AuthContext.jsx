@@ -1,6 +1,4 @@
-// src/context/AuthContext.jsx
-
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import axiosInstance from '../utils/axiosConfig';
 
 const AuthContext = createContext();
@@ -12,8 +10,9 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const refreshTimeoutRef = useRef();
 
-  const refreshToken = useCallback(async () => {
+  const refreshToken = useCallback(async (silent = false) => {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) {
@@ -23,6 +22,12 @@ export function AuthProvider({ children }) {
       const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken });
       localStorage.setItem('token', response.data.accessToken);
       localStorage.setItem('refreshToken', response.data.refreshToken);
+
+      if (silent) {
+        // Schedule the next refresh
+        refreshTimeoutRef.current = setTimeout(() => refreshToken(true), (response.data.expiresIn - 60) * 1000);
+      }
+
       return response.data.accessToken;
     } catch (error) {
       console.error('Error refreshing token:', error);
@@ -31,21 +36,31 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    setUser(null);
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    // Optionally, invalidate the token on the server
+    axiosInstance.post('/api/auth/logout').catch(console.error);
+    window.location.href = '/login';
+  }, []);
+
   useEffect(() => {
     const checkLoggedIn = async () => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          console.log('Checking logged in status with token');
           const response = await axiosInstance.get('/api/auth/user');
-          console.log('User data received:', response.data);
           setUser(response.data);
+          refreshToken(true); // Start silent refresh cycle
         } catch (error) {
           console.error('Error fetching user:', error);
           if (error.response && error.response.status === 401) {
             try {
               await refreshToken();
-              // Retry fetching user data with new token
               const retryResponse = await axiosInstance.get('/api/auth/user');
               setUser(retryResponse.data);
             } catch (refreshError) {
@@ -61,13 +76,17 @@ export function AuthProvider({ children }) {
     };
 
     checkLoggedIn();
-  }, [refreshToken]);
+
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, [refreshToken, logout]);
 
   const register = async (username, email, password) => {
     try {
-      console.log('Attempting to register user:', username);
       await axiosInstance.post('/api/auth/register', { username, email, password });
-      console.log('Registration successful');
       return true;
     } catch (error) {
       console.error('Registration error:', error.response?.data || error.message);
@@ -77,15 +96,13 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password) => {
     try {
-      console.log('Attempting to log in user:', username);
       const response = await axiosInstance.post('/api/auth/login', { username, password });
-      console.log('Login response:', response.data);
       
       if (response.data && response.data.accessToken && response.data.user) {
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
         setUser(response.data.user);
-        console.log('User logged in successfully:', response.data.user);
+        refreshToken(true); // Start silent refresh cycle
         return response.data;
       } else {
         throw new Error('Invalid response from server');
@@ -95,38 +112,6 @@ export function AuthProvider({ children }) {
       throw error;
     }
   };
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    setUser(null);
-    // Redirect to login page
-    window.location.href = '/login';
-  }, []);
-
-  const silentRefresh = useCallback(async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) throw new Error('No refresh token');
-  
-      const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken });
-      localStorage.setItem('token', response.data.accessToken);
-      localStorage.setItem('refreshToken', response.data.refreshToken);
-      
-      // Schedule the next refresh
-      setTimeout(silentRefresh, (response.data.expiresIn - 60) * 1000); // Refresh 1 minute before expiration
-    } catch (error) {
-      console.error('Silent refresh failed:', error);
-      // Handle failed refresh (e.g., logout user)
-      logout();
-    }
-  }, [logout]);
-  
-  useEffect(() => {
-    if (user) {
-      silentRefresh();
-    }
-  }, [user, silentRefresh]);
 
   const value = {
     user,
