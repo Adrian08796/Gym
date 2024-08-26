@@ -41,12 +41,7 @@ function WorkoutTracker() {
   const [isLoading, setIsLoading] = useState(true);
   const [exerciseHistory, setExerciseHistory] = useState({});
 
-  const { 
-    addWorkout, 
-    saveProgress, 
-    clearWorkout,
-    getExerciseHistory 
-  } = useGymContext();
+  const { addWorkout, saveProgress, clearWorkout, getExerciseHistory } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
@@ -259,7 +254,9 @@ function WorkoutTracker() {
           ...lastSetValues,
           [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
         },
-        startTime: startTime.toISOString() // Add this line
+        startTime: startTime.toISOString(),
+        completedSets: completedSets + 1,
+        totalSets
       });
       addNotification('Set completed and progress saved!', 'success');
     } catch (error) {

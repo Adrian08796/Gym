@@ -25,7 +25,7 @@ export function GymProvider({ children }) {
   const [exercises, setExercises] = useState([]);
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [workoutHistory, setWorkoutHistory] = useState([]);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { addNotification } = useNotification();
 
   const API_URL = `${hostName}/api`;
@@ -429,29 +429,26 @@ export function GymProvider({ children }) {
 
   const saveProgress = useCallback(async (progressData) => {
     if (!user) return;
-  
+
     try {
       if (!progressData.startTime) {
         progressData.startTime = new Date().toISOString();
       }
       
-      await axiosInstance.post(`${API_URL}/workouts/progress`, progressData);
+      await axiosInstance.post(`${hostName}/api/workouts/progress`, progressData);
       localStorage.setItem('workoutProgress', JSON.stringify(progressData));
       console.log('Progress saved successfully');
     } catch (error) {
       console.error('Error saving progress:', error);
       if (error.response && error.response.status === 401) {
-        // Token refresh should be handled by axiosInstance interceptor
-        // If we still get here, it means refresh failed
         addNotification('Session expired. Please log in again.', 'error');
-        // Implement a logout function to clear user data and redirect to login
         logout();
       } else {
         addNotification('Failed to save progress: ' + (error.response?.data?.message || error.message), 'error');
       }
       throw error;
     }
-  }, [user, API_URL, addNotification, logout]);
+  }, [user, addNotification, logout]);
 
   const clearWorkout = useCallback(async () => {
     if (!user) return;
