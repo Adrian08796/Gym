@@ -1,3 +1,5 @@
+// src/context/AuthContext.jsx
+
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import axiosInstance from '../utils/axiosConfig';
 
@@ -24,8 +26,9 @@ export function AuthProvider({ children }) {
       localStorage.setItem('refreshToken', response.data.refreshToken);
 
       if (silent) {
-        // Schedule the next refresh
-        refreshTimeoutRef.current = setTimeout(() => refreshToken(true), (response.data.expiresIn - 60) * 1000);
+        // Schedule the next refresh based on expiresIn
+        const refreshTime = (response.data.expiresIn - 60) * 1000; // 60 seconds before expiry
+        refreshTimeoutRef.current = setTimeout(() => refreshToken(true), refreshTime);
       }
 
       return response.data.accessToken;
@@ -36,16 +39,23 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    setUser(null);
-    if (refreshTimeoutRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
+  const logout = useCallback(async () => {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        await axiosInstance.post('/api/auth/logout', { refreshToken });
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      setUser(null);
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      window.location.href = '/login';
     }
-    // Optionally, invalidate the token on the server
-    axiosInstance.post('/api/auth/logout').catch(console.error);
-    window.location.href = '/login';
   }, []);
 
   useEffect(() => {
@@ -84,16 +94,6 @@ export function AuthProvider({ children }) {
     };
   }, [refreshToken, logout]);
 
-  const register = async (username, email, password) => {
-    try {
-      await axiosInstance.post('/api/auth/register', { username, email, password });
-      return true;
-    } catch (error) {
-      console.error('Registration error:', error.response?.data || error.message);
-      throw error;
-    }
-  };
-
   const login = async (username, password) => {
     try {
       const response = await axiosInstance.post('/api/auth/login', { username, password });
@@ -113,11 +113,21 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const register = async (username, email, password) => {
+    try {
+      await axiosInstance.post('/api/auth/register', { username, email, password });
+      return true;
+    } catch (error) {
+      console.error('Registration error:', error.response?.data || error.message);
+      throw error;
+    }
+  };
+
   const value = {
     user,
-    register,
     login,
     logout,
+    register,
     loading,
     refreshToken
   };

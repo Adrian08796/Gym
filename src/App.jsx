@@ -1,6 +1,4 @@
-// src/App.jsx
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import WorkoutTracker from './pages/WorkoutTracker';
@@ -33,6 +31,14 @@ const PrivateRoute = ({ children }) => {
 function AppContent() {
   const { user, loading } = useAuth();
   const { darkMode } = useTheme();
+  const authContext = useAuth();
+  
+  useEffect(() => {
+    window.authContext = authContext;
+    return () => {
+      delete window.authContext;
+    };
+  }, [authContext]);
 
   if (loading) {
     return <div>Loading...</div>;
