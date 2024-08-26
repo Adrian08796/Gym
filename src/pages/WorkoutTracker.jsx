@@ -1,6 +1,6 @@
 // src/pages/WorkoutTracker.jsx
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
@@ -444,8 +444,10 @@ function WorkoutTracker() {
   }, [requiredSets]);
 
   const calculateProgress = useMemo(() => {
-    if (totalSets === 0) return 0;
-    return (completedSets / totalSets) * 100;
+    return () => {
+      if (totalSets === 0) return 0;
+      return (completedSets / totalSets) * 100;
+    };
   }, [completedSets, totalSets]);
 
   const handleNoteChange = (index, value) => {
@@ -571,9 +573,9 @@ function WorkoutTracker() {
 
       <div className="mb-4">
         <div className="progress-bar">
-          <div className="progress-bar-fill" style={{width: `${calculateProgress.toFixed(2)}%`}}></div>
+        <div className="progress-bar-fill" style={{width: `${calculateProgress().toFixed(2)}%`}}></div>
         </div>
-        <p className="text-sm mt-2 text-center">Overall Progress: {calculateProgress.toFixed(2)}%</p>
+        <p className="text-sm mt-2 text-center">Overall Progress: {calculateProgress().toFixed(2)}%</p>
       </div>
 
       <div className="mb-4 flex justify-center items-center">
