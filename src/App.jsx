@@ -17,7 +17,6 @@ import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import NotificationToast from './components/NotificationToast';
-import ErrorBoundary from './components/ErrorBoundary';
 import axiosInstance from './utils/axiosConfig';
 
 const PrivateRoute = ({ children }) => {
@@ -54,13 +53,7 @@ function AppContent() {
             <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
             <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/tracker" element={
-              <PrivateRoute>
-                <ErrorBoundary>
-                  <WorkoutTracker />
-                </ErrorBoundary>
-              </PrivateRoute>
-            } />
+            <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
             <Route path="/exercises" element={<PrivateRoute><ExerciseLibrary /></PrivateRoute>} />
             <Route path="/plans" element={<PrivateRoute><WorkoutPlans /></PrivateRoute>} />
             <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
