@@ -27,7 +27,6 @@ function ExerciseLibrary() {
   const [exerciseToAddToPlan, setExerciseToAddToPlan] = useState(null);
   const [filterText, setFilterText] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [viewMode, setViewMode] = useState('grid');
 
   const filteredExercises = useMemo(() => {
     return exercises.filter(exercise => 
@@ -82,10 +81,6 @@ function ExerciseLibrary() {
     setEditingExercise(null);
   };
 
-  const toggleViewMode = () => {
-    setViewMode(viewMode === 'grid' ? 'list' : 'grid');
-  };
-
   const toggleCategory = (category) => {
     setSelectedCategories(prev => 
       prev.includes(category)
@@ -107,15 +102,6 @@ function ExerciseLibrary() {
             onChange={(e) => setFilterText(e.target.value)}
             className="w-full px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
           />
-        </div>
-
-        <div className="flex items-center gap-4">
-          <button
-            onClick={toggleViewMode}
-            className="px-4 py-2 lg:py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200"
-          >
-            {viewMode === 'grid' ? 'List View' : 'Grid View'}
-          </button>
         </div>
       </div>
 
@@ -145,17 +131,18 @@ function ExerciseLibrary() {
       />
 
       <div className="overflow-x-auto pb-4">
-        <div className="flex space-x-4 snap-x snap-mandatory">
+        <div className="flex space-x-4 snap-x snap-mandatory w-full">
           {filteredExercises.map((exercise) => (
-            <div key={exercise._id} className="snap-start flex-shrink-0 w-72">
-              <ExerciseItem 
-                exercise={exercise}
-                onClick={() => setSelectedExercise(exercise)}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onAddToPlan={handleAddToPlan}
-                viewMode={viewMode}
-              />
+            <div key={exercise._id} className="snap-center flex-shrink-0 w-80">
+              <div className="h-full">
+                <ExerciseItem 
+                  exercise={exercise}
+                  onClick={() => setSelectedExercise(exercise)}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onAddToPlan={handleAddToPlan}
+                />
+              </div>
             </div>
           ))}
         </div>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { FiEdit, FiTrash2, FiPlus } from 'react-icons/fi';
 
-function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, viewMode }) {
+function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const handleAction = (action, e) => {
@@ -50,63 +50,31 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, viewMo
       onClick={(e) => handleAction(action, e)}
       className={`${buttonStyles.base} ${style}`}
     >
-      <span className="mr-1">{icon}</span>
-      {text}
+      {icon}
+      <span className="ml-1">{text}</span>
     </button>
   );
 
   const DeleteConfirmation = () => (
-    <div className="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center rounded-lg">
+    <div className="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center rounded-lg z-10">
       <div className="bg-white dark:bg-gray-700 p-4 rounded-lg text-center">
         <p className="mb-4 text-sm">Are you sure you want to delete this exercise?</p>
         <div className="flex justify-center space-x-2">
-          <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>Yes, Delete</button>
-          <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>Cancel</button>
+          <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>
+            <FiTrash2 className="mr-1" />
+            Yes, Delete
+          </button>
+          <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>
+            Cancel
+          </button>
         </div>
       </div>
     </div>
   );
 
-  const Content = () => (
-    <>
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="font-heading text-xl font-bold text-primary dark:text-blue-400">{exercise.name}</h3>
-        <CategoryBadge />
-      </div>
-      <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">{exercise.description}</p>
-      <p className="text-accent dark:text-yellow-300 text-xs mb-4">
-        Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
-      </p>
-      <div className="flex justify-between mt-4">
-        <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} text="Edit" />
-        <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} text="Delete" />
-        <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} text="Add to Plan" />
-      </div>
-    </>
-  );
-
-  if (viewMode === 'list') {
-    return (
-      <div 
-        className="relative bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer flex items-center"
-        onClick={() => onClick(exercise)}
-      >
-        <img 
-          src={exercise.imageUrl} 
-          alt={exercise.name} 
-          className="w-24 h-24 object-cover"
-        />
-        <div className="flex-grow p-4">
-          <Content />
-        </div>
-        {isDeleteConfirmOpen && <DeleteConfirmation />}
-      </div>
-    );
-  }
-
   return (
     <div 
-      className="relative bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer"
+      className="relative bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer h-full flex flex-col"
       onClick={() => onClick(exercise)}
     >
       <img 
@@ -114,8 +82,20 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, viewMo
         alt={exercise.name} 
         className="w-full h-48 object-cover"
       />
-      <div className="p-4">
-        <Content />
+      <div className="p-4 flex-grow flex flex-col">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-heading text-xl font-bold text-primary dark:text-blue-400">{exercise.name}</h3>
+          <CategoryBadge />
+        </div>
+        <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 flex-grow">{exercise.description}</p>
+        <p className="text-accent dark:text-yellow-300 text-xs mb-4">
+          Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
+        </p>
+        <div className="flex justify-between mt-auto">
+          <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} text="Edit" />
+          <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} text="Delete" />
+          <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} text="Add to Plan" />
+        </div>
       </div>
       {isDeleteConfirmOpen && <DeleteConfirmation />}
     </div>
