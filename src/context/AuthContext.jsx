@@ -27,24 +27,24 @@ export function AuthProvider({ children }) {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
       console.log('Attempting to refresh token with:', refreshToken);
-
+  
       if (!refreshToken) {
         console.log('No refresh token found in localStorage');
         throw new Error('No refresh token available');
       }
-
+  
       const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken });
       console.log('Refresh token response:', response.data);
-
+  
       localStorage.setItem('token', response.data.accessToken);
       localStorage.setItem('refreshToken', response.data.refreshToken);
-
+  
       if (silent) {
-        const refreshTime = (response.data.expiresIn - 60) * 1000;
+        const refreshTime = Math.min((response.data.expiresIn - 60) * 1000, 5 * 60 * 1000); // Refresh every 5 minutes or before token expiry
         console.log('Scheduling next refresh in', refreshTime, 'ms');
         refreshTimeoutRef.current = setTimeout(() => refreshToken(true), refreshTime);
       }
-
+  
       return response.data.accessToken;
     } catch (error) {
       console.error('Error refreshing token:', error);
