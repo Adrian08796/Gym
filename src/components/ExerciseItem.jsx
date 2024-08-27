@@ -1,20 +1,18 @@
 // src/components/ExerciseItem.jsx
 
-import React, { useState } from 'react';
+import React from 'react';
 import { FiEdit, FiTrash2, FiPlus, FiTarget } from 'react-icons/fi';
 
 function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
-  const [isHovered, setIsHovered] = useState(false);
-
   const handleAction = (action, e) => {
     e.stopPropagation();
     action(exercise);
   };
 
   const categoryColors = {
-    Strength: 'from-red-400 to-red-600',
-    Cardio: 'from-blue-400 to-blue-600',
-    Flexibility: 'from-green-400 to-green-600'
+    Strength: 'bg-red-500 text-white',
+    Cardio: 'bg-blue-500 text-white',
+    Flexibility: 'bg-green-500 text-white'
   };
 
   const buttonStyles = {
@@ -38,8 +36,6 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
     <div 
       className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-pointer h-full flex flex-col"
       onClick={() => onClick(exercise)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative h-48 overflow-hidden">
         <img 
@@ -47,8 +43,7 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
           alt={exercise.name} 
           className="w-full h-full object-cover transition-transform duration-300 transform group-hover:scale-110"
         />
-        <div className={`absolute inset-0 bg-gradient-to-b ${categoryColors[exercise.category] || 'from-gray-400 to-gray-600'} opacity-50`}></div>
-        <div className="absolute top-2 right-2 bg-white dark:bg-gray-800 rounded-full px-3 py-1 text-xs font-semibold text-gray-700 dark:text-gray-300 shadow-md">
+        <div className={`absolute top-2 right-2 ${categoryColors[exercise.category] || 'bg-gray-500 text-white'} rounded-full px-3 py-1 text-xs font-semibold shadow-md`}>
           {exercise.category}
         </div>
       </div>
@@ -60,7 +55,7 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
           <span>{Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}</span>
         </div>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white dark:from-gray-800 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <div className="flex justify-between space-x-2">
           <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} text="Edit" />
           <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} text="Delete" />
