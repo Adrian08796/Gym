@@ -6,13 +6,6 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  variants: {
-    extend: {
-      scrollSnapType: ['responsive'],
-      scrollSnapAlign: ['responsive'],
-      scrollSnapStop: ['responsive'],
-    }
-  },
   darkMode: 'class',
   theme: {
     extend: {
@@ -32,6 +25,21 @@ export default {
       fontFamily: {
         'sans': ['Roboto', 'Arial', 'sans-serif'],
         'heading': ['Montserrat', 'Helvetica', 'sans-serif'],
+      },
+      scrollSnapType: {
+        x: 'x',
+        y: 'y',
+        both: 'both',
+        none: 'none',
+      },
+      scrollSnapAlign: {
+        start: 'start',
+        end: 'end',
+        center: 'center',
+      },
+      scrollSnapStop: {
+        normal: 'normal',
+        always: 'always',
       },
     },
   },
