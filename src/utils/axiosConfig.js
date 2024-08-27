@@ -17,6 +17,8 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// src/utils/axiosConfig.js
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -24,11 +26,14 @@ axiosInstance.interceptors.response.use(
     if (error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
+        console.log('Attempting to refresh token due to 401 error');
         const refreshToken = localStorage.getItem('refreshToken');
         if (!refreshToken) {
+          console.log('No refresh token found in localStorage');
           throw new Error('No refresh token available');
         }
         const response = await axios.post('/api/auth/refresh-token', { refreshToken });
+        console.log('Token refresh response:', response.data);
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
         axiosInstance.defaults.headers.common['x-auth-token'] = response.data.accessToken;

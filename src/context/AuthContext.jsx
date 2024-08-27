@@ -19,27 +19,32 @@ export function AuthProvider({ children }) {
   const refreshToken = useCallback(async (silent = false) => {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
+      console.log('Attempting to refresh token with:', refreshToken);
+  
       if (!refreshToken) {
+        console.log('No refresh token found in localStorage');
         throw new Error('No refresh token available');
       }
-
+  
       const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken });
+      console.log('Refresh token response:', response.data);
+  
       localStorage.setItem('token', response.data.accessToken);
       localStorage.setItem('refreshToken', response.data.refreshToken);
-
+  
       if (silent) {
-        // Schedule the next refresh based on expiresIn
-        const refreshTime = (response.data.expiresIn - 60) * 1000; // 60 seconds before expiry
+        const refreshTime = (response.data.expiresIn - 60) * 1000;
+        console.log('Scheduling next refresh in', refreshTime, 'ms');
         refreshTimeoutRef.current = setTimeout(() => refreshToken(true), refreshTime);
       }
-
+  
       return response.data.accessToken;
     } catch (error) {
       console.error('Error refreshing token:', error);
       logout();
       throw error;
     }
-  }, []);
+  }, [logout]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
@@ -92,12 +97,14 @@ export function AuthProvider({ children }) {
   const login = async (username, password) => {
     try {
       const response = await axiosInstance.post('/api/auth/login', { username, password });
-
+      console.log('Login response:', response.data);
+  
       if (response.data && response.data.accessToken && response.data.refreshToken && response.data.user) {
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
         setUser(response.data.user);
-        refreshToken(true); // Start silent refresh cycle
+        console.log('Tokens stored in localStorage');
+        refreshToken(true);
         return response.data;
       } else {
         throw new Error('Invalid response from server');
