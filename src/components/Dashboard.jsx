@@ -113,7 +113,7 @@ function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <ChartCard title="Workout Frequency">
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={workoutFrequencyData}>
@@ -139,9 +139,9 @@ function Dashboard() {
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
-      </div>
+      </div> */}
 
-      <ChartCard title="Workout Types">
+      {/* <ChartCard title="Workout Types">
         <div className="flex justify-center">
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -163,7 +163,7 @@ function Dashboard() {
             </PieChart>
           </ResponsiveContainer>
         </div>
-      </ChartCard>
+      </ChartCard> */}
     </div>
   );
 }
