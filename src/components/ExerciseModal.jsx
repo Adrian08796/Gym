@@ -76,19 +76,19 @@ function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
         <div className="flex justify-end space-x-4 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button 
             onClick={() => onEdit(exercise)}
-            className="'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'"
+            className="bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md"
           >
             Edit
           </button>
           <button 
             onClick={() => onDelete(exercise)}
-            className="'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'"
+            className="bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md"
           >
             Delete
           </button>
           <button 
             onClick={() => onAddToPlan(exercise)}
-            className="'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'"
+            className="bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md"
           >
             Add to Plan
           </button>

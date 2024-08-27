@@ -114,7 +114,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     <div className="mb-8">
       <button
         onClick={toggleForm}
-        className="mb-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        className="mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-2 px-4 rounded"
       >
         {isExpanded ? 'Hide Form' : 'Add New Exercise'}
       </button>
