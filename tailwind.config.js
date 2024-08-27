@@ -6,6 +6,13 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  variants: {
+    extend: {
+      scrollSnapType: ['responsive'],
+      scrollSnapAlign: ['responsive'],
+      scrollSnapStop: ['responsive'],
+    }
+  },
   darkMode: 'class',
   theme: {
     extend: {

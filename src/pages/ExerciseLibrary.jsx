@@ -63,9 +63,9 @@ function ExerciseLibrary() {
       addNotification('No exercise selected', 'error');
       return;
     }
-    
+
     const result = await addExerciseToPlan(plan._id, exerciseToAddToPlan._id);
-    
+
     if (result.success) {
       addNotification(`Exercise added to ${plan.name}`, 'success');
     } else if (result.alreadyInPlan) {
@@ -73,7 +73,7 @@ function ExerciseLibrary() {
     } else {
       // The error notification is already handled in the GymContext
     }
-    
+
     setShowWorkoutPlanSelector(false);
     setExerciseToAddToPlan(null);
   };
@@ -97,7 +97,7 @@ function ExerciseLibrary() {
   return (
     <div className={`bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
       <h1 className="text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise Library</h1>
-      
+
       <div className="mb-6 lg:mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex-grow">
           <input
@@ -108,7 +108,7 @@ function ExerciseLibrary() {
             className="w-full px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
           />
         </div>
-        
+
         <div className="flex items-center gap-4">
           <button
             onClick={toggleViewMode}
@@ -137,27 +137,30 @@ function ExerciseLibrary() {
           ))}
         </div>
       </div>
-      
+
       <AddExerciseForm 
         onSave={handleSave} 
         initialExercise={editingExercise}
         onCancel={handleCancelEdit}
       />
-      
-      <div className={`${viewMode === 'grid' ? 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5' : 'space-y-4'}`}>
-        {filteredExercises.map((exercise) => (
-          <ExerciseItem 
-            key={exercise._id} 
-            exercise={exercise}
-            onClick={() => setSelectedExercise(exercise)}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onAddToPlan={handleAddToPlan}
-            viewMode={viewMode}
-          />
-        ))}
+
+      <div className="overflow-x-auto pb-4">
+        <div className="flex space-x-4 snap-x snap-mandatory">
+          {filteredExercises.map((exercise) => (
+            <div key={exercise._id} className="snap-start flex-shrink-0 w-72">
+              <ExerciseItem 
+                exercise={exercise}
+                onClick={() => setSelectedExercise(exercise)}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onAddToPlan={handleAddToPlan}
+                viewMode={viewMode}
+              />
+            </div>
+          ))}
+        </div>
       </div>
-      
+
       {selectedExercise && (
         <ExerciseModal
           exercise={selectedExercise}
@@ -167,7 +170,7 @@ function ExerciseLibrary() {
           onAddToPlan={handleAddToPlan}
         />
       )}
-      
+
       {showWorkoutPlanSelector && (
         <WorkoutPlanSelector
           onSelect={handleSelectWorkoutPlan}
