@@ -1,5 +1,7 @@
 // src/context/AuthContext.jsx
 
+// src/context/AuthContext.jsx
+
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import axiosInstance from '../utils/axiosConfig';
 
@@ -51,7 +53,8 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const checkLoggedIn = async () => {
       const token = localStorage.getItem('token');
-      if (token) {
+      const refreshTokenStored = localStorage.getItem('refreshToken');
+      if (token && refreshTokenStored) {
         try {
           const response = await axiosInstance.get('/api/auth/user');
           setUser(response.data);
@@ -71,6 +74,8 @@ export function AuthProvider({ children }) {
             logout();
           }
         }
+      } else {
+        logout();
       }
       setLoading(false);
     };
@@ -88,7 +93,7 @@ export function AuthProvider({ children }) {
     try {
       const response = await axiosInstance.post('/api/auth/login', { username, password });
 
-      if (response.data && response.data.accessToken && response.data.user) {
+      if (response.data && response.data.accessToken && response.data.refreshToken && response.data.user) {
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
         setUser(response.data.user);
