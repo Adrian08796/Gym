@@ -29,16 +29,6 @@ axiosInstance.interceptors.response.use(
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
         axiosInstance.defaults.headers.common['x-auth-token'] = response.data.accessToken;
-
-        // Schedule the next refresh
-        const refreshTime = (response.data.expiresIn - 60) * 1000; // 60 seconds before expiry
-        setTimeout(() => {
-          const authContext = window.authContext; // Assuming you've set this globally
-          if (authContext && authContext.refreshToken) {
-            authContext.refreshToken(true);
-          }
-        }, refreshTime);
-
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         console.error('Error refreshing token:', refreshError);

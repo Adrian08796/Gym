@@ -39,22 +39,12 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const logout = useCallback(async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (refreshToken) {
-        await axiosInstance.post('/api/auth/logout', { refreshToken });
-      }
-    } catch (error) {
-      console.error('Error during logout:', error);
-    } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      setUser(null);
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-      window.location.href = '/login';
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    setUser(null);
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
     }
   }, []);
 
@@ -97,7 +87,7 @@ export function AuthProvider({ children }) {
   const login = async (username, password) => {
     try {
       const response = await axiosInstance.post('/api/auth/login', { username, password });
-      
+
       if (response.data && response.data.accessToken && response.data.user) {
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
