@@ -162,7 +162,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                     onClick={() => handleTargetChange(group)}
                     className={`py-1 px-2 rounded ${
                       target.includes(group)
-                        ? 'bg-blue-500 text-white'
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'
                         : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
                     }`}
                   >
@@ -204,7 +204,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           </div>
           <div className="flex items-center justify-between">
             <button
-              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-2 px-4 rounded ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               type="submit"
               disabled={isSubmitting}
             >

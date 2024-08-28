@@ -17,8 +17,8 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
 
   const buttonStyles = {
     base: 'text-xs font-semibold py-2 px-3 rounded-full transition-all duration-300 flex items-center justify-center',
-    edit: 'bg-indigo-500 hover:bg-indigo-600 text-white',
-    delete: 'bg-rose-500 hover:bg-rose-600 text-white',
+    edit: 'bg-emerald-500 hover:bg-emerald-600 text-white',
+    delete: 'bg-emerald-500 hover:bg-emerald-600 text-white',
     addToPlan: 'bg-emerald-500 hover:bg-emerald-600 text-white'
   };
 
