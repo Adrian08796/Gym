@@ -34,7 +34,7 @@ function WorkoutPlanModal({ plan, onClose, onEdit, onStart }) {
           </div>
           <div className="flex justify-between items-center px-4 py-3">
             <button
-              className={`px-4 py-2 ${darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-300`}
+              className={`px-4 py-2 ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300`}
               onClick={() => {
                 onEdit(plan);
                 onClose();
@@ -52,7 +52,7 @@ function WorkoutPlanModal({ plan, onClose, onEdit, onStart }) {
               Start Workout
             </button>
             <button
-              className={`px-4 py-2 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300`}
+              className={`px-4 py-2 ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300`}
               onClick={onClose}
             >
               Close
