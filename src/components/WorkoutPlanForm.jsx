@@ -171,7 +171,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       <div className="flex items-center justify-between mt-6">
         <button
           type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          className="bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
         >
           {initialPlan ? 'Update Workout Plan' : 'Create Workout Plan'}
         </button>
