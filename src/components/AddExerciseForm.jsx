@@ -114,7 +114,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     <div className="mb-8">
       <button
         onClick={toggleForm}
-        className="mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-2 px-4 rounded"
+        className="mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
       >
         {isExpanded ? 'Hide Form' : 'Add New Exercise'}
       </button>
@@ -204,14 +204,14 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           </div>
           <div className="flex items-center justify-between">
             <button
-              className={`mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-2 px-4 rounded ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               type="submit"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Saving...' : (initialExercise ? 'Update Exercise' : 'Add Exercise')}
             </button>
             <button
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded focus:outline-none focus:shadow-outline"
               type="button"
               onClick={handleCancel}
             >
