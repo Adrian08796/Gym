@@ -237,7 +237,7 @@ function WorkoutPlans() {
             setShowForm(!showForm);
             setEditingPlan(null);
           }}
-          className="bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
+          className="mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
         >
           {showForm ? 'Hide Form' : 'Create New Plan'}
         </button>
