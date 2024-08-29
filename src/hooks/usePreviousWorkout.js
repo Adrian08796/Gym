@@ -15,7 +15,7 @@ export const usePreviousWorkout = (planId, API_URL, addNotification) => {
       setIsPreviousWorkoutLoading(true);
       try {
         const response = await axiosInstance.get(
-          `${API_URL}/workouts/last/${planId}`,
+          `${API_URL}/api/workouts/last/${planId}`,
           {
             headers: { "x-auth-token": localStorage.getItem("token") },
           }
