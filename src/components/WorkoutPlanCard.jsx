@@ -39,8 +39,8 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const buttonStyles = {
     base: 'text-xs font-semibold py-1 px-2 rounded transition-all duration-200 flex items-center justify-center',
     start: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md',
-    edit: 'bg-indigo-500 text-white hover:bg-indigo-600 dark:bg-indigo-600 dark:hover:bg-indigo-700 hover:shadow-md',
-    delete: 'bg-rose-500 text-white hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700 hover:shadow-md'
+    edit: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md',
+    delete: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'
   };
 
   const TypeBadge = () => (

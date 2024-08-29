@@ -3,7 +3,8 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: 'https://walrus-app-lqhsg.ondigitalocean.app/backend',
+  // baseURL: 'https://walrus-app-lqhsg.ondigitalocean.app/backend',
+  baseURL: 'http://192.168.178.42:4500',
 });
 
 axiosInstance.interceptors.request.use(

@@ -49,7 +49,8 @@ function WorkoutTracker() {
   const navigate = useNavigate();
   const nodeRef = useRef(null);
 
-  const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
+  // const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
+  const API_URL = 'http://192.168.178.42:4500';
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan?._id, API_URL, addNotification);
   

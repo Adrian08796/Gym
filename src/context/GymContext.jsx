@@ -12,7 +12,8 @@ import axiosInstance from "../utils/axiosConfig";
 import { useAuth } from "./AuthContext";
 import { useNotification } from "./NotificationContext";
 
-export const hostName = "https://walrus-app-lqhsg.ondigitalocean.app/backend";
+// export const hostName = "https://walrus-app-lqhsg.ondigitalocean.app/backend";
+export const hostName = "http://192.168.178.42:4500";
 
 const GymContext = createContext();
 
