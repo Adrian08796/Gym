@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import axiosInstance from "./../utils/axiosConfig";
 
 export const usePreviousWorkout = (planId, API_URL, addNotification) => {
-  const [isPreviousWorkoutLoading, setIsPreviousWorkoutLoading] =
-    useState(false);
+  const [isPreviousWorkoutLoading, setIsPreviousWorkoutLoading] = useState(false);
   const [previousWorkout, setPreviousWorkout] = useState(null);
 
   useEffect(() => {
@@ -20,7 +19,12 @@ export const usePreviousWorkout = (planId, API_URL, addNotification) => {
             headers: { "x-auth-token": localStorage.getItem("token") },
           }
         );
-        setPreviousWorkout(response.data);
+        if (response.data.message) {
+          // No workout found, but it's not an error
+          setPreviousWorkout(null);
+        } else {
+          setPreviousWorkout(response.data);
+        }
       } catch (error) {
         console.error("Error fetching previous workout:", error);
         addNotification("Failed to fetch previous workout data", "error");
