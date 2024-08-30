@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-const PreviousWorkoutDisplay = ({ previousWorkout, exerciseHistory, isLoading, formatTime, darkMode }) => {
+const PreviousWorkoutDisplay = ({ previousWorkout, exerciseHistory, isLoading, formatTime, darkMode, currentExercise }) => {
   if (isLoading) {
     return <p className="p-4">Loading previous data...</p>;
   }
@@ -18,19 +18,43 @@ const PreviousWorkoutDisplay = ({ previousWorkout, exerciseHistory, isLoading, f
       <div className="mb-4">
         <h3 className="text-xl font-bold mb-2">Last Exercise Performance</h3>
         <p><strong>Date:</strong> {new Date(lastWorkout.date).toLocaleDateString()}</p>
-        <h4 className="text-lg font-medium mt-2">Sets:</h4>
+        <h4 className="text-lg font-medium mt-2">
+          {currentExercise.category === 'Cardio' ? 'Exercise Details:' : 'Sets:'}
+        </h4>
         <ul className="list-disc pl-5">
-          {lastWorkout.sets.map((set, index) => (
-            <li key={index} className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-              Set {index + 1}: {set.weight} kg x {set.reps} reps
+          {currentExercise.category === 'Cardio' ? (
+            <li className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+              Exercise completed: 1 / 1
+              <br />
+              {renderSetDetails(lastWorkout.sets[0])}
             </li>
-          ))}
+          ) : (
+            lastWorkout.sets.map((set, index) => (
+              <li key={index} className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                Set {index + 1}: {renderSetDetails(set)}
+              </li>
+            ))
+          )}
         </ul>
         {lastWorkout.notes && (
           <p className="mt-2 italic">Notes: {lastWorkout.notes}</p>
         )}
       </div>
     );
+  };
+
+  const renderSetDetails = (set) => {
+    if (set.weight !== undefined && set.reps !== undefined) {
+      return `${set.weight} kg x ${set.reps} reps`;
+    } else if (set.duration !== undefined) {
+      let details = `${set.duration} minutes`;
+      if (set.distance) details += `, ${set.distance} km`;
+      if (set.intensity) details += `, Intensity: ${set.intensity}`;
+      if (set.incline) details += `, Incline: ${set.incline}%`;
+      return details;
+    } else {
+      return 'No data available';
+    }
   };
 
   const renderPreviousWorkout = () => {
@@ -52,14 +76,22 @@ const PreviousWorkoutDisplay = ({ previousWorkout, exerciseHistory, isLoading, f
             </h4>
             {exercise.sets && exercise.sets.length > 0 ? (
               <ul className="list-disc pl-5">
-                {exercise.sets.map((set, setIndex) => (
-                  <li key={setIndex}>
-                    Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
+                {exercise.exercise.category === 'Cardio' ? (
+                  <li>
+                    Exercise completed: 1 / 1
+                    <br />
+                    {renderSetDetails(exercise.sets[0])}
                   </li>
-                ))}
+                ) : (
+                  exercise.sets.map((set, setIndex) => (
+                    <li key={setIndex}>
+                      Set {setIndex + 1}: {renderSetDetails(set)}
+                    </li>
+                  ))
+                )}
               </ul>
             ) : (
-              <p>No sets recorded for this exercise.</p>
+              <p>No data recorded for this exercise.</p>
             )}
             {exercise.notes && (
               <p className="mt-2 italic">Notes: {exercise.notes}</p>

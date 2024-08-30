@@ -255,7 +255,7 @@ function WorkoutTracker() {
 
     if (currentExercise.category === 'Strength') {
       return (
-        <div className="mb-4 flex debugging">
+        <div className="mb-4 flex">
           <input
             type="number"
             placeholder="Weight (kg)"
@@ -312,7 +312,7 @@ function WorkoutTracker() {
   const handleSetComplete = async () => {
     const currentExercise = currentPlan.exercises[currentExerciseIndex];
     let newSet;
-
+  
     if (currentExercise.category === 'Strength') {
       if (!weight || !reps) {
         addNotification('Please enter both weight and reps', 'error');
@@ -338,27 +338,33 @@ function WorkoutTracker() {
         skippedRest: isResting
       };
     }
-
+  
     setSets(prevSets => {
       const newSets = [...prevSets];
-      newSets[currentExerciseIndex] = [
-        ...(newSets[currentExerciseIndex] || []),
-        newSet
-      ];
+      if (currentExercise.category === 'Cardio') {
+        // For cardio, replace any existing set with the new one
+        newSets[currentExerciseIndex] = [newSet];
+      } else {
+        // For strength, add the new set to the existing ones
+        newSets[currentExerciseIndex] = [
+          ...(newSets[currentExerciseIndex] || []),
+          newSet
+        ];
+      }
       return newSets;
     });
-
+  
     setCompletedSets(prevCompletedSets => prevCompletedSets + 1);
-
+  
     setLastSetValues(prev => ({
       ...prev,
       [currentExercise._id]: newSet
     }));
-
+  
     // Update progress
     const newProgress = calculateProgress();
     setProgression(newProgress);
-
+  
     // Save progress to database
     try {
       await saveProgress({
@@ -374,22 +380,33 @@ function WorkoutTracker() {
         completedSets: completedSets + 1,
         totalSets
       });
-      addNotification('Set completed and progress saved!', 'success');
+      addNotification(`${currentExercise.category === 'Cardio' ? 'Exercise' : 'Set'} completed and progress saved!`, 'success');
     } catch (error) {
       console.error('Error saving progress:', error);
       addNotification('Failed to save progress', 'error');
     }
-
-    // Reset input fields
-    setWeight('');
-    setReps('');
-    setDuration('');
-    setDistance('');
-    setIntensity('');
-    setIncline('');
-
-    startRestTimer();
+  
+    // Don't reset input fields for strength exercises
+    if (currentExercise.category === 'Cardio') {
+      setDuration('');
+      setDistance('');
+      setIntensity('');
+      setIncline('');
+    }
+  
+    // For cardio exercises, we don't start the rest timer
+    if (currentExercise.category !== 'Cardio') {
+      startRestTimer();
+    }
   };
+
+  const isExerciseComplete = useCallback((exerciseId, exerciseSets) => {
+    const exercise = currentPlan.exercises.find(e => e._id === exerciseId);
+    if (exercise.category === 'Cardio') {
+      return exerciseSets.length > 0;
+    }
+    return exerciseSets.length >= (requiredSets[exerciseId] || 0);
+  }, [currentPlan, requiredSets]);
 
   const startRestTimer = () => {
     setIsResting(true);
@@ -528,16 +545,28 @@ function WorkoutTracker() {
     return typeof value === 'number' ? value.toFixed(decimalPlaces) : '0.00';
   };
 
-  const isExerciseComplete = useCallback((exerciseId, exerciseSets) => {
-    return exerciseSets.length >= (requiredSets[exerciseId] || 0);
-  }, [requiredSets]);
-
   const calculateProgress = useMemo(() => {
     return () => {
       if (totalSets === 0) return 0;
-      return (completedSets / totalSets) * 100;
+      let completedExercises = 0;
+      let totalExercises = 0;
+
+      currentPlan.exercises.forEach((exercise, index) => {
+        if (exercise.category === 'Cardio') {
+          totalExercises += 1;
+          if (sets[index] && sets[index].length > 0) {
+            completedExercises += 1;
+          }
+        } else {
+          const requiredSetsForExercise = requiredSets[exercise._id] || 0;
+          totalExercises += requiredSetsForExercise;
+          completedExercises += (sets[index] || []).length;
+        }
+      });
+
+      return (completedExercises / totalExercises) * 100;
     };
-  }, [completedSets, totalSets]);
+  }, [currentPlan, sets, requiredSets]);
 
   const handleNoteChange = (index, value) => {
     setNotes(prevNotes => {
@@ -556,7 +585,7 @@ function WorkoutTracker() {
         notes: notes[currentExerciseIndex],
         currentExerciseIndex,
         lastSetValues,
-        startTime: startTime.toISOString() // Add this line
+        startTime: startTime.toISOString()
       });
     } catch (error) {
       console.error('Error saving progress before switching exercise:', error);
@@ -564,15 +593,27 @@ function WorkoutTracker() {
     }
   
     setCurrentExerciseIndex(newIndex);
-    
+  
     const newExercise = currentPlan.exercises[newIndex];
     const lastValues = lastSetValues[newExercise._id];
     if (lastValues) {
-      setWeight(lastValues.weight);
-      setReps(lastValues.reps);
+      if (newExercise.category === 'Strength') {
+        setWeight(lastValues.weight?.toString() || '');
+        setReps(lastValues.reps?.toString() || '');
+      } else if (newExercise.category === 'Cardio') {
+        setDuration(lastValues.duration?.toString() || '');
+        setDistance(lastValues.distance?.toString() || '');
+        setIntensity(lastValues.intensity?.toString() || '');
+        setIncline(lastValues.incline?.toString() || '');
+      }
     } else {
+      // Reset all input fields if there are no last values
       setWeight('');
       setReps('');
+      setDuration('');
+      setDistance('');
+      setIntensity('');
+      setIncline('');
     }
   };
 
@@ -637,9 +678,22 @@ function WorkoutTracker() {
 
   const currentExercise = currentPlan.exercises[currentExerciseIndex];
 
+  const renderSetDetails = (set, exerciseCategory) => {
+    if (exerciseCategory === 'Strength') {
+      return `${set.weight} kg x ${set.reps} reps`;
+    } else if (exerciseCategory === 'Cardio') {
+      let details = `${set.duration} minutes`;
+      if (set.distance) details += `, ${set.distance} km`;
+      if (set.intensity) details += `, Intensity: ${set.intensity}`;
+      if (set.incline) details += `, Incline: ${set.incline}%`;
+      return details;
+    } else {
+      return 'No data available';
+    }
+  };
+
   return (
-    <div 
-      className={`workout-tracker container mx-auto mt-8 p-4 ${darkMode ? 'dark-mode bg-gray-800 text-white' : 'bg-white text-gray-800'}`}
+    <div className={`workout-tracker container mx-auto mt-8 p-4 ${darkMode ? 'dark-mode bg-gray-800 text-white' : 'bg-white text-gray-800'}`}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -662,7 +716,7 @@ function WorkoutTracker() {
 
       <div className="mb-4">
         <div className="progress-bar">
-        <div className="progress-bar-fill" style={{width: `${calculateProgress().toFixed(2)}%`}}></div>
+          <div className="progress-bar-fill" style={{width: `${calculateProgress().toFixed(2)}%`}}></div>
         </div>
         <p className="text-sm mt-2 text-center">Overall Progress: {calculateProgress().toFixed(2)}%</p>
       </div>
@@ -696,8 +750,7 @@ function WorkoutTracker() {
         >
           <div 
             ref={nodeRef} 
-            className="exercise-container bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4"
-          >
+            className="exercise-container bg-gray-100 dark:bg-gray-700 shadow-md rounded px-8 pt-6 pb-8 mb-4">
             {currentExercise ? (
               <>
                 <div className="flex flex-col md:flex-row mb-4">
@@ -718,44 +771,34 @@ function WorkoutTracker() {
                       <p className="mb-2"><strong>Description:</strong> {currentExercise.description}</p>
                       <p className="mb-2"><strong>Target Muscle:</strong> {currentExercise.target}</p>
                     </div>
-                    <p className="mb-2">
-                      <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id] || 0}
-                    </p>
+                    {currentExercise.category === 'Cardio' ? (
+                      <p className="mb-2">
+                        <strong>Exercise completed:</strong> {isExerciseComplete(currentExercise._id, sets[currentExerciseIndex] || []) ? '1' : '0'} / 1
+                      </p>
+                    ) : (
+                      <p className="mb-2">
+                        <strong>Sets completed:</strong> {(sets[currentExerciseIndex] || []).length} / {requiredSets[currentExercise._id] || 0}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* <div className="mb-4 flex debugging2">
-                  <input
-                    type="number"
-                    placeholder="Weight (kg)"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Reps"
-                    value={reps}
-                    onChange={(e) => setReps(e.target.value)}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  />
-                </div> */}
                 {renderExerciseInputs()}
-                <div className="mb-4 flex justify-between items-center">
-                  <button
-                    onClick={handleSetComplete}
-                    className="btn btn-primary"
-                  >
-                    Complete Set
-                  </button>
-                  <button
-                    onClick={toggleExerciseOptions}
-                    className="btn btn-secondary flex items-center"
-                  >
-                    <FiSettings className="mr-2" /> Options
-                    {isExerciseOptionsOpen ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
-                  </button>
-                </div>
+            <div className="mb-4 flex justify-between items-center">
+              <button
+                onClick={handleSetComplete}
+                className="btn btn-primary"
+              >
+                {currentExercise.category === 'Cardio' ? 'Complete Exercise' : 'Complete Set'}
+              </button>
+              <button
+                onClick={toggleExerciseOptions}
+                className="btn btn-secondary flex items-center"
+              >
+                <FiSettings className="mr-2" /> Options
+                {isExerciseOptionsOpen ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
+              </button>
+            </div>
 
                 <div className={`collapsible-content ${isExerciseOptionsOpen ? 'open' : ''}`}>
                   <div className="mb-4">
@@ -806,7 +849,7 @@ function WorkoutTracker() {
                     )}
                   </div>
                 )}
-              </>
+               </>
             ) : (
               <p>No exercise data available for this index.</p>
             )}
@@ -843,30 +886,31 @@ function WorkoutTracker() {
       </div>
 
       <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
-      <button 
-        onClick={togglePreviousWorkout}
-        className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
-      >
-        <span>Previous Workout and Exercise Performance</span>
-        {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
-      </button>
-      <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
-        <PreviousWorkoutDisplay 
-          previousWorkout={previousWorkout}
-          exerciseHistory={exerciseHistory[currentExercise?._id]}
-          isLoading={isPreviousWorkoutLoading}
-          formatTime={formatTime}
-          darkMode={darkMode}
-        />
+        <button 
+          onClick={togglePreviousWorkout}
+          className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}
+        >
+          <span>Previous Workout and Exercise Performance</span>
+          {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
+        </button>
+        <div className={`collapsible-content ${isPreviousWorkoutOpen ? 'open' : ''}`}>
+          <PreviousWorkoutDisplay 
+            previousWorkout={previousWorkout}
+            exerciseHistory={exerciseHistory[currentExercise?._id]}
+            isLoading={isPreviousWorkoutLoading}
+            formatTime={formatTime}
+            darkMode={darkMode}
+            currentExercise={currentExercise}
+          />
+        </div>
       </div>
-    </div>
 
-      <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
+    <div className={`mt-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
         <button 
           onClick={toggleCurrentSetLog}
           className={`w-full p-4 text-left font-semibold flex justify-between items-center ${darkMode ? 'text-green-300' : 'text-green-800'}`}
         >
-          <span>Current Workout Set Log</span>
+          <span>Current Workout Log</span>
           {isCurrentSetLogOpen ? <FiChevronUp /> : <FiChevronDown />}
         </button>
         <div className={`collapsible-content ${isCurrentSetLogOpen ? 'open' : ''}`}>
@@ -879,18 +923,28 @@ function WorkoutTracker() {
                 </h4>
                 {sets[index] && sets[index].length > 0 ? (
                   <ul className="list-disc pl-5">
-                    {sets[index].map((set, setIndex) => (
-                      <li key={setIndex}>
-                        Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
-                      </li>
-                    ))}
+                    {exercise.category === 'Cardio' ? (
+                      <li>{renderSetDetails(sets[index][0], exercise.category)}</li>
+                    ) : (
+                      sets[index].map((set, setIndex) => (
+                        <li key={setIndex}>
+                          Set {setIndex + 1}: {renderSetDetails(set, exercise.category)}
+                        </li>
+                      ))
+                    )}
                   </ul>
                 ) : (
-                  <p>No sets completed yet</p>
+                  <p>No data recorded yet</p>
                 )}
-                <p>
-                  {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id] || 0} sets completed
-                </p>
+                {exercise.category === 'Cardio' ? (
+                  <p>
+                    Exercise completed: {isExerciseComplete(exercise._id, sets[index] || []) ? '1' : '0'} / 1
+                  </p>
+                ) : (
+                  <p>
+                    {sets[index] ? sets[index].length : 0} / {requiredSets[exercise._id] || 0} sets completed
+                  </p>
+                )}
                 {notes[index] && (
                   <p className="mt-2 italic">Notes: {notes[index]}</p>
                 )}
