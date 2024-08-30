@@ -73,7 +73,7 @@ const PreviousWorkoutDisplay = ({ previousWorkout, exerciseHistory, isLoading, f
   return (
     <div className="p-4">
       {exerciseHistory && renderExerciseHistory()}
-      {previousWorkout && renderPreviousWorkout()}
+      {renderPreviousWorkout()}
       {!exerciseHistory && !previousWorkout && (
         <p className="p-4">No previous workout data available. This will be your first workout!</p>
       )}

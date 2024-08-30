@@ -90,7 +90,7 @@ function ExerciseLibrary() {
   };
 
   return (
-    <div className={`bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
+    <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
       <h1 className="text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise Library</h1>
 
       <div className="mb-6 lg:mb-8 flex flex-wrap items-center justify-between gap-4">

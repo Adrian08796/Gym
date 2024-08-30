@@ -30,13 +30,17 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       setCategory(initialExercise.category || '');
       setIsExpanded(true);
     } else {
-      setName('');
-      setDescription('');
-      setTarget([]);
-      setImageUrl('');
-      setCategory('');
+      resetForm();
     }
   }, [initialExercise]);
+
+  const resetForm = () => {
+    setName('');
+    setDescription('');
+    setTarget([]);
+    setImageUrl('');
+    setCategory('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,7 +59,19 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       return;
     }
 
-    const exercise = { name, description, target, imageUrl, category };
+    const exerciseType = category === 'Strength' ? 'strength' : 'cardio';
+    const measurementType = category === 'Strength' ? 'weight_reps' : 'duration';
+
+    const exercise = { 
+      name, 
+      description, 
+      target, 
+      imageUrl, 
+      category, 
+      exerciseType, 
+      measurementType 
+    };
+
     try {
       let savedExercise;
       if (initialExercise) {
@@ -65,11 +81,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
         savedExercise = await addExercise(exercise);
         addNotification('Exercise added successfully', 'success');
       }
-      setName('');
-      setDescription('');
-      setTarget([]);
-      setImageUrl('');
-      setCategory('');
+      resetForm();
       setIsExpanded(false);
       onSave(savedExercise);
     } catch (error) {
@@ -88,11 +100,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   };
 
   const handleCancel = () => {
-    setName('');
-    setDescription('');
-    setTarget([]);
-    setImageUrl('');
-    setCategory('');
+    resetForm();
     setIsExpanded(false);
     if (typeof onCancel === 'function') {
       onCancel();
@@ -102,11 +110,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const toggleForm = () => {
     setIsExpanded(!isExpanded);
     if (!isExpanded) {
-      setName('');
-      setDescription('');
-      setTarget([]);
-      setImageUrl('');
-      setCategory('');
+      resetForm();
     }
   };
 
@@ -123,6 +127,8 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
             {initialExercise ? 'Edit Exercise' : 'Add New Exercise'}
           </h2>
+
+          {/* Name input */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="name">
               Exercise Name
@@ -137,6 +143,8 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               required
             />
           </div>
+
+          {/* Description input */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="description">
               Description
@@ -150,6 +158,8 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               required
             />
           </div>
+
+          {/* Target muscle groups */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
               Target Muscle Groups
@@ -172,6 +182,8 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               ))}
             </div>
           </div>
+
+          {/* Category selection */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="category">
               Category
@@ -189,6 +201,8 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               ))}
             </select>
           </div>
+
+          {/* Image URL input */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="imageUrl">
               Image URL
@@ -202,6 +216,8 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               onChange={(e) => setImageUrl(e.target.value)}
             />
           </div>
+
+          {/* Submit and Cancel buttons */}
           <div className="flex items-center justify-between">
             <button
               className={`mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}

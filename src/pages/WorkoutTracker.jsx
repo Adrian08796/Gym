@@ -19,8 +19,6 @@ function WorkoutTracker() {
   const [sets, setSets] = useState([]);
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [weight, setWeight] = useState('');
-  const [reps, setReps] = useState('');
   const [restTime, setRestTime] = useState(120);
   const [isResting, setIsResting] = useState(false);
   const [remainingRestTime, setRemainingRestTime] = useState(0);
@@ -41,7 +39,13 @@ function WorkoutTracker() {
   const [isLoading, setIsLoading] = useState(true);
   const [exerciseHistory, setExerciseHistory] = useState({});
   const [completedSets, setCompletedSets] = useState(0);
-  const [totalSets, setTotalSets] = useState(0);  
+  const [totalSets, setTotalSets] = useState(0);
+  const [weight, setWeight] = useState('');
+  const [reps, setReps] = useState('');
+  const [duration, setDuration] = useState('');
+  const [distance, setDistance] = useState('');
+  const [intensity, setIntensity] = useState('');
+  const [incline, setIncline] = useState('');
 
   const { addWorkout, saveProgress, clearWorkout, getExerciseHistory } = useGymContext();
   const { addNotification } = useNotification();
@@ -49,7 +53,8 @@ function WorkoutTracker() {
   const navigate = useNavigate();
   const nodeRef = useRef(null);
 
-  const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
+  // const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
+  const API_URL = 'http://192.168.178.42:4500';
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan?._id, API_URL, addNotification);
   
@@ -245,19 +250,95 @@ function WorkoutTracker() {
     localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
   };
 
-  const handleSetComplete = async () => {
-    if (!weight || !reps) {
-      addNotification('Please enter both weight and reps', 'error');
-      return;
+  const renderExerciseInputs = () => {
+    const currentExercise = currentPlan.exercises[currentExerciseIndex];
+
+    if (currentExercise.category === 'Strength') {
+      return (
+        <div className="mb-4 flex debugging">
+          <input
+            type="number"
+            placeholder="Weight (kg)"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
+          />
+          <input
+            type="number"
+            placeholder="Reps"
+            value={reps}
+            onChange={(e) => setReps(e.target.value)}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
+        </div>
+      );
+    } else if (currentExercise.category === 'Cardio') {
+      return (
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <input
+            type="number"
+            placeholder="Duration (minutes)"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
+          <input
+            type="number"
+            placeholder="Distance (km)"
+            value={distance}
+            onChange={(e) => setDistance(e.target.value)}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
+          <input
+            type="number"
+            placeholder="Intensity (1-10)"
+            value={intensity}
+            onChange={(e) => setIntensity(e.target.value)}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
+          <input
+            type="number"
+            placeholder="Incline (%)"
+            value={incline}
+            onChange={(e) => setIncline(e.target.value)}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
+        </div>
+      );
     }
-  
-    const newSet = {
-      weight: Number(weight),
-      reps: Number(reps),
-      completedAt: new Date().toISOString(),
-      skippedRest: isResting
-    };
-  
+    // You can add an else clause here for Flexibility exercises if needed
+  };
+
+  const handleSetComplete = async () => {
+    const currentExercise = currentPlan.exercises[currentExerciseIndex];
+    let newSet;
+
+    if (currentExercise.category === 'Strength') {
+      if (!weight || !reps) {
+        addNotification('Please enter both weight and reps', 'error');
+        return;
+      }
+      newSet = {
+        weight: Number(weight),
+        reps: Number(reps),
+        completedAt: new Date().toISOString(),
+        skippedRest: isResting
+      };
+    } else if (currentExercise.category === 'Cardio') {
+      if (!duration) {
+        addNotification('Please enter at least the duration', 'error');
+        return;
+      }
+      newSet = {
+        duration: Number(duration),
+        distance: distance ? Number(distance) : undefined,
+        intensity: intensity ? Number(intensity) : undefined,
+        incline: incline ? Number(incline) : undefined,
+        completedAt: new Date().toISOString(),
+        skippedRest: isResting
+      };
+    }
+
     setSets(prevSets => {
       const newSets = [...prevSets];
       newSets[currentExerciseIndex] = [
@@ -266,28 +347,28 @@ function WorkoutTracker() {
       ];
       return newSets;
     });
-  
+
     setCompletedSets(prevCompletedSets => prevCompletedSets + 1);
-  
+
     setLastSetValues(prev => ({
       ...prev,
-      [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
+      [currentExercise._id]: newSet
     }));
-  
+
     // Update progress
     const newProgress = calculateProgress();
     setProgression(newProgress);
-  
+
     // Save progress to database
     try {
       await saveProgress({
         plan: currentPlan._id,
-        exercise: currentPlan.exercises[currentExerciseIndex]._id,
+        exercise: currentExercise._id,
         set: newSet,
         currentExerciseIndex,
         lastSetValues: {
           ...lastSetValues,
-          [currentPlan.exercises[currentExerciseIndex]._id]: { weight, reps }
+          [currentExercise._id]: newSet
         },
         startTime: startTime.toISOString(),
         completedSets: completedSets + 1,
@@ -298,7 +379,15 @@ function WorkoutTracker() {
       console.error('Error saving progress:', error);
       addNotification('Failed to save progress', 'error');
     }
-  
+
+    // Reset input fields
+    setWeight('');
+    setReps('');
+    setDuration('');
+    setDistance('');
+    setIntensity('');
+    setIncline('');
+
     startRestTimer();
   };
 
@@ -635,7 +724,7 @@ function WorkoutTracker() {
                   </div>
                 </div>
 
-                <div className="mb-4 flex">
+                {/* <div className="mb-4 flex debugging2">
                   <input
                     type="number"
                     placeholder="Weight (kg)"
@@ -650,8 +739,8 @@ function WorkoutTracker() {
                     onChange={(e) => setReps(e.target.value)}
                     className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
-                </div>
-
+                </div> */}
+                {renderExerciseInputs()}
                 <div className="mb-4 flex justify-between items-center">
                   <button
                     onClick={handleSetComplete}
