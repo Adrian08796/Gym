@@ -19,8 +19,6 @@ function WorkoutTracker() {
   const [sets, setSets] = useState([]);
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [weight, setWeight] = useState('');
-  const [reps, setReps] = useState('');
   const [restTime, setRestTime] = useState(120);
   const [isResting, setIsResting] = useState(false);
   const [remainingRestTime, setRemainingRestTime] = useState(0);
@@ -42,8 +40,10 @@ function WorkoutTracker() {
   const [exerciseHistory, setExerciseHistory] = useState({});
   const [completedSets, setCompletedSets] = useState(0);
   const [totalSets, setTotalSets] = useState(0);
-  const [distance, setDistance] = useState('');
+  const [weight, setWeight] = useState('');
+  const [reps, setReps] = useState('');
   const [duration, setDuration] = useState('');
+  const [distance, setDistance] = useState('');
   const [intensity, setIntensity] = useState('');
   const [incline, setIncline] = useState('');
 
@@ -253,9 +253,9 @@ function WorkoutTracker() {
   const renderExerciseInputs = () => {
     const currentExercise = currentPlan.exercises[currentExerciseIndex];
 
-    if (currentExercise.exerciseType === 'strength') {
+    if (currentExercise.category === 'Strength') {
       return (
-        <div className="mb-4 flex">
+        <div className="mb-4 flex debugging">
           <input
             type="number"
             placeholder="Weight (kg)"
@@ -272,7 +272,7 @@ function WorkoutTracker() {
           />
         </div>
       );
-    } else if (currentExercise.exerciseType === 'cardio') {
+    } else if (currentExercise.category === 'Cardio') {
       return (
         <div className="mb-4 grid grid-cols-2 gap-2">
           <input
@@ -306,13 +306,14 @@ function WorkoutTracker() {
         </div>
       );
     }
+    // You can add an else clause here for Flexibility exercises if needed
   };
 
   const handleSetComplete = async () => {
     const currentExercise = currentPlan.exercises[currentExerciseIndex];
     let newSet;
 
-    if (currentExercise.exerciseType === 'strength') {
+    if (currentExercise.category === 'Strength') {
       if (!weight || !reps) {
         addNotification('Please enter both weight and reps', 'error');
         return;
@@ -323,9 +324,9 @@ function WorkoutTracker() {
         completedAt: new Date().toISOString(),
         skippedRest: isResting
       };
-    } else if (currentExercise.exerciseType === 'cardio') {
+    } else if (currentExercise.category === 'Cardio') {
       if (!duration) {
-        addNotification('Please enter the duration', 'error');
+        addNotification('Please enter at least the duration', 'error');
         return;
       }
       newSet = {
@@ -378,6 +379,14 @@ function WorkoutTracker() {
       console.error('Error saving progress:', error);
       addNotification('Failed to save progress', 'error');
     }
+
+    // Reset input fields
+    setWeight('');
+    setReps('');
+    setDuration('');
+    setDistance('');
+    setIntensity('');
+    setIncline('');
 
     startRestTimer();
   };
@@ -715,7 +724,7 @@ function WorkoutTracker() {
                   </div>
                 </div>
 
-                <div className="mb-4 flex">
+                {/* <div className="mb-4 flex debugging2">
                   <input
                     type="number"
                     placeholder="Weight (kg)"
@@ -730,7 +739,7 @@ function WorkoutTracker() {
                     onChange={(e) => setReps(e.target.value)}
                     className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
-                </div>
+                </div> */}
                 {renderExerciseInputs()}
                 <div className="mb-4 flex justify-between items-center">
                   <button
