@@ -13,8 +13,10 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const refreshTimeoutRef = useRef();
+  const isRefreshing = useRef(false);
 
   const logout = useCallback(() => {
+    console.log('Logging out user');
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     setUser(null);
@@ -23,7 +25,34 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const register = async (username, email, password) => {
+    try {
+      console.log('Attempting to register user:', username);
+      const response = await axiosInstance.post('/api/auth/register', { username, email, password });
+      console.log('Registration response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Registration error:', error);
+      if (error.response) {
+        console.error('Server responded with:', error.response.data);
+        throw new Error(error.response.data.message || 'Registration failed');
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        throw new Error('No response from server');
+      } else {
+        console.error('Error details:', error.message);
+        throw error;
+      }
+    }
+  };
+
   const refreshToken = useCallback(async (silent = false) => {
+    if (isRefreshing.current) {
+      console.log('Token refresh already in progress, skipping');
+      return;
+    }
+
+    isRefreshing.current = true;
     try {
       const refreshToken = localStorage.getItem('refreshToken');
       console.log('Attempting to refresh token with:', refreshToken);
@@ -36,25 +65,40 @@ export function AuthProvider({ children }) {
       const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken });
       console.log('Refresh token response:', response.data);
   
-      localStorage.setItem('token', response.data.accessToken);
-      localStorage.setItem('refreshToken', response.data.refreshToken);
+      if (response.data && response.data.accessToken) {
+        localStorage.setItem('token', response.data.accessToken);
+        localStorage.setItem('refreshToken', response.data.refreshToken);
   
-      if (silent) {
-        const refreshTime = Math.min((response.data.expiresIn - 60) * 1000, 5 * 60 * 1000); // Refresh every 5 minutes or before token expiry
-        console.log('Scheduling next refresh in', refreshTime, 'ms');
-        refreshTimeoutRef.current = setTimeout(() => refreshToken(true), refreshTime);
+        // Add a small delay after token refresh
+        await new Promise(resolve => setTimeout(resolve, 1000));
+  
+        if (silent) {
+          const refreshTime = Math.min((response.data.expiresIn - 60) * 1000, 5 * 60 * 1000);
+          console.log('Scheduling next refresh in', refreshTime, 'ms');
+          refreshTimeoutRef.current = setTimeout(() => refreshToken(true), refreshTime);
+        }
+  
+        return response.data.accessToken;
+      } else {
+        throw new Error('Invalid refresh token response');
       }
-  
-      return response.data.accessToken;
     } catch (error) {
       console.error('Error refreshing token:', error);
-      logout();
+      if (error.response && error.response.status === 500) {
+        console.log('Server error during token refresh, will retry');
+        // Don't logout immediately on server error, maybe retry
+      } else {
+        logout();
+      }
       throw error;
+    } finally {
+      isRefreshing.current = false;
     }
   }, [logout]);
 
   const login = async (username, password) => {
     try {
+      console.log('Attempting login for user:', username);
       const response = await axiosInstance.post('/api/auth/login', { username, password });
       console.log('Login response:', response.data);
 
@@ -66,8 +110,11 @@ export function AuthProvider({ children }) {
           username: response.data.user.username,
           email: response.data.user.email
         });
-        console.log('Tokens stored in localStorage');
-        refreshToken(true);
+        console.log('User set after login:', response.data.user);
+        
+        // Add a small delay before initiating the first token refresh
+        setTimeout(() => refreshToken(true), 1000);
+        
         return response.data;
       } else {
         throw new Error('Invalid response from server');
@@ -78,41 +125,38 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async (username, email, password) => {
-    try {
-      await axiosInstance.post('/api/auth/register', { username, email, password });
-      return true;
-    } catch (error) {
-      console.error('Registration error:', error.response?.data || error.message);
-      throw error;
-    }
-  };
-
   useEffect(() => {
     const checkLoggedIn = async () => {
+      console.log('Checking if user is logged in');
       const token = localStorage.getItem('token');
       const refreshTokenStored = localStorage.getItem('refreshToken');
       if (token && refreshTokenStored) {
         try {
+          console.log('Attempting to fetch user data');
           const response = await axiosInstance.get('/api/auth/user');
+          console.log('User data fetched:', response.data);
           setUser(response.data);
           refreshToken(true);
         } catch (error) {
           console.error('Error fetching user:', error);
           if (error.response && error.response.status === 401) {
             try {
+              console.log('Token expired, attempting to refresh');
               await refreshToken();
               const retryResponse = await axiosInstance.get('/api/auth/user');
+              console.log('User data fetched after refresh:', retryResponse.data);
               setUser(retryResponse.data);
             } catch (refreshError) {
               console.error('Error refreshing token:', refreshError);
               logout();
             }
           } else {
+            console.log('Unexpected error, logging out');
             logout();
           }
         }
       } else {
+        console.log('No tokens found, user is not logged in');
         logout();
       }
       setLoading(false);
@@ -131,7 +175,7 @@ export function AuthProvider({ children }) {
     user,
     login,
     logout,
-    register,
+    register, // Add this line
     loading,
     refreshToken
   };

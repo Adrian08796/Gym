@@ -36,11 +36,25 @@ function Register() {
     e.preventDefault();
     if (validateForm()) {
       try {
-        await register(username, email, password);
+        console.log('Attempting to register user:', username);
+        const result = await register(username, email, password);
+        console.log('Registration result:', result);
         addNotification('Registration successful! Please log in.', 'success');
         navigate('/login');
       } catch (err) {
-        addNotification('Registration failed: ' + (err.response?.data?.message || 'Unknown error'), 'error');
+        console.error('Registration error:', err);
+        let errorMessage = 'Registration failed: ';
+        if (err.response) {
+          console.error('Error response:', err.response);
+          errorMessage += err.response.data?.message || err.response.statusText;
+        } else if (err.request) {
+          console.error('Error request:', err.request);
+          errorMessage += 'No response received from server';
+        } else {
+          console.error('Error details:', err.message);
+          errorMessage += err.message;
+        }
+        addNotification(errorMessage, 'error');
       }
     }
   };
