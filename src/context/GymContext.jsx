@@ -61,22 +61,63 @@ export function GymProvider({ children }) {
     [API_URL, getAuthConfig, addNotification]
   );
 
-  const getExerciseHistory = useCallback(
-    async exerciseId => {
-      try {
-        const response = await axiosInstance.get(
-          `${API_URL}/workouts/exercise-history/${exerciseId}`,
-          getAuthConfig()
-        );
-        return response.data;
-      } catch (error) {
-        console.error("Error fetching exercise history:", error);
-        addNotification("Failed to fetch exercise history", "error");
-        return [];
+  const getExerciseById = useCallback(async (exerciseId) => {
+    if (!exerciseId || exerciseId === 'undefined') {
+      console.error('Invalid exerciseId provided to getExerciseById:', exerciseId);
+      throw new Error('Invalid exercise ID');
+    }
+
+    try {
+      console.log(`Fetching exercise details for exerciseId: ${exerciseId}`);
+      const response = await axiosInstance.get(
+        `${API_URL}/exercises/${exerciseId}`,
+        getAuthConfig()
+      );
+      console.log('Exercise details response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching exercise details:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        throw new Error(`Failed to fetch exercise details: ${error.response.data.message || error.response.statusText}`);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        throw new Error('Failed to fetch exercise details: No response received from server');
+      } else {
+        console.error('Error setting up request:', error.message);
+        throw error;
       }
-    },
-    [API_URL, getAuthConfig, addNotification]
-  );
+    }
+  }, [API_URL, getAuthConfig]);
+
+  const getExerciseHistory = useCallback(async (exerciseId) => {
+    if (!exerciseId || exerciseId === 'undefined') {
+      console.error('Invalid exerciseId provided to getExerciseHistory:', exerciseId);
+      throw new Error('Invalid exercise ID');
+    }
+
+    try {
+      console.log(`Fetching exercise history for exerciseId: ${exerciseId}`);
+      const response = await axiosInstance.get(
+        `${API_URL}/workouts/exercise-history/${exerciseId}`,
+        getAuthConfig()
+      );
+      console.log('Exercise history response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching exercise history:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        throw new Error(`Failed to fetch exercise history: ${error.response.data.message || error.response.statusText}`);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        throw new Error('Failed to fetch exercise history: No response received from server');
+      } else {
+        console.error('Error setting up request:', error.message);
+        throw error;
+      }
+    }
+  }, [API_URL, getAuthConfig]);
 
   const fetchWorkoutHistory = useCallback(async () => {
     if (user) {
@@ -438,7 +479,7 @@ export function GymProvider({ children }) {
       
       await axiosInstance.post(`${hostName}/api/workouts/progress`, {
         ...progressData,
-        userId: user.id // Add user ID to the progress data
+        userId: user.id
       });
       localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(progressData));
       console.log('Progress saved successfully');
@@ -453,6 +494,25 @@ export function GymProvider({ children }) {
       throw error;
     }
   }, [user, addNotification, logout]);
+
+  const loadProgress = useCallback(async () => {
+    if (!user) return null;
+
+    try {
+      const response = await axiosInstance.get(
+        `${API_URL}/workouts/progress`,
+        getAuthConfig()
+      );
+      if (response.data) {
+        localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(response.data));
+        return response.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error loading progress:', error);
+      return null;
+    }
+  }, [user, API_URL, getAuthConfig]);
 
   const clearWorkout = useCallback(async () => {
     if (!user) return;
@@ -485,25 +545,6 @@ export function GymProvider({ children }) {
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 
-  const loadProgress = useCallback(async () => {
-    if (!user) return null;
-
-    try {
-      const response = await axiosInstance.get(
-        `${API_URL}/workouts/progress`,
-        getAuthConfig()
-      );
-      if (response.data) {
-        localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(response.data));
-        return response.data;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error loading progress:', error);
-      return null;
-    }
-  }, [user, API_URL, getAuthConfig]);
-
   const contextValue = useMemo(
     () => ({
       workouts,
@@ -527,6 +568,7 @@ export function GymProvider({ children }) {
       loadProgress,
       getExerciseHistory,
       getLastWorkoutForPlan,
+      getExerciseById,
     }),
     [
       workouts,
@@ -550,6 +592,7 @@ export function GymProvider({ children }) {
       loadProgress,
       getExerciseHistory,
       getLastWorkoutForPlan,
+      getExerciseById,
     ]
   );
 

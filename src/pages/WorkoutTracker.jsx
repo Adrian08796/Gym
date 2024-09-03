@@ -47,8 +47,9 @@ function WorkoutTracker() {
   const [distance, setDistance] = useState('');
   const [intensity, setIntensity] = useState('');
   const [incline, setIncline] = useState('');
+  const [exerciseHistoryError, setExerciseHistoryError] = useState(null);
 
-  const { addWorkout, saveProgress, clearWorkout, getExerciseHistory, loadProgress } = useGymContext();
+  const { addWorkout, saveProgress, clearWorkout, getExerciseHistory, getExerciseById, loadProgress } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const { user } = useAuth(); // Add this line
@@ -59,25 +60,58 @@ function WorkoutTracker() {
   const API_URL = 'http://192.168.178.42:4500';
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(currentPlan?._id, API_URL, addNotification);
+
+  // Fetch full exercise details from the API
+  const fetchFullExerciseDetails = useCallback(async (exerciseIdOrObject) => {
+    if (typeof exerciseIdOrObject === 'string') {
+      try {
+        return await getExerciseById(exerciseIdOrObject);
+      } catch (error) {
+        console.error(`Error fetching exercise details for ID ${exerciseIdOrObject}:`, error);
+        throw error;
+      }
+    }
+    return exerciseIdOrObject;
+  }, [getExerciseById]);
   
-  // Fetch exercise history when currentPlan changes
+  // Fetch exercise history for a specific exercise
+  const fetchExerciseHistory = useCallback(async (exerciseIdOrObject) => {
+    try {
+      const fullExercise = await fetchFullExerciseDetails(exerciseIdOrObject);
+      if (!fullExercise || !fullExercise._id) {
+        throw new Error('Invalid exercise data');
+      }
+
+      const history = await getExerciseHistory(fullExercise._id);
+      setExerciseHistory(prevHistory => ({
+        ...prevHistory,
+        [fullExercise._id]: history
+      }));
+    } catch (error) {
+      console.error('Error fetching exercise history:', error);
+      setExerciseHistoryError(`Failed to fetch exercise history: ${error.message}`);
+      // Set empty history to prevent continuous retries
+      if (typeof exerciseIdOrObject === 'object' && exerciseIdOrObject._id) {
+        setExerciseHistory(prevHistory => ({
+          ...prevHistory,
+          [exerciseIdOrObject._id]: []
+        }));
+      }
+    }
+  }, [getExerciseHistory, fetchFullExerciseDetails]);
+
+  // Fetch exercise history for all exercises in the current plan
   useEffect(() => {
-    const fetchExerciseHistory = async () => {
+    const fetchHistories = async () => {
       if (currentPlan && currentPlan.exercises) {
-        const historyPromises = currentPlan.exercises.map(exercise => 
-          getExerciseHistory(exercise._id)
-        );
-        const histories = await Promise.all(historyPromises);
-        const historyMap = {};
-        currentPlan.exercises.forEach((exercise, index) => {
-          historyMap[exercise._id] = histories[index];
-        });
-        setExerciseHistory(historyMap);
+        for (const exercise of currentPlan.exercises) {
+          await fetchExerciseHistory(exercise);
+        }
       }
     };
 
-    fetchExerciseHistory();
-  }, [currentPlan, getExerciseHistory]);
+    fetchHistories();
+  }, [currentPlan, fetchExerciseHistory]);
 
   useEffect(() => {
     const loadWorkout = async () => {
@@ -85,11 +119,13 @@ function WorkoutTracker() {
       const progress = await loadProgress();
       if (progress) {
         setCurrentPlan(progress.plan);
-        setSets(progress.sets || []);
+        setSets(progress.exercises || []);
         setCurrentExerciseIndex(progress.currentExerciseIndex || 0);
         setStartTime(new Date(progress.startTime));
         setNotes(progress.notes || []);
         setLastSetValues(progress.lastSetValues || {});
+        setTotalPauseTime(progress.totalPauseTime || 0);
+        setSkippedPauses(progress.skippedPauses || 0);
         // Set other state variables as needed
       } else {
         const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
@@ -185,30 +221,30 @@ function WorkoutTracker() {
     const initialTotalSets = plan.exercises.reduce((total, exercise) => total + (exercise.requiredSets || 3), 0);
     setTotalSets(initialTotalSets);
     const storedSets = localStorage.getItem(`currentSets_${user.id}`);
-  if (storedSets) {
-    const parsedSets = JSON.parse(storedSets);
-    const initialCompletedSets = parsedSets.flat().length;
-    setCompletedSets(initialCompletedSets);
-    setSets(parsedSets);
-  } else {
-    setCompletedSets(0);
-    setSets(plan.exercises.map(() => []));
-  }
-    const storedIndex = localStorage.getItem('currentExerciseIndex');
-    const storedStartTime = localStorage.getItem('workoutStartTime');
-  if (storedStartTime) {
-    setStartTime(new Date(storedStartTime));
-    const now = new Date();
-    const elapsed = Math.floor((now - new Date(storedStartTime)) / 1000);
-    setElapsedTime(elapsed);
-  } else {
-    const newStartTime = new Date();
-    setStartTime(newStartTime);
-    localStorage.setItem('workoutStartTime', newStartTime.toISOString());
-    setElapsedTime(0);
-  }
-    const storedNotes = localStorage.getItem('workoutNotes');
-    const storedLastSetValues = localStorage.getItem('lastSetValues');
+    if (storedSets) {
+      const parsedSets = JSON.parse(storedSets);
+      const initialCompletedSets = parsedSets.flat().length;
+      setCompletedSets(initialCompletedSets);
+      setSets(parsedSets);
+    } else {
+      setCompletedSets(0);
+      setSets(plan.exercises.map(() => []));
+    }
+    const storedIndex = localStorage.getItem(`currentExerciseIndex_${user.id}`);
+    const storedStartTime = localStorage.getItem(`workoutStartTime_${user.id}`);
+    if (storedStartTime) {
+      setStartTime(new Date(storedStartTime));
+      const now = new Date();
+      const elapsed = Math.floor((now - new Date(storedStartTime)) / 1000);
+      setElapsedTime(elapsed);
+    } else {
+      const newStartTime = new Date();
+      setStartTime(newStartTime);
+      localStorage.setItem(`workoutStartTime_${user.id}`, newStartTime.toISOString());
+      setElapsedTime(0);
+    }
+    const storedNotes = localStorage.getItem(`workoutNotes_${user.id}`);
+    const storedLastSetValues = localStorage.getItem(`lastSetValues_${user.id}`);
     const totalSetsCount = plan.exercises.reduce((total, exercise) => total + (exercise.requiredSets || 3), 0);
     setTotalSets(totalSetsCount);
 
@@ -221,22 +257,8 @@ function WorkoutTracker() {
     });
     setRequiredSets(initialRequiredSets);
 
-    if (storedSets) {
-      setSets(JSON.parse(storedSets));
-    } else {
-      setSets(plan.exercises.map(() => []));
-    }
-    
     if (storedIndex !== null) {
       setCurrentExerciseIndex(parseInt(storedIndex, 10));
-    }
-
-    if (storedStartTime) {
-      setStartTime(new Date(storedStartTime));
-    } else {
-      const newStartTime = new Date();
-      setStartTime(newStartTime);
-      localStorage.setItem('workoutStartTime', newStartTime.toISOString());
     }
 
     if (storedNotes) {
@@ -710,6 +732,13 @@ function WorkoutTracker() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      {exerciseHistoryError && (
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+          <p className="font-bold">Error</p>
+          <p>{exerciseHistoryError}</p>
+        </div>
+      )}
+
       <div className="relative mb-6">
         <button
           onClick={handleCancelWorkout}
@@ -752,6 +781,7 @@ function WorkoutTracker() {
           ))}
         </div>
       </div>
+      
 
       <SwitchTransition mode="out-in">
         <CSSTransition
