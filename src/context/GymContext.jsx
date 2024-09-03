@@ -436,8 +436,11 @@ export function GymProvider({ children }) {
         progressData.startTime = new Date().toISOString();
       }
       
-      await axiosInstance.post(`${hostName}/api/workouts/progress`, progressData);
-      localStorage.setItem('workoutProgress', JSON.stringify(progressData));
+      await axiosInstance.post(`${hostName}/api/workouts/progress`, {
+        ...progressData,
+        userId: user.id // Add user ID to the progress data
+      });
+      localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(progressData));
       console.log('Progress saved successfully');
     } catch (error) {
       console.error('Error saving progress:', error);
@@ -455,15 +458,17 @@ export function GymProvider({ children }) {
     if (!user) return;
 
     try {
-      localStorage.removeItem("currentPlan");
-      localStorage.removeItem("currentSets");
-      localStorage.removeItem("currentExerciseIndex");
-      localStorage.removeItem("workoutStartTime");
-      localStorage.removeItem("workoutNotes");
-      localStorage.removeItem("lastSetValues");
+      localStorage.removeItem(`workoutProgress_${user.id}`);
+      localStorage.removeItem(`currentPlan_${user.id}`);
+      localStorage.removeItem(`currentSets_${user.id}`);
+      localStorage.removeItem(`currentExerciseIndex_${user.id}`);
+      localStorage.removeItem(`workoutStartTime_${user.id}`);
+      localStorage.removeItem(`workoutNotes_${user.id}`);
+      localStorage.removeItem(`lastSetValues_${user.id}`);
 
       await axiosInstance.delete(
         `${API_URL}/workouts/progress`,
+        { data: { userId: user.id } },
         getAuthConfig()
       );
 
@@ -479,6 +484,25 @@ export function GymProvider({ children }) {
       throw error;
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
+
+  const loadProgress = useCallback(async () => {
+    if (!user) return null;
+
+    try {
+      const response = await axiosInstance.get(
+        `${API_URL}/workouts/progress`,
+        getAuthConfig()
+      );
+      if (response.data) {
+        localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(response.data));
+        return response.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error loading progress:', error);
+      return null;
+    }
+  }, [user, API_URL, getAuthConfig]);
 
   const contextValue = useMemo(
     () => ({
@@ -500,6 +524,7 @@ export function GymProvider({ children }) {
       addExerciseToPlan,
       saveProgress,
       clearWorkout,
+      loadProgress,
       getExerciseHistory,
       getLastWorkoutForPlan,
     }),
@@ -522,6 +547,7 @@ export function GymProvider({ children }) {
       addExerciseToPlan,
       saveProgress,
       clearWorkout,
+      loadProgress,
       getExerciseHistory,
       getLastWorkoutForPlan,
     ]

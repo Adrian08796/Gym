@@ -61,7 +61,11 @@ export function AuthProvider({ children }) {
       if (response.data && response.data.accessToken && response.data.refreshToken && response.data.user) {
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
-        setUser(response.data.user);
+        setUser({
+          id: response.data.user.id,
+          username: response.data.user.username,
+          email: response.data.user.email
+        });
         console.log('Tokens stored in localStorage');
         refreshToken(true);
         return response.data;

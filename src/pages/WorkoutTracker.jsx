@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { CSSTransition, SwitchTransition } from 'react-transition-group';
 import { FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiSettings, FiX } from 'react-icons/fi';
 import { usePreviousWorkout } from '../hooks/usePreviousWorkout';
@@ -47,9 +48,10 @@ function WorkoutTracker() {
   const [intensity, setIntensity] = useState('');
   const [incline, setIncline] = useState('');
 
-  const { addWorkout, saveProgress, clearWorkout, getExerciseHistory } = useGymContext();
+  const { addWorkout, saveProgress, clearWorkout, getExerciseHistory, loadProgress } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
+  const { user } = useAuth(); // Add this line
   const navigate = useNavigate();
   const nodeRef = useRef(null);
 
@@ -80,30 +82,41 @@ function WorkoutTracker() {
   useEffect(() => {
     const loadWorkout = async () => {
       setIsLoading(true);
-      const storedPlan = localStorage.getItem('currentPlan');
-      if (storedPlan) {
-        try {
-          const plan = JSON.parse(storedPlan);
-          if (plan && plan.exercises && plan.exercises.length > 0) {
-            setCurrentPlan(plan);
-            loadStoredData(plan);
-          } else {
-            throw new Error('Invalid plan data');
+      const progress = await loadProgress();
+      if (progress) {
+        setCurrentPlan(progress.plan);
+        setSets(progress.sets || []);
+        setCurrentExerciseIndex(progress.currentExerciseIndex || 0);
+        setStartTime(new Date(progress.startTime));
+        setNotes(progress.notes || []);
+        setLastSetValues(progress.lastSetValues || {});
+        // Set other state variables as needed
+      } else {
+        const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
+        if (storedPlan) {
+          try {
+            const plan = JSON.parse(storedPlan);
+            if (plan && plan.exercises && plan.exercises.length > 0) {
+              setCurrentPlan(plan);
+              loadStoredData(plan);
+            } else {
+              throw new Error('Invalid plan data');
+            }
+          } catch (error) {
+            console.error('Error loading workout plan:', error);
+            addNotification('Error loading workout plan. Please select a new plan.', 'error');
+            navigate('/plans');
           }
-        } catch (error) {
-          console.error('Error loading workout plan:', error);
-          addNotification('Error loading workout plan. Please select a new plan.', 'error');
+        } else {
+          addNotification('No workout plan selected', 'error');
           navigate('/plans');
         }
-      } else {
-        addNotification('No workout plan selected', 'error');
-        navigate('/plans');
       }
       setIsLoading(false);
     };
   
     loadWorkout();
-  }, [navigate, addNotification]);
+  }, [navigate, addNotification, loadProgress, user.id]);
 
   useEffect(() => {
     const saveInterval = setInterval(async () => {
@@ -119,7 +132,6 @@ function WorkoutTracker() {
           });
         } catch (error) {
           console.error('Failed to save progress:', error);
-          // Optionally, you can add a notification here or handle the error in another way
         }
       }
     }, 30000); // Save every 30 seconds
@@ -172,7 +184,7 @@ function WorkoutTracker() {
   const loadStoredData = (plan) => {
     const initialTotalSets = plan.exercises.reduce((total, exercise) => total + (exercise.requiredSets || 3), 0);
     setTotalSets(initialTotalSets);
-    const storedSets = localStorage.getItem('currentSets');
+    const storedSets = localStorage.getItem(`currentSets_${user.id}`);
   if (storedSets) {
     const parsedSets = JSON.parse(storedSets);
     const initialCompletedSets = parsedSets.flat().length;
@@ -240,14 +252,14 @@ function WorkoutTracker() {
 
   const saveDataToLocalStorage = () => {
     if (currentPlan) {
-      localStorage.setItem('currentPlan', JSON.stringify(currentPlan));
+      localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(currentPlan));
     }
     if (sets.length > 0) {
-      localStorage.setItem('currentSets', JSON.stringify(sets));
+      localStorage.setItem(`currentSets_${user.id}`, JSON.stringify(sets));
     }
-    localStorage.setItem('currentExerciseIndex', currentExerciseIndex.toString());
-    localStorage.setItem('workoutNotes', JSON.stringify(notes));
-    localStorage.setItem('lastSetValues', JSON.stringify(lastSetValues));
+    localStorage.setItem(`currentExerciseIndex_${user.id}`, currentExerciseIndex.toString());
+    localStorage.setItem(`workoutNotes_${user.id}`, JSON.stringify(notes));
+    localStorage.setItem(`lastSetValues_${user.id}`, JSON.stringify(lastSetValues));
   };
 
   const renderExerciseInputs = () => {
