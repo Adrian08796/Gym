@@ -49,10 +49,10 @@ function WorkoutTracker() {
   const [incline, setIncline] = useState('');
   const [exerciseHistoryError, setExerciseHistoryError] = useState(null);
 
-  const { addWorkout, saveProgress, clearWorkout, getExerciseHistory, getExerciseById, loadProgress } = useGymContext();
+  const { addWorkout, saveProgress, clearWorkout, getExerciseHistory, loadProgress, getExerciseById } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
-  const { user } = useAuth(); // Add this line
+  const { user } = useAuth();
   const navigate = useNavigate();
   const nodeRef = useRef(null);
 
@@ -116,43 +116,68 @@ function WorkoutTracker() {
   useEffect(() => {
     const loadWorkout = async () => {
       setIsLoading(true);
-      const progress = await loadProgress();
-      if (progress) {
-        setCurrentPlan(progress.plan);
-        setSets(progress.exercises || []);
-        setCurrentExerciseIndex(progress.currentExerciseIndex || 0);
-        setStartTime(new Date(progress.startTime));
-        setNotes(progress.notes || []);
-        setLastSetValues(progress.lastSetValues || {});
-        setTotalPauseTime(progress.totalPauseTime || 0);
-        setSkippedPauses(progress.skippedPauses || 0);
-        // Set other state variables as needed
-      } else {
-        const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
-        if (storedPlan) {
-          try {
-            const plan = JSON.parse(storedPlan);
-            if (plan && plan.exercises && plan.exercises.length > 0) {
-              setCurrentPlan(plan);
-              loadStoredData(plan);
-            } else {
-              throw new Error('Invalid plan data');
+      try {
+        const progress = await loadProgress();
+        if (progress && progress.plan) {
+          const fullPlan = await loadFullPlanDetails(progress.plan);
+          setCurrentPlan(fullPlan);
+          setSets(progress.exercises || []);
+          setCurrentExerciseIndex(progress.currentExerciseIndex || 0);
+          setStartTime(progress.startTime ? new Date(progress.startTime) : new Date());
+          setNotes(progress.notes || []);
+          setLastSetValues(progress.lastSetValues || {});
+          setTotalPauseTime(progress.totalPauseTime || 0);
+          setSkippedPauses(progress.skippedPauses || 0);
+          setRequiredSets(progress.requiredSets || {});
+          setCompletedSets(progress.completedSets || 0);
+          setTotalSets(progress.totalSets || 0);
+        } else {
+          const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
+          if (storedPlan) {
+            try {
+              const plan = JSON.parse(storedPlan);
+              if (plan && plan.exercises && plan.exercises.length > 0) {
+                const fullPlan = await loadFullPlanDetails(plan);
+                setCurrentPlan(fullPlan);
+                loadStoredData(fullPlan);
+              } else {
+                throw new Error('Invalid plan data');
+              }
+            } catch (error) {
+              console.error('Error loading workout plan:', error);
+              addNotification('Error loading workout plan. Please select a new plan.', 'error');
+              navigate('/plans');
             }
-          } catch (error) {
-            console.error('Error loading workout plan:', error);
-            addNotification('Error loading workout plan. Please select a new plan.', 'error');
+          } else {
+            addNotification('No workout plan selected', 'error');
             navigate('/plans');
           }
-        } else {
-          addNotification('No workout plan selected', 'error');
-          navigate('/plans');
         }
+      } catch (error) {
+        console.error('Error loading workout:', error);
+        addNotification('Error loading workout. Please try again.', 'error');
+        navigate('/plans');
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
   
     loadWorkout();
   }, [navigate, addNotification, loadProgress, user.id]);
+
+  const loadFullPlanDetails = async (plan) => {
+    if (!plan || !plan.exercises) {
+      console.error('Invalid plan data:', plan);
+      return null;
+    }
+    const fullExercises = await Promise.all(plan.exercises.map(async (exercise) => {
+      if (typeof exercise === 'string' || !exercise.description) {
+        return await getExerciseById(exercise._id || exercise);
+      }
+      return exercise;
+    }));
+    return { ...plan, exercises: fullExercises.filter(Boolean) };
+  };
 
   useEffect(() => {
     const saveInterval = setInterval(async () => {
@@ -282,6 +307,9 @@ function WorkoutTracker() {
     localStorage.setItem(`currentExerciseIndex_${user.id}`, currentExerciseIndex.toString());
     localStorage.setItem(`workoutNotes_${user.id}`, JSON.stringify(notes));
     localStorage.setItem(`lastSetValues_${user.id}`, JSON.stringify(lastSetValues));
+    localStorage.setItem(`requiredSets_${user.id}`, JSON.stringify(requiredSets));
+    localStorage.setItem(`completedSets_${user.id}`, completedSets.toString());
+    localStorage.setItem(`totalSets_${user.id}`, totalSets.toString());
   };
 
   const renderExerciseInputs = () => {
@@ -398,13 +426,18 @@ function WorkoutTracker() {
     // Update progress
     const newProgress = calculateProgress();
     setProgression(newProgress);
-  
+
     // Save progress to database
     try {
+      const exercisesProgress = currentPlan.exercises.map((exercise, index) => ({
+        exercise: exercise._id,
+        sets: sets[index] || [],
+        notes: notes[index] || ''
+      }));
+
       await saveProgress({
         plan: currentPlan._id,
-        exercise: currentExercise._id,
-        set: newSet,
+        exercises: exercisesProgress,
         currentExerciseIndex,
         lastSetValues: {
           ...lastSetValues,
@@ -412,14 +445,16 @@ function WorkoutTracker() {
         },
         startTime: startTime.toISOString(),
         completedSets: completedSets + 1,
-        totalSets
+        totalSets,
+        totalPauseTime,
+        skippedPauses
       });
       addNotification(`${currentExercise.category === 'Cardio' ? 'Exercise' : 'Set'} completed and progress saved!`, 'success');
     } catch (error) {
       console.error('Error saving progress:', error);
       addNotification('Failed to save progress', 'error');
     }
-  
+
     // Don't reset input fields for strength exercises
     if (currentExercise.category === 'Cardio') {
       setDuration('');
@@ -612,14 +647,22 @@ function WorkoutTracker() {
 
   const handleExerciseChange = async (newIndex) => {
     try {
+      const exercisesProgress = currentPlan.exercises.map((exercise, index) => ({
+        exercise: exercise._id,
+        sets: sets[index] || [],
+        notes: notes[index] || ''
+      }));
+
       await saveProgress({
         plan: currentPlan._id,
-        exercise: currentPlan.exercises[currentExerciseIndex]._id,
-        sets: sets[currentExerciseIndex] || [],
-        notes: notes[currentExerciseIndex],
+        exercises: exercisesProgress,
         currentExerciseIndex,
         lastSetValues,
-        startTime: startTime.toISOString()
+        startTime: startTime.toISOString(),
+        completedSets,
+        totalSets,
+        totalPauseTime,
+        skippedPauses
       });
     } catch (error) {
       console.error('Error saving progress before switching exercise:', error);

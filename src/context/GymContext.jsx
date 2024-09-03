@@ -471,18 +471,35 @@ export function GymProvider({ children }) {
 
   const saveProgress = useCallback(async (progressData) => {
     if (!user) return;
-
+  
     try {
+      console.log('Received progress data:', progressData);
+  
       if (!progressData.startTime) {
         progressData.startTime = new Date().toISOString();
       }
+  
+      // Ensure exercises is an array, even if empty
+      const exercises = progressData.exercises || [];
+  
+      // Ensure exercises have the correct structure
+      const formattedExercises = exercises.map(exercise => ({
+        exercise: exercise.exercise?._id || exercise.exercise,
+        sets: exercise.sets || [],
+        notes: exercise.notes || ''
+      }));
       
-      await axiosInstance.post(`${hostName}/api/workouts/progress`, {
+      const dataToSave = {
         ...progressData,
+        exercises: formattedExercises,
         userId: user.id
-      });
+      };
+      
+      console.log('Saving progress data:', dataToSave);
+  
+      const response = await axiosInstance.post(`${hostName}/api/workouts/progress`, dataToSave);
       localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(progressData));
-      console.log('Progress saved successfully');
+      console.log('Progress saved successfully', response.data);
     } catch (error) {
       console.error('Error saving progress:', error);
       if (error.response && error.response.status === 401) {
@@ -493,7 +510,7 @@ export function GymProvider({ children }) {
       }
       throw error;
     }
-  }, [user, addNotification, logout]);
+  }, [user, addNotification, logout, hostName, axiosInstance]);
 
   const loadProgress = useCallback(async () => {
     if (!user) return null;
@@ -504,15 +521,27 @@ export function GymProvider({ children }) {
         getAuthConfig()
       );
       if (response.data) {
-        localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(response.data));
-        return response.data;
+        const progressData = response.data;
+        // Fetch full exercise details for the plan
+        if (progressData.plan && progressData.plan.exercises) {
+          progressData.plan.exercises = await Promise.all(
+            progressData.plan.exercises.map(async (exercise) => {
+              if (typeof exercise === 'string' || !exercise.description) {
+                return await getExerciseById(exercise._id || exercise);
+              }
+              return exercise;
+            })
+          );
+        }
+        localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(progressData));
+        return progressData;
       }
       return null;
     } catch (error) {
       console.error('Error loading progress:', error);
       return null;
     }
-  }, [user, API_URL, getAuthConfig]);
+  }, [user, API_URL, getAuthConfig, getExerciseById]);
 
   const clearWorkout = useCallback(async () => {
     if (!user) return;
