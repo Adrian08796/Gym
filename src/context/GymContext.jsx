@@ -482,10 +482,13 @@ export function GymProvider({ children }) {
       // Ensure exercises is an array, even if empty
       const exercises = progressData.exercises || [];
   
-      // Ensure exercises have the correct structure
+      // Ensure exercises have the correct structure and completedAt is set
       const formattedExercises = exercises.map(exercise => ({
         exercise: exercise.exercise?._id || exercise.exercise,
-        sets: exercise.sets || [],
+        sets: (exercise.sets || []).map(set => ({
+          ...set,
+          completedAt: set.completedAt || new Date().toISOString()
+        })),
         notes: exercise.notes || ''
       }));
       
@@ -545,7 +548,7 @@ export function GymProvider({ children }) {
 
   const clearWorkout = useCallback(async () => {
     if (!user) return;
-
+  
     try {
       localStorage.removeItem(`workoutProgress_${user.id}`);
       localStorage.removeItem(`currentPlan_${user.id}`);
@@ -554,13 +557,13 @@ export function GymProvider({ children }) {
       localStorage.removeItem(`workoutStartTime_${user.id}`);
       localStorage.removeItem(`workoutNotes_${user.id}`);
       localStorage.removeItem(`lastSetValues_${user.id}`);
-
+  
       await axiosInstance.delete(
         `${API_URL}/workouts/progress`,
         { data: { userId: user.id } },
         getAuthConfig()
       );
-
+  
       console.log("Workout cleared successfully");
       addNotification("Workout cleared", "success");
     } catch (error) {

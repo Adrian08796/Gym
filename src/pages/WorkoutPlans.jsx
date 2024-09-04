@@ -55,7 +55,19 @@ function WorkoutPlans() {
   }, []);
 
   const handleStartWorkout = (plan) => {
-    localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(plan));
+    const planToSave = {
+      _id: plan._id,
+      name: plan.name,
+      exercises: plan.exercises.map(exercise => ({
+        _id: exercise._id,
+        name: exercise.name,
+        description: exercise.description,
+        category: exercise.category,
+        target: exercise.target,
+        imageUrl: exercise.imageUrl
+      }))
+    };
+    localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(planToSave));
     navigate('/tracker');
   };
 

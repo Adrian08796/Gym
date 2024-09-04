@@ -121,10 +121,10 @@ function WorkoutTracker() {
         if (progress && progress.plan) {
           const fullPlan = await loadFullPlanDetails(progress.plan);
           setCurrentPlan(fullPlan);
-          setSets(progress.exercises || []);
+          setSets(progress.exercises.map(exercise => exercise.sets || []));
           setCurrentExerciseIndex(progress.currentExerciseIndex || 0);
           setStartTime(progress.startTime ? new Date(progress.startTime) : new Date());
-          setNotes(progress.notes || []);
+          setNotes(progress.exercises.map(exercise => exercise.notes || ''));
           setLastSetValues(progress.lastSetValues || {});
           setTotalPauseTime(progress.totalPauseTime || 0);
           setSkippedPauses(progress.skippedPauses || 0);
@@ -137,9 +137,8 @@ function WorkoutTracker() {
             try {
               const plan = JSON.parse(storedPlan);
               if (plan && plan.exercises && plan.exercises.length > 0) {
-                const fullPlan = await loadFullPlanDetails(plan);
-                setCurrentPlan(fullPlan);
-                loadStoredData(fullPlan);
+                setCurrentPlan(plan);
+                loadStoredData(plan);
               } else {
                 throw new Error('Invalid plan data');
               }
@@ -164,6 +163,7 @@ function WorkoutTracker() {
   
     loadWorkout();
   }, [navigate, addNotification, loadProgress, user.id]);
+  
 
   const loadFullPlanDetails = async (plan) => {
     if (!plan || !plan.exercises) {
@@ -270,31 +270,26 @@ function WorkoutTracker() {
     }
     const storedNotes = localStorage.getItem(`workoutNotes_${user.id}`);
     const storedLastSetValues = localStorage.getItem(`lastSetValues_${user.id}`);
-    const totalSetsCount = plan.exercises.reduce((total, exercise) => total + (exercise.requiredSets || 3), 0);
-    setTotalSets(totalSetsCount);
-
-    const completedSetsCount = storedSets ? JSON.parse(storedSets).flat().length : 0;
-    setCompletedSets(completedSetsCount);
-
-    const initialRequiredSets = {};
-    plan.exercises.forEach(exercise => {
-      initialRequiredSets[exercise._id] = exercise.requiredSets || 3;
-    });
-    setRequiredSets(initialRequiredSets);
-
+  
     if (storedIndex !== null) {
       setCurrentExerciseIndex(parseInt(storedIndex, 10));
     }
-
+  
     if (storedNotes) {
       setNotes(JSON.parse(storedNotes));
     } else {
       setNotes(plan.exercises.map(() => ''));
     }
-
+  
     if (storedLastSetValues) {
       setLastSetValues(JSON.parse(storedLastSetValues));
     }
+  
+    const initialRequiredSets = {};
+    plan.exercises.forEach(exercise => {
+      initialRequiredSets[exercise._id] = exercise.requiredSets || 3;
+    });
+    setRequiredSets(initialRequiredSets);
   };
 
   const saveDataToLocalStorage = () => {
@@ -404,10 +399,8 @@ function WorkoutTracker() {
     setSets(prevSets => {
       const newSets = [...prevSets];
       if (currentExercise.category === 'Cardio') {
-        // For cardio, replace any existing set with the new one
         newSets[currentExerciseIndex] = [newSet];
       } else {
-        // For strength, add the new set to the existing ones
         newSets[currentExerciseIndex] = [
           ...(newSets[currentExerciseIndex] || []),
           newSet
@@ -535,10 +528,7 @@ function WorkoutTracker() {
     try {
       await addWorkout(completedWorkout);
       await clearWorkout();
-      localStorage.removeItem('workoutStartTime'); // Add this line
       addNotification('Workout completed and saved!', 'success');
-      resetWorkoutState();
-      clearLocalStorage();
       navigate('/');
     } catch (error) {
       console.error('Error saving workout:', error);
