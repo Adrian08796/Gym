@@ -131,14 +131,16 @@ function WorkoutTracker() {
           setRequiredSets(progress.requiredSets || {});
           setCompletedSets(progress.completedSets || 0);
           setTotalSets(progress.totalSets || 0);
+          loadStoredData(fullPlan);
         } else {
           const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
           if (storedPlan) {
             try {
               const plan = JSON.parse(storedPlan);
               if (plan && plan.exercises && plan.exercises.length > 0) {
-                setCurrentPlan(plan);
-                loadStoredData(plan);
+                const fullPlan = await loadFullPlanDetails(plan);
+                setCurrentPlan(fullPlan);
+                loadStoredData(fullPlan);
               } else {
                 throw new Error('Invalid plan data');
               }
@@ -246,15 +248,15 @@ function WorkoutTracker() {
     const initialTotalSets = plan.exercises.reduce((total, exercise) => total + (exercise.requiredSets || 3), 0);
     setTotalSets(initialTotalSets);
     const storedSets = localStorage.getItem(`currentSets_${user.id}`);
-    if (storedSets) {
-      const parsedSets = JSON.parse(storedSets);
-      const initialCompletedSets = parsedSets.flat().length;
-      setCompletedSets(initialCompletedSets);
-      setSets(parsedSets);
-    } else {
-      setCompletedSets(0);
-      setSets(plan.exercises.map(() => []));
-    }
+  if (storedSets) {
+    const parsedSets = JSON.parse(storedSets);
+    const initialCompletedSets = parsedSets.reduce((total, exerciseSets) => total + exerciseSets.length, 0);
+    setCompletedSets(initialCompletedSets);
+    setSets(parsedSets);
+  } else {
+    setCompletedSets(0);
+    setSets(plan.exercises.map(() => []));
+  }
     const storedIndex = localStorage.getItem(`currentExerciseIndex_${user.id}`);
     const storedStartTime = localStorage.getItem(`workoutStartTime_${user.id}`);
     if (storedStartTime) {
@@ -282,7 +284,23 @@ function WorkoutTracker() {
     }
   
     if (storedLastSetValues) {
-      setLastSetValues(JSON.parse(storedLastSetValues));
+      const parsedLastSetValues = JSON.parse(storedLastSetValues);
+      setLastSetValues(parsedLastSetValues);
+      
+      // Restore the input fields for the current exercise
+      const currentExercise = plan.exercises[currentExerciseIndex];
+      const lastValues = parsedLastSetValues[currentExercise._id];
+      if (lastValues) {
+        if (currentExercise.category === 'Strength') {
+          setWeight(lastValues.weight?.toString() || '');
+          setReps(lastValues.reps?.toString() || '');
+        } else if (currentExercise.category === 'Cardio') {
+          setDuration(lastValues.duration?.toString() || '');
+          setDistance(lastValues.distance?.toString() || '');
+          setIntensity(lastValues.intensity?.toString() || '');
+          setIncline(lastValues.incline?.toString() || '');
+        }
+      }
     }
   
     const initialRequiredSets = {};
@@ -654,13 +672,9 @@ function WorkoutTracker() {
         totalPauseTime,
         skippedPauses
       });
-    } catch (error) {
-      console.error('Error saving progress before switching exercise:', error);
-      addNotification('Failed to save progress', 'error');
-    }
   
     setCurrentExerciseIndex(newIndex);
-  
+
     const newExercise = currentPlan.exercises[newIndex];
     const lastValues = lastSetValues[newExercise._id];
     if (lastValues) {
@@ -682,7 +696,11 @@ function WorkoutTracker() {
       setIntensity('');
       setIncline('');
     }
-  };
+  } catch (error) {
+    console.error('Error saving progress before switching exercise:', error);
+    addNotification('Failed to save progress', 'error');
+  }
+};
 
   const handleTouchStart = (e) => {
     setTouchEnd(null);
