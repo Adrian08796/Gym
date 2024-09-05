@@ -164,9 +164,16 @@ function WorkoutTracker() {
           setLastSetValues(progress.lastSetValues || {});
           setTotalPauseTime(progress.totalPauseTime || 0);
           setSkippedPauses(progress.skippedPauses || 0);
-          setRequiredSets(progress.requiredSets || {});
+          
+          // Set requiredSets
+          const newRequiredSets = {};
+          fullPlan.exercises.forEach((exercise, index) => {
+            newRequiredSets[exercise._id] = progress.exercises[index]?.requiredSets || 3;
+          });
+          setRequiredSets(newRequiredSets);
+          
           setCompletedSets(progress.completedSets || 0);
-          setTotalSets(progress.totalSets || 0);
+          setTotalSets(progress.totalSets || fullPlan.exercises.reduce((total, exercise) => total + (newRequiredSets[exercise._id] || 3), 0));
           
           // Restore input fields for the current exercise
           const currentExercise = fullPlan.exercises[progress.currentExerciseIndex || 0];
@@ -474,7 +481,7 @@ function WorkoutTracker() {
   const handleSetComplete = async () => {
     const currentExercise = currentPlan.exercises[currentExerciseIndex];
     let newSet;
-
+  
     if (currentExercise.category === "Strength") {
       if (!weight || !reps) {
         addNotification("Please enter both weight and reps", "error");
@@ -500,7 +507,7 @@ function WorkoutTracker() {
         skippedRest: isResting,
       };
     }
-
+  
     setSets(prevSets => {
       const newSets = [...prevSets];
       if (currentExercise.category === "Cardio") {
@@ -513,28 +520,30 @@ function WorkoutTracker() {
       }
       return newSets;
     });
-
-    setCompletedSets(prevCompletedSets => prevCompletedSets + 1);
-
+  
+    setCompletedSets(prevCompletedSets => {
+      const newCompletedSets = prevCompletedSets + 1;
+      return newCompletedSets;
+    });
+  
     setLastSetValues(prev => ({
       ...prev,
       [currentExercise._id]: newSet,
     }));
-
+  
     // Update progress
     const newProgress = calculateProgress();
     setProgression(newProgress);
-
+  
     // Save progress to database
     try {
-      const exercisesProgress = currentPlan.exercises.map(
-        (exercise, index) => ({
-          exercise: exercise._id,
-          sets: sets[index] || [],
-          notes: notes[index] || "",
-        })
-      );
-
+      const exercisesProgress = currentPlan.exercises.map((exercise, index) => ({
+        exercise: exercise._id,
+        sets: sets[index] || [],
+        notes: notes[index] || "",
+        requiredSets: requiredSets[exercise._id] || 3,
+      }));
+  
       await saveProgress({
         plan: currentPlan._id,
         exercises: exercisesProgress,
@@ -549,6 +558,7 @@ function WorkoutTracker() {
         totalPauseTime,
         skippedPauses,
       });
+  
       addNotification(
         `${
           currentExercise.category === "Cardio" ? "Exercise" : "Set"
@@ -559,21 +569,10 @@ function WorkoutTracker() {
       console.error("Error saving progress:", error);
       addNotification("Failed to save progress", "error");
     }
-
-    // Lines below will reset the input fields for Cardio exercises when an exercise is complete
-    if (currentExercise.category === 'Cardio') {
-      // setDuration('');
-      // setDistance('');
-      // setIntensity('');
-      // setIncline('');
-    }
-
+  
     // For cardio exercises, we don't start the rest timer
     if (currentExercise.category !== "Cardio") {
       startRestTimer();
-      // Lines below will reset the input fields for Strength exercises when a set is complete
-      // setWeight("");
-      // setReps("");
     }
   };
 
@@ -1012,7 +1011,7 @@ function WorkoutTracker() {
                       <p className="mb-2">
                         <strong>Sets completed:</strong>{" "}
                         {(sets[currentExerciseIndex] || []).length} /{" "}
-                        {requiredSets[currentExercise._id] || 0}
+                        {requiredSets[currentExercise._id] || 3}
                       </p>
                     )}
                   </div>

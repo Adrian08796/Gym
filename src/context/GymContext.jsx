@@ -487,7 +487,8 @@ export function GymProvider({ children }) {
           ...set,
           completedAt: set.completedAt || new Date().toISOString()
         })),
-        notes: exercise.notes || ''
+        notes: exercise.notes || '',
+        requiredSets: exercise.requiredSets || 3 // Default to 3 if not specified
       }));
       
       const dataToSave = {
@@ -499,7 +500,7 @@ export function GymProvider({ children }) {
       console.log('Saving progress data:', dataToSave);
   
       const response = await axiosInstance.post(`${hostName}/api/workouts/progress`, dataToSave);
-      localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(progressData));
+      localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(dataToSave));
       console.log('Progress saved successfully', response.data);
     } catch (error) {
       console.error('Error saving progress:', error);
@@ -526,11 +527,16 @@ export function GymProvider({ children }) {
         // Fetch full exercise details for the plan
         if (progressData.plan && progressData.plan.exercises) {
           progressData.plan.exercises = await Promise.all(
-            progressData.plan.exercises.map(async (exercise) => {
+            progressData.plan.exercises.map(async (exercise, index) => {
+              let fullExercise;
               if (typeof exercise === 'string' || !exercise.description) {
-                return await getExerciseById(exercise._id || exercise);
+                fullExercise = await getExerciseById(exercise._id || exercise);
+              } else {
+                fullExercise = exercise;
               }
-              return exercise;
+              // Ensure requiredSets is set
+              fullExercise.requiredSets = progressData.exercises[index]?.requiredSets || 3;
+              return fullExercise;
             })
           );
         }
