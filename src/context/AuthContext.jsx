@@ -126,6 +126,7 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
+    console.log('FETCHING USER');
     const checkLoggedIn = async () => {
       console.log('Checking if user is logged in');
       const token = localStorage.getItem('token');
@@ -134,7 +135,7 @@ export function AuthProvider({ children }) {
         try {
           console.log('Attempting to fetch user data');
           const response = await axiosInstance.get('/api/auth/user');
-          console.log('User data fetched:', response.data);
+          console.log('User data fetched:::: :', response.data);
           setUser(response.data);
           refreshToken(true);
         } catch (error) {
@@ -144,7 +145,7 @@ export function AuthProvider({ children }) {
               console.log('Token expired, attempting to refresh');
               await refreshToken();
               const retryResponse = await axiosInstance.get('/api/auth/user');
-              console.log('User data fetched after refresh:', retryResponse.data);
+              console.log('User data fetched after refresh:::: :', retryResponse.data);
               setUser(retryResponse.data);
             } catch (refreshError) {
               console.error('Error refreshing token:', refreshError);
@@ -175,7 +176,7 @@ export function AuthProvider({ children }) {
     user,
     login,
     logout,
-    register, // Add this line
+    register,
     loading,
     refreshToken
   };
