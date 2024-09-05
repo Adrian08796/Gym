@@ -635,15 +635,15 @@ function WorkoutTracker() {
             completedExercises += 1;
           }
         } else {
-          const requiredSetsForExercise = requiredSets[exercise._id] || 0;
+          const requiredSetsForExercise = requiredSets[exercise._id] || 3; // Default to 3 if not set
           totalExercises += requiredSetsForExercise;
-          completedExercises += (sets[index] || []).length;
+          completedExercises += Math.min((sets[index] || []).length, requiredSetsForExercise);
         }
       });
 
-      return (completedExercises / totalExercises) * 100;
+      return Math.min((completedExercises / totalExercises) * 100, 100); // Cap at 100%
     };
-  }, [currentPlan, sets, requiredSets]);
+  }, [currentPlan, sets, requiredSets, totalSets]);
 
   const handleNoteChange = (index, value) => {
     setNotes(prevNotes => {
