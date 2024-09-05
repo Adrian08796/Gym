@@ -55,6 +55,19 @@ function WorkoutSummary() {
     }));
   };
 
+  const renderSetDetails = (set, exerciseCategory) => {
+    if (exerciseCategory === 'Strength') {
+      return `${set.weight} kg x ${set.reps} reps`;
+    } else if (exerciseCategory === 'Cardio') {
+      let details = `${set.duration} minutes`;
+      if (set.distance) details += `, ${set.distance} km`;
+      if (set.intensity) details += `, Intensity: ${set.intensity}`;
+      if (set.incline) details += `, Incline: ${set.incline}%`;
+      return details;
+    }
+    return 'No data available';
+  };
+
   return (
     <div className={`container mx-auto mt-8 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
       <h2 className="text-2xl font-bold mb-4">Workout History</h2>
@@ -99,22 +112,28 @@ function WorkoutSummary() {
                     <div className="ml-6 mt-2">
                       {exercise.sets && exercise.sets.length > 0 ? (
                         <ul className="list-disc">
-                          {exercise.sets.map((set, setIndex) => (
-                            <li key={setIndex} className={`mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                              Set {setIndex + 1}: {set.weight} kg x {set.reps} reps
-                              {set.completedAt && (
-                                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>
-                                  (at {formatTime(set.completedAt)})
-                                </span>
-                              )}
-                              {set.skippedRest && (
-                                <span className="text-yellow-500 ml-2">(Rest Skipped)</span>
-                              )}
+                          {exercise.exercise.category === 'Cardio' ? (
+                            <li className={`mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {renderSetDetails(exercise.sets[0], exercise.exercise.category)}
                             </li>
-                          ))}
+                          ) : (
+                            exercise.sets.map((set, setIndex) => (
+                              <li key={setIndex} className={`mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                Set {setIndex + 1}: {renderSetDetails(set, exercise.exercise.category)}
+                                {set.completedAt && (
+                                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>
+                                    (at {formatTime(set.completedAt)})
+                                  </span>
+                                )}
+                                {set.skippedRest && (
+                                  <span className="text-yellow-500 ml-2">(Rest Skipped)</span>
+                                )}
+                              </li>
+                            ))
+                          )}
                         </ul>
                       ) : (
-                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>No sets recorded for this exercise.</p>
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>No data recorded for this exercise.</p>
                       )}
                       {exercise.notes && (
                         <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>

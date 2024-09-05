@@ -10,6 +10,7 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
 import WorkoutPlanCard from '../components/WorkoutPlanCard';
 import WorkoutPlanModal from '../components/WorkoutPlanModal';
@@ -44,6 +45,7 @@ function WorkoutPlans() {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
+  const { user } = useAuth();
 
   useEffect(() => {
     const storedPlan = localStorage.getItem('currentPlan');
@@ -53,7 +55,19 @@ function WorkoutPlans() {
   }, []);
 
   const handleStartWorkout = (plan) => {
-    localStorage.setItem('currentPlan', JSON.stringify(plan));
+    const planToSave = {
+      _id: plan._id,
+      name: plan.name,
+      exercises: plan.exercises.map(exercise => ({
+        _id: exercise._id,
+        name: exercise.name,
+        description: exercise.description,
+        category: exercise.category,
+        target: exercise.target,
+        imageUrl: exercise.imageUrl
+      }))
+    };
+    localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(planToSave));
     navigate('/tracker');
   };
 
