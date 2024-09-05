@@ -473,16 +473,14 @@ export function GymProvider({ children }) {
     if (!user) return;
   
     try {
-      console.log('Received progress data:', progressData);
+      console.log('Saving progress data:', progressData);
   
       if (!progressData.startTime) {
         progressData.startTime = new Date().toISOString();
       }
   
-      // Ensure exercises is an array, even if empty
       const exercises = progressData.exercises || [];
   
-      // Ensure exercises have the correct structure and completedAt is set
       const formattedExercises = exercises.map(exercise => ({
         exercise: exercise.exercise?._id || exercise.exercise,
         sets: (exercise.sets || []).map(set => ({
@@ -517,7 +515,7 @@ export function GymProvider({ children }) {
 
   const loadProgress = useCallback(async () => {
     if (!user) return null;
-
+  
     try {
       const response = await axiosInstance.get(
         `${API_URL}/workouts/progress`,

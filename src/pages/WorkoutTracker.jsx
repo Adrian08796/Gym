@@ -26,6 +26,7 @@ import PreviousWorkoutDisplay from "../components/PreviousWorkoutDisplay";
 import { formatTime } from "../utils/timeUtils";
 import { canVibrate, vibrateDevice } from "../utils/deviceUtils";
 import "./WorkoutTracker.css";
+import { set } from "date-fns";
 
 function WorkoutTracker() {
   const [currentPlan, setCurrentPlan] = useState(null);
@@ -158,9 +159,7 @@ function WorkoutTracker() {
           setCurrentPlan(fullPlan);
           setSets(progress.exercises.map(exercise => exercise.sets || []));
           setCurrentExerciseIndex(progress.currentExerciseIndex || 0);
-          setStartTime(
-            progress.startTime ? new Date(progress.startTime) : new Date()
-          );
+          setStartTime(progress.startTime ? new Date(progress.startTime) : new Date());
           setNotes(progress.exercises.map(exercise => exercise.notes || ""));
           setLastSetValues(progress.lastSetValues || {});
           setTotalPauseTime(progress.totalPauseTime || 0);
@@ -168,7 +167,23 @@ function WorkoutTracker() {
           setRequiredSets(progress.requiredSets || {});
           setCompletedSets(progress.completedSets || 0);
           setTotalSets(progress.totalSets || 0);
-          loadStoredData(fullPlan);
+          
+          // Restore input fields for the current exercise
+          const currentExercise = fullPlan.exercises[progress.currentExerciseIndex || 0];
+          if (currentExercise) {
+            const lastValues = progress.lastSetValues[currentExercise._id];
+            if (lastValues) {
+              if (currentExercise.category === "Strength") {
+                setWeight(lastValues.weight?.toString() || "");
+                setReps(lastValues.reps?.toString() || "");
+              } else if (currentExercise.category === "Cardio") {
+                setDuration(lastValues.duration?.toString() || "");
+                setDistance(lastValues.distance?.toString() || "");
+                setIntensity(lastValues.intensity?.toString() || "");
+                setIncline(lastValues.incline?.toString() || "");
+              }
+            }
+          }
         } else {
           const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
           if (storedPlan) {
@@ -202,7 +217,7 @@ function WorkoutTracker() {
         setIsLoading(false);
       }
     };
-
+  
     loadWorkout();
   }, [navigate, addNotification, loadProgress, user.id]);
 
@@ -223,33 +238,32 @@ function WorkoutTracker() {
   };
 
   useEffect(() => {
-    const saveInterval = setInterval(async () => {
-      if (currentPlan) {
-        try {
-          await saveProgress({
-            plan: currentPlan,
-            sets,
-            currentExerciseIndex,
-            startTime,
-            notes,
-            lastSetValues,
-          });
-        } catch (error) {
-          console.error("Failed to save progress:", error);
-        }
+  const saveInterval = setInterval(async () => {
+    if (currentPlan) {
+      try {
+        await saveProgress({
+          plan: currentPlan,
+          exercises: currentPlan.exercises.map((exercise, index) => ({
+            exercise: exercise._id,
+            sets: sets[index] || [],
+            notes: notes[index] || "",
+          })),
+          currentExerciseIndex,
+          startTime,
+          lastSetValues,
+          totalPauseTime,
+          skippedPauses,
+          completedSets,
+          totalSets,
+        });
+      } catch (error) {
+        console.error("Failed to save progress:", error);
       }
-    }, 30000); // Save every 30 seconds
+    }
+  }, 30000); // Save every 30 seconds
 
-    return () => clearInterval(saveInterval);
-  }, [
-    currentPlan,
-    sets,
-    currentExerciseIndex,
-    startTime,
-    notes,
-    lastSetValues,
-    saveProgress,
-  ]);
+  return () => clearInterval(saveInterval);
+}, [currentPlan, sets, currentExerciseIndex, startTime, notes, lastSetValues, saveProgress, totalPauseTime, skippedPauses, completedSets, totalSets]);
 
   useEffect(() => {
     let timer;
@@ -546,17 +560,20 @@ function WorkoutTracker() {
       addNotification("Failed to save progress", "error");
     }
 
-    // Don't reset input fields for strength exercises
-    // if (currentExercise.category === 'Cardio') {
-    //   setDuration('');
-    //   setDistance('');
-    //   setIntensity('');
-    //   setIncline('');
-    // }
+    // Lines below will reset the input fields for Cardio exercises when an exercise is complete
+    if (currentExercise.category === 'Cardio') {
+      // setDuration('');
+      // setDistance('');
+      // setIntensity('');
+      // setIncline('');
+    }
 
     // For cardio exercises, we don't start the rest timer
     if (currentExercise.category !== "Cardio") {
       startRestTimer();
+      // Lines below will reset the input fields for Strength exercises when a set is complete
+      // setWeight("");
+      // setReps("");
     }
   };
 
@@ -651,7 +668,7 @@ function WorkoutTracker() {
           onClick: async () => {
             try {
               await clearWorkout();
-              localStorage.removeItem("workoutStartTime"); // Add this line
+              localStorage.removeItem("workoutStartTime");
               resetWorkoutState();
               clearLocalStorage();
               addNotification("Workout cancelled", "info");
