@@ -10,6 +10,7 @@ import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 
 const categories = ['Strength', 'Cardio', 'Flexibility'];
+const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'];
 
 const categoryColors = {
   Strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
@@ -27,15 +28,17 @@ function ExerciseLibrary() {
   const [exerciseToAddToPlan, setExerciseToAddToPlan] = useState(null);
   const [filterText, setFilterText] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState([]);
 
   const filteredExercises = useMemo(() => {
     return exercises.filter(exercise => 
       (exercise.name.toLowerCase().includes(filterText.toLowerCase()) ||
        exercise.description.toLowerCase().includes(filterText.toLowerCase()) ||
        (Array.isArray(exercise.target) && exercise.target.some(t => t.toLowerCase().includes(filterText.toLowerCase())))) &&
-      (selectedCategories.length === 0 || selectedCategories.includes(exercise.category))
+      (selectedCategories.length === 0 || selectedCategories.includes(exercise.category)) &&
+      (selectedMuscleGroups.length === 0 || selectedMuscleGroups.some(group => exercise.target.includes(group)))
     );
-  }, [exercises, filterText, selectedCategories]);
+  }, [exercises, filterText, selectedCategories, selectedMuscleGroups]);
 
   const handleEdit = (exercise) => {
     setEditingExercise(exercise);
@@ -89,6 +92,14 @@ function ExerciseLibrary() {
     );
   };
 
+  const toggleMuscleGroup = (group) => {
+    setSelectedMuscleGroups(prev => 
+      prev.includes(group)
+        ? prev.filter(g => g !== group)
+        : [...prev, group]
+    );
+  };
+
   return (
     <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
       <h1 className="text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise Library</h1>
@@ -119,6 +130,25 @@ function ExerciseLibrary() {
               }`}
             >
               {category}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-2">Muscle Groups</h2>
+        <div className="flex flex-wrap gap-2">
+          {muscleGroups.map(group => (
+            <button
+              key={group}
+              onClick={() => toggleMuscleGroup(group)}
+              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                selectedMuscleGroups.includes(group)
+                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
+                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+              }`}
+            >
+              {group}
             </button>
           ))}
         </div>
@@ -169,7 +199,7 @@ function ExerciseLibrary() {
       )}
 
       <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-2">Category Legend</h2>
+        <h2 className="text-xl font-semibold mb-2">Filters Legend</h2>
         <div className="flex flex-wrap gap-4">
           {categories.map(category => (
             <div key={category} className="flex items-center">
@@ -177,6 +207,10 @@ function ExerciseLibrary() {
               <span>{category}</span>
             </div>
           ))}
+          <div className="flex items-center">
+            <span className="w-4 h-4 rounded-full mr-2 bg-purple-100 dark:bg-purple-900"></span>
+            <span>Muscle Group</span>
+          </div>
         </div>
       </div>
     </div>
