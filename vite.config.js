@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
   const backendUrl = isProduction
-    ? 'https://walrus-app-lqhsg.ondigitalocean.app'
+    ? 'https://walrus-app-lqhsg.ondigitalocean.app/backend'
     : 'http://192.168.178.42:4500';
 
   return {
