@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
+  //Change between 'production' for DigitalOcean deployment and 'development' for local development
   const isProduction = mode === 'production';
   const backendUrl = isProduction
     ? 'https://walrus-app-lqhsg.ondigitalocean.app/backend'
