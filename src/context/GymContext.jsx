@@ -12,7 +12,6 @@ import axiosInstance from "../utils/axiosConfig";
 import { useAuth } from "./AuthContext";
 import { useNotification } from "./NotificationContext";
 
-// export const hostName = "https://walrus-app-lqhsg.ondigitalocean.app/backend";
 export const hostName = import.meta.env.VITE_BACKEND_HOST;
 
 const GymContext = createContext();

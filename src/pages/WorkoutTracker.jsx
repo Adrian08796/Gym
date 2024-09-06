@@ -77,7 +77,6 @@ function WorkoutTracker() {
   const navigate = useNavigate();
   const nodeRef = useRef(null);
 
-  // const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
   const API_URL = import.meta.env.VITE_BACKEND_HOST;
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(
