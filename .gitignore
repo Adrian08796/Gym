@@ -48,8 +48,8 @@ bower_components/
 # dotenv environment variables file
 .env
 .env.test
-.env.development
-.env.production
+# .env.development
+# .env.production
 .env.staging
 
 # parcel-bundler cache (https://parceljs.org/)

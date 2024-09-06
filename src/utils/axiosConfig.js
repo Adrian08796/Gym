@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-const BASE_URL = 'http://192.168.178.42:4500';
+const BASE_URL = import.meta.env.VITE_BACKEND_HOST;
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
