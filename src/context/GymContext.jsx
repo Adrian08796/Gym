@@ -594,14 +594,24 @@ export function GymProvider({ children }) {
 
   const importWorkoutPlan = async (shareId) => {
     try {
-      const response = await axiosInstance.post(`${API_URL}/workoutplans/import/${shareId}`, {}, getAuthConfig());
+      console.log('Attempting to import workout plan with shareId:', shareId);
+      const response = await axiosInstance.post(`${hostName}/api/workoutplans/import/${shareId}`, {}, getAuthConfig());
+      console.log('Import response:', response.data);
       addNotification('Workout plan imported successfully', 'success');
       await fetchWorkoutPlans(); // Refresh the workout plans after importing
       return response.data;
     } catch (error) {
       console.error('Error importing workout plan:', error);
-      addNotification('Failed to import workout plan', 'error');
-      throw error;
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        throw new Error(error.response.data.message || 'Failed to import workout plan');
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        throw new Error('No response received from server');
+      } else {
+        console.error('Error details:', error.message);
+        throw error;
+      }
     }
   };
 

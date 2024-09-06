@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
 import WorkoutPlanCard from '../components/WorkoutPlanCard';
 import WorkoutPlanModal from '../components/WorkoutPlanModal';
+import WorkoutCalendar from '../components/WorkoutCalendar';
 
 const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop(Calendar);
@@ -33,7 +34,8 @@ function WorkoutPlans() {
     deleteWorkoutPlan, 
     addWorkoutPlan, 
     updateWorkoutPlan, 
-    fetchWorkoutPlans
+    fetchWorkoutPlans,
+    importWorkoutPlan
   } = useGymContext();
   const [showForm, setShowForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
@@ -42,6 +44,8 @@ function WorkoutPlans() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [importLink, setImportLink] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
   const navigate = useNavigate();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
@@ -228,6 +232,31 @@ function WorkoutPlans() {
     };
   }, [getEventColor]);
 
+  const handleImportPlan = async () => {
+    if (!importLink) {
+      addNotification('Please enter a valid import link', 'error');
+      return;
+    }
+    setIsImporting(true);
+    try {
+      console.log('Importing plan with link:', importLink);
+      const shareId = importLink.split('/').pop();
+      console.log('Extracted shareId:', shareId);
+      
+      const importedPlan = await importWorkoutPlan(shareId);
+      console.log('Imported plan:', importedPlan);
+      
+      addNotification('Workout plan imported successfully', 'success');
+      setImportLink('');
+      await fetchWorkoutPlans();
+    } catch (error) {
+      console.error('Error importing workout plan:', error);
+      addNotification(`Failed to import workout plan: ${error.message}`, 'error');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'}`}>
       <h1 className="text-3xl font-bold mb-4">Workout Plans</h1>
@@ -283,6 +312,24 @@ function WorkoutPlans() {
           </button>
         </div>
       </div>
+      
+      <div className="mb-4 flex items-center space-x-2">
+        <input
+          type="text"
+          placeholder="Paste import link here..."
+          value={importLink}
+          onChange={(e) => setImportLink(e.target.value)}
+          className="border rounded py-1 px-2 text-gray-700 flex-grow"
+          disabled={isImporting}
+        />
+        <button
+          onClick={handleImportPlan}
+          className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={isImporting}
+        >
+          {isImporting ? 'Importing...' : 'Import Plan'}
+        </button>
+      </div> 
 
       {showForm && (
         <WorkoutPlanForm
