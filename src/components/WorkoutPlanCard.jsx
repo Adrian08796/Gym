@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useGymContext } from '../context/GymContext';
-import { FiPlay, FiEdit, FiTrash2, FiShare2 } from 'react-icons/fi';
+import { FiPlay, FiEdit, FiTrash2, FiShare2, FiUser } from 'react-icons/fi';
 
 function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const { darkMode } = useTheme();
@@ -80,6 +80,8 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
       </div>
     </div>
   );
+  // Identify if the workout plan was imported from another user
+  const isImported = plan.importedFrom && plan.importedFrom.username;
 
   const handleShare = async (e) => {
     if (e && e.stopPropagation) {
@@ -97,11 +99,19 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     <div className={`relative border rounded-lg p-4 mb-4 shadow-sm ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} transition-transform duration-300 hover:scale-105`}>
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-xl font-semibold">{plan.name}</h3>
-        <TypeBadge />
+        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${typeColors[plan.type] || typeColors.other}`}>
+          {plan.type || 'Other'}
+        </span>
       </div>
       <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
         Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
       </p>
+      {isImported && (
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 flex items-center">
+          <FiUser className="mr-1" />
+          Imported from {plan.importedFrom.username}
+        </p>
+      )}
       <div className="mb-4 max-h-40 overflow-y-auto">
         <h4 className="font-semibold mb-1">Exercises:</h4>
         <ul className="list-disc list-inside">

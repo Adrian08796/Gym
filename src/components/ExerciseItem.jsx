@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiEdit, FiTrash2, FiPlus, FiTarget } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser } from 'react-icons/fi';
 
 function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -25,9 +25,9 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
   };
 
   const categoryColors = {
-    Strength: 'bg-red-500 text-white',
-    Cardio: 'bg-blue-500 text-white',
-    Flexibility: 'bg-green-500 text-white'
+    Strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    Cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    Flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
   };
 
   const buttonStyles = {
@@ -59,6 +59,9 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
     </div>
   );
 
+  const isImported = exercise.importedFrom && exercise.importedFrom.username;
+
+
   return (
     <div 
       className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-pointer h-full flex flex-col"
@@ -77,10 +80,16 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
       <div className="p-4 flex-grow flex flex-col">
         <h3 className="font-heading text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{exercise.name}</h3>
         <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 flex-grow line-clamp-3">{exercise.description}</p>
-        <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-4">
+        <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
           <FiTarget className="mr-1" />
           <span>{Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}</span>
         </div>
+        {isImported && (
+          <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
+            <FiUser className="mr-1" />
+            <span>Imported from {exercise.importedFrom.username}</span>
+          </div>
+        )}
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <div className="flex justify-between space-x-2">
