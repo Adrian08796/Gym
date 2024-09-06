@@ -580,6 +580,31 @@ export function GymProvider({ children }) {
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 
+  const shareWorkoutPlan = async (planId) => {
+    try {
+      const response = await axiosInstance.post(`${API_URL}/workoutplans/${planId}/share`, {}, getAuthConfig());
+      addNotification('Workout plan shared successfully', 'success');
+      return response.data.shareLink;
+    } catch (error) {
+      console.error('Error sharing workout plan:', error);
+      addNotification('Failed to share workout plan', 'error');
+      throw error;
+    }
+  };
+
+  const importWorkoutPlan = async (shareId) => {
+    try {
+      const response = await axiosInstance.post(`${API_URL}/workoutplans/import/${shareId}`, {}, getAuthConfig());
+      addNotification('Workout plan imported successfully', 'success');
+      await fetchWorkoutPlans(); // Refresh the workout plans after importing
+      return response.data;
+    } catch (error) {
+      console.error('Error importing workout plan:', error);
+      addNotification('Failed to import workout plan', 'error');
+      throw error;
+    }
+  };
+
   const contextValue = useMemo(
     () => ({
       workouts,
@@ -604,6 +629,8 @@ export function GymProvider({ children }) {
       getExerciseHistory,
       getLastWorkoutForPlan,
       getExerciseById,
+      shareWorkoutPlan,
+      importWorkoutPlan,
     }),
     [
       workouts,
@@ -628,6 +655,8 @@ export function GymProvider({ children }) {
       getExerciseHistory,
       getLastWorkoutForPlan,
       getExerciseById,
+      shareWorkoutPlan,
+      importWorkoutPlan,
     ]
   );
 

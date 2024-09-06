@@ -2,15 +2,19 @@
 
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-// Import icons from react-icons
-import { FiPlay, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { useGymContext } from '../context/GymContext';
+import { FiPlay, FiEdit, FiTrash2, FiShare2 } from 'react-icons/fi';
 
 function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const { darkMode } = useTheme();
+  const { shareWorkoutPlan } = useGymContext();
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [shareLink, setShareLink] = useState('');
 
   const handleAction = (action, e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
     if (action === onDelete) {
       setIsDeleteConfirmOpen(true);
     } else {
@@ -40,7 +44,8 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     base: 'text-xs font-semibold py-1 px-2 rounded transition-all duration-200 flex items-center justify-center',
     start: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md',
     edit: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md',
-    delete: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'
+    delete: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md',
+    share: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'
   };
 
   const TypeBadge = () => (
@@ -76,6 +81,18 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     </div>
   );
 
+  const handleShare = async (e) => {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
+    try {
+      const link = await shareWorkoutPlan(plan._id);
+      setShareLink(link);
+    } catch (error) {
+      console.error('Error sharing workout plan:', error);
+    }
+  };
+
   return (
     <div className={`relative border rounded-lg p-4 mb-4 shadow-sm ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} transition-transform duration-300 hover:scale-105`}>
       <div className="flex justify-between items-center mb-2">
@@ -95,11 +112,24 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
           ))}
         </ul>
       </div>
-      <div className="flex justify-between">
+      <div className="flex justify-between mt-4">
         <ActionButton action={onStart} style={buttonStyles.start} icon={<FiPlay className="mr-1" />} text="Start Workout" />
         <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit className="mr-1" />} text="Edit Plan" />
         <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 className="mr-1" />} text="Delete Plan" />
+        <ActionButton action={handleShare} style={buttonStyles.share} icon={<FiShare2 className="mr-1" />} text="Share Plan" />
       </div>
+      {shareLink && (
+        <div className="mt-4">
+          <p>Share this link:</p>
+          <input
+            type="text"
+            value={shareLink}
+            readOnly
+            className="w-full p-2 mt-2 border rounded"
+            onClick={(e) => e.target.select()}
+          />
+        </div>
+      )}
       {isDeleteConfirmOpen && <DeleteConfirmation />}
     </div>
   );
