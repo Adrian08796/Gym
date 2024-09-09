@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
@@ -12,7 +13,7 @@ import Footer from './components/Footer';
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
-import ImportWorkoutPlan from './components/ImportWorkoutPlan'; // Add this import
+import ImportWorkoutPlan from './components/ImportWorkoutPlan';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -30,16 +31,34 @@ const PrivateRoute = ({ children }) => {
 };
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, updateActivity } = useAuth();
   const { darkMode } = useTheme();
   const authContext = useAuth();
   
   useEffect(() => {
     window.authContext = authContext;
+
+    const handleActivity = () => {
+      if (typeof updateActivity === 'function') {
+        updateActivity();
+      }
+    };
+
+    // Add event listeners for user activity
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('scroll', handleActivity);
+
     return () => {
       delete window.authContext;
+      // Remove event listeners
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
     };
-  }, [authContext]);
+  }, [authContext, updateActivity]);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -62,7 +81,7 @@ function AppContent() {
             <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
             <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><UserProfile /></PrivateRoute>} />
-            <Route path="/import/:shareId" element={<PrivateRoute><ImportWorkoutPlan /></PrivateRoute>} /> {/* Add this route */}
+            <Route path="/import/:shareId" element={<PrivateRoute><ImportWorkoutPlan /></PrivateRoute>} />
           </Routes>
         </div>
       </main>

@@ -44,6 +44,10 @@ const processQueue = (error, token = null) => {
 axiosInstance.interceptors.response.use(
   (response) => {
     console.log('Response received:', response.config.url, response.status);
+    // Call updateActivity here
+    if (window.authContext && typeof window.authContext.updateActivity === 'function') {
+      window.authContext.updateActivity();
+    }
     return response;
   },
   async (error) => {
@@ -76,6 +80,10 @@ axiosInstance.interceptors.response.use(
           localStorage.setItem('token', response.data.accessToken);
           axiosInstance.defaults.headers.common['x-auth-token'] = response.data.accessToken;
           processQueue(null, response.data.accessToken);
+          // Call updateActivity after successful token refresh
+          if (window.authContext && typeof window.authContext.updateActivity === 'function') {
+            window.authContext.updateActivity();
+          }
           return axiosInstance(originalRequest);
         } else {
           throw new Error('Invalid refresh token response');
@@ -85,7 +93,12 @@ axiosInstance.interceptors.response.use(
         processQueue(refreshError, null);
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        // Call logout instead of redirecting
+        if (window.authContext && typeof window.authContext.logout === 'function') {
+          window.authContext.logout();
+        } else {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

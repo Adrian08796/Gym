@@ -14,6 +14,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const refreshTimeoutRef = useRef();
   const isRefreshing = useRef(false);
+  const activityTimeoutRef = useRef();
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
   const logout = useCallback(() => {
     console.log('Logging out user');
@@ -23,7 +25,17 @@ export function AuthProvider({ children }) {
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
     }
+    if (activityTimeoutRef.current) {
+      clearTimeout(activityTimeoutRef.current);
+    }
   }, []);
+
+  const updateActivity = useCallback(() => {
+    if (activityTimeoutRef.current) {
+      clearTimeout(activityTimeoutRef.current);
+    }
+    activityTimeoutRef.current = setTimeout(logout, INACTIVITY_TIMEOUT);
+  }, [logout]);
 
   const register = async (username, email, password) => {
     try {
@@ -139,6 +151,7 @@ export function AuthProvider({ children }) {
   const changePassword = async (currentPassword, newPassword) => {
     try {
       await axiosInstance.put('/api/auth/change-password', { currentPassword, newPassword });
+      updateActivity();
     } catch (error) {
       console.error('Error changing password:', error);
       throw error;
@@ -158,6 +171,7 @@ export function AuthProvider({ children }) {
           console.log('User data fetched:::: :', response.data);
           setUser(response.data);
           refreshToken(true);
+          updateActivity();
         } catch (error) {
           console.error('Error fetching user:', error);
           if (error.response && error.response.status === 401) {
@@ -167,6 +181,7 @@ export function AuthProvider({ children }) {
               const retryResponse = await axiosInstance.get('/api/auth/user');
               console.log('User data fetched after refresh:::: :', retryResponse.data);
               setUser(retryResponse.data);
+              updateActivity();
             } catch (refreshError) {
               console.error('Error refreshing token:', refreshError);
               logout();
@@ -189,8 +204,30 @@ export function AuthProvider({ children }) {
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
+      if (activityTimeoutRef.current) {
+        clearTimeout(activityTimeoutRef.current);
+      }
     };
-  }, [refreshToken, logout]);
+  }, [refreshToken, logout, updateActivity]);
+
+  useEffect(() => {
+    const handleActivity = () => {
+      updateActivity();
+    };
+
+    // Add event listeners for user activity
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('scroll', handleActivity);
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
+    };
+  }, [updateActivity]);
 
   const value = {
     user,
@@ -200,7 +237,8 @@ export function AuthProvider({ children }) {
     loading,
     refreshToken,
     updateUser,
-    changePassword
+    changePassword,
+    updateActivity
   };
 
   return (
