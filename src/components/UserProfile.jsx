@@ -90,7 +90,7 @@ function UserProfile() {
               />
             </div>
             <div className="flex space-x-2">
-              <button type="submit" className="flex items-center bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+              <button type="submit" className="flex items-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded">
                 <FiSave className="mr-2" /> Save
               </button>
               <button type="button" onClick={() => setIsEditing(false)} className="flex items-center bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
@@ -102,7 +102,7 @@ function UserProfile() {
           <div>
             <p><strong>Username:</strong> {user?.username}</p>
             <p><strong>Email:</strong> {user?.email}</p>
-            <button onClick={() => setIsEditing(true)} className="flex items-center mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            <button onClick={() => setIsEditing(true)} className="flex items-center mt-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded">
               <FiEdit2 className="mr-2" /> Edit Profile
             </button>
           </div>
@@ -156,7 +156,7 @@ function UserProfile() {
             </div>
           </form>
         ) : (
-          <button onClick={() => setIsChangingPassword(true)} className="flex items-center bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+          <button onClick={() => setIsChangingPassword(true)} className="flex items-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded">
             <FiLock className="mr-2" /> Change Password
           </button>
         )}

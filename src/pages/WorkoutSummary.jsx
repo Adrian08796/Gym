@@ -74,7 +74,7 @@ function WorkoutSummary() {
       <div className="mb-4 flex justify-between items-center">
         <button
           onClick={toggleSortOrder}
-          className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
+          className={`mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded`}
         >
           Sort {sortOrder === 'desc' ? 'Oldest First' : 'Newest First'}
         </button>
@@ -154,7 +154,7 @@ function WorkoutSummary() {
       ))}
       <button
         onClick={() => navigate('/')}
-        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4`}
+        className={` bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded`}
       >
         Back to Home
       </button>
