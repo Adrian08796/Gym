@@ -18,6 +18,7 @@ import { GymProvider } from './context/GymContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import NotificationToast from './components/NotificationToast';
+import UserProfile from './components/UserProfile';
 import axiosInstance from './utils/axiosConfig';
 
 const PrivateRoute = ({ children }) => {
@@ -60,6 +61,7 @@ function AppContent() {
             <Route path="/plans/:id" element={<PrivateRoute><WorkoutPlanDetails /></PrivateRoute>} />
             <Route path="/workout-summary" element={<PrivateRoute><WorkoutSummary /></PrivateRoute>} />
             <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
+            <Route path="/profile" element={<PrivateRoute><UserProfile /></PrivateRoute>} />
             <Route path="/import/:shareId" element={<PrivateRoute><ImportWorkoutPlan /></PrivateRoute>} /> {/* Add this route */}
           </Routes>
         </div>

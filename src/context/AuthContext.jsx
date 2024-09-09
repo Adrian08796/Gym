@@ -125,6 +125,26 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateUser = async (userData) => {
+    try {
+      const response = await axiosInstance.put('/api/auth/user', userData);
+      setUser(response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      await axiosInstance.put('/api/auth/change-password', { currentPassword, newPassword });
+    } catch (error) {
+      console.error('Error changing password:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     console.log('FETCHING USER');
     const checkLoggedIn = async () => {
@@ -178,7 +198,9 @@ export function AuthProvider({ children }) {
     logout,
     register,
     loading,
-    refreshToken
+    refreshToken,
+    updateUser,
+    changePassword
   };
 
   return (
