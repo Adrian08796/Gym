@@ -33,12 +33,12 @@ export function AuthProvider({ children }) {
   }, []);
 
   const updateActivity = useCallback(() => {
-  console.log('Activity detected, resetting timeout');
+  // console.log('Activity detected, resetting timeout');
   if (activityTimeoutRef.current) {
-    console.log('Clearing existing timeout');
+    // console.log('Clearing existing timeout');
     clearTimeout(activityTimeoutRef.current);
   }
-  console.log('Setting new timeout');
+  // console.log('Setting new timeout');
   activityTimeoutRef.current = setTimeout(() => {
     console.log('Inactivity timeout reached, logging out');
     logout();
