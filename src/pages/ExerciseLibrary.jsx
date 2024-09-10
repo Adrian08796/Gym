@@ -104,6 +104,22 @@ function ExerciseLibrary() {
     );
   };
 
+  const renderExercises = useMemo(() => {
+    return filteredExercises.map(exercise => (
+      <div key={exercise._id} className="snap-center flex-shrink-0 w-80">
+        <div className="h-full">
+          <ExerciseItem 
+            exercise={exercise}
+            onClick={() => setSelectedExercise(exercise)}
+            onEdit={exercise.isDefault ? null : handleEdit}
+            onDelete={exercise.isDefault ? null : handleDelete}
+            onAddToPlan={handleAddToPlan}
+          />
+        </div>
+      </div>
+    ));
+  }, [filteredExercises, handleEdit, handleDelete, handleAddToPlan, setSelectedExercise]);
+
   return (
     <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
       <h1 className="text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise Library</h1>
@@ -179,6 +195,7 @@ function ExerciseLibrary() {
               </div>
             </div>
           ))}
+          {renderExercises}
         </div>
       </div>
 

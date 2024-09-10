@@ -134,27 +134,28 @@ export function GymProvider({ children }) {
   }, [user, addNotification, API_URL, getAuthConfig]);
 
   const fetchExercises = useCallback(async () => {
-    try {
-      const response = await axiosInstance.get(
-        `${API_URL}/exercises`,
-        getAuthConfig()
-      );
-      const formattedExercises = response.data.map(exercise => ({
-        ...exercise,
-        name: toTitleCase(exercise.name),
-        description: toTitleCase(exercise.description),
-        target: Array.isArray(exercise.target)
-          ? exercise.target.map(toTitleCase)
-          : toTitleCase(exercise.target),
-      }));
-      setExercises(formattedExercises);
-      return formattedExercises;
-    } catch (error) {
-      console.error("Error fetching exercises:", error);
-      addNotification("Failed to fetch exercises", "error");
-      return [];
+    if (user) {
+      try {
+        const response = await axiosInstance.get(
+          `${API_URL}/exercises`,
+          getAuthConfig()
+        );
+        const formattedExercises = response.data.map(exercise => ({
+          ...exercise,
+          name: toTitleCase(exercise.name),
+          description: toTitleCase(exercise.description),
+          target: Array.isArray(exercise.target)
+            ? exercise.target.map(toTitleCase)
+            : toTitleCase(exercise.target),
+          isDefault: !exercise.user  // Add this line to identify default exercises
+        }));
+        setExercises(formattedExercises);
+      } catch (error) {
+        console.error("Error fetching exercises:", error);
+        addNotification("Failed to fetch exercises", "error");
+      }
     }
-  }, [API_URL, getAuthConfig, addNotification]);
+  }, [user, API_URL, getAuthConfig, addNotification]);
 
   const fetchWorkoutPlans = useCallback(async () => {
     if (user) {
@@ -168,11 +169,11 @@ export function GymProvider({ children }) {
             const fullExercises = await Promise.all(
               plan.exercises.map(async exercise => {
                 if (!exercise.description || !exercise.imageUrl) {
-                  const fullExercise = await axiosInstance.get(
+                  const exerciseResponse = await axiosInstance.get(
                     `${API_URL}/exercises/${exercise._id}`,
                     getAuthConfig()
                   );
-                  return fullExercise.data;
+                  return exerciseResponse.data;
                 }
                 return exercise;
               })
