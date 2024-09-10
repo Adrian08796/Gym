@@ -1,3 +1,5 @@
+// src/components/ImportWorkoutPlan.jsx
+
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
@@ -6,7 +8,7 @@ import { useNotification } from '../context/NotificationContext';
 function ImportWorkoutPlan() {
   const { shareId } = useParams();
   const [isImporting, setIsImporting] = useState(false);
-  const { importWorkoutPlan } = useGymContext();
+  const { importWorkoutPlan, fetchExercises } = useGymContext();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
 
@@ -14,6 +16,7 @@ function ImportWorkoutPlan() {
     setIsImporting(true);
     try {
       await importWorkoutPlan(shareId);
+      await fetchExercises(); // Fetch exercises after successful import
       addNotification('Workout plan imported successfully', 'success');
       navigate('/plans');
     } catch (error) {

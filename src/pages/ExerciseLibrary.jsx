@@ -19,7 +19,7 @@ const categoryColors = {
 };
 
 function ExerciseLibrary() {
-  const { exercises, updateExercise, deleteExercise, addExerciseToPlan } = useGymContext();
+  const { exercises, updateExercise, deleteExercise, addExerciseToPlan, fetchExercises } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const [editingExercise, setEditingExercise] = useState(null);
@@ -29,6 +29,10 @@ function ExerciseLibrary() {
   const [filterText, setFilterText] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState([]);
+
+  useEffect(() => {
+    fetchExercises();
+  }, [fetchExercises]);
 
   const filteredExercises = useMemo(() => {
     return exercises.filter(exercise => 

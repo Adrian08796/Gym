@@ -148,9 +148,11 @@ export function GymProvider({ children }) {
           : toTitleCase(exercise.target),
       }));
       setExercises(formattedExercises);
+      return formattedExercises;
     } catch (error) {
       console.error("Error fetching exercises:", error);
       addNotification("Failed to fetch exercises", "error");
+      return [];
     }
   }, [API_URL, getAuthConfig, addNotification]);
 
@@ -654,7 +656,8 @@ export function GymProvider({ children }) {
       const response = await axiosInstance.post(`${hostName}/api/workoutplans/import/${shareId}`, {}, getAuthConfig());
       console.log('Import response:', response.data);
       addNotification('Workout plan imported successfully', 'success');
-      await fetchWorkoutPlans(); // Refresh the workout plans after importing
+      await fetchWorkoutPlans(); // Refresh workout plans
+      await fetchExercises(); // Refresh exercises
       return response.data;
     } catch (error) {
       console.error('Error importing workout plan:', error);
@@ -696,6 +699,7 @@ export function GymProvider({ children }) {
       getLastWorkoutForPlan,
       getExerciseById,
       shareWorkoutPlan,
+      fetchExercises,
       importWorkoutPlan,
     }),
     [
