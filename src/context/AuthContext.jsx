@@ -1,7 +1,5 @@
 // src/context/AuthContext.jsx
 
-// src/context/AuthContext.jsx
-
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import axiosInstance from '../utils/axiosConfig';
 
@@ -17,6 +15,7 @@ export function AuthProvider({ children }) {
   const refreshTimeoutRef = useRef();
   const isRefreshing = useRef(false);
   const activityTimeoutRef = useRef();
+  // const INACTIVITY_TIMEOUT = 10 * 1000; // 10 seconds
   const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
   const logout = useCallback(() => {
@@ -34,11 +33,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   const updateActivity = useCallback(() => {
-    if (activityTimeoutRef.current) {
-      clearTimeout(activityTimeoutRef.current);
-    }
-    activityTimeoutRef.current = setTimeout(logout, INACTIVITY_TIMEOUT);
-  }, [logout]);
+  console.log('Activity detected, resetting timeout');
+  if (activityTimeoutRef.current) {
+    console.log('Clearing existing timeout');
+    clearTimeout(activityTimeoutRef.current);
+  }
+  console.log('Setting new timeout');
+  activityTimeoutRef.current = setTimeout(() => {
+    console.log('Inactivity timeout reached, logging out');
+    logout();
+  }, INACTIVITY_TIMEOUT);
+}, [logout]);
 
   const register = async (username, email, password) => {
     try {
@@ -66,12 +71,10 @@ export function AuthProvider({ children }) {
       }
   
       const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken });
-      
+  
       if (response.data && response.data.accessToken) {
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
-  
-        await new Promise(resolve => setTimeout(resolve, 1000));
   
         if (silent) {
           const refreshTime = Math.min((response.data.expiresIn - 60) * 1000, 5 * 60 * 1000);
@@ -84,9 +87,7 @@ export function AuthProvider({ children }) {
       }
     } catch (error) {
       console.error('Error refreshing token:', error);
-      if (error.response?.status !== 500) {
-        logout();
-      }
+      logout();
       throw error;
     } finally {
       isRefreshing.current = false;
@@ -146,15 +147,13 @@ export function AuthProvider({ children }) {
           refreshToken(true);
           updateActivity();
         } catch (error) {
-          console.error('Error fetching user:', error);
-          if (error.response?.status === 401) {
+          if (error.response && error.response.status === 401) {
             try {
               await refreshToken();
               const retryResponse = await axiosInstance.get('/api/auth/user');
               setUser(retryResponse.data);
               updateActivity();
             } catch (refreshError) {
-              console.error('Error refreshing token:', refreshError);
               logout();
             }
           } else {
@@ -170,8 +169,12 @@ export function AuthProvider({ children }) {
     checkLoggedIn();
 
     return () => {
-      clearTimeout(refreshTimeoutRef.current);
-      clearTimeout(activityTimeoutRef.current);
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      if (activityTimeoutRef.current) {
+        clearTimeout(activityTimeoutRef.current);
+      }
     };
   }, [refreshToken, logout, updateActivity]);
 
@@ -180,16 +183,38 @@ export function AuthProvider({ children }) {
       updateActivity();
     };
 
+    // Desktop events
     window.addEventListener('mousemove', handleActivity);
     window.addEventListener('keydown', handleActivity);
     window.addEventListener('click', handleActivity);
     window.addEventListener('scroll', handleActivity);
 
+    // Mobile events
+    window.addEventListener('touchstart', handleActivity);
+    window.addEventListener('touchmove', handleActivity);
+    window.addEventListener('touchend', handleActivity);
+
+    // Visibility change event (for when user switches tabs or minimizes browser)
+    document.addEventListener('visibilitychange', handleActivity);
+
+    // Initialize the timeout
+    updateActivity();
+
     return () => {
+      // Clean up event listeners
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keydown', handleActivity);
       window.removeEventListener('click', handleActivity);
       window.removeEventListener('scroll', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      window.removeEventListener('touchmove', handleActivity);
+      window.removeEventListener('touchend', handleActivity);
+      document.removeEventListener('visibilitychange', handleActivity);
+
+      // Clear the timeout
+      if (activityTimeoutRef.current) {
+        clearTimeout(activityTimeoutRef.current);
+      }
     };
   }, [updateActivity]);
 
