@@ -487,7 +487,7 @@ export function GymProvider({ children }) {
           completedAt: set.completedAt || new Date().toISOString()
         })),
         notes: exercise.notes || '',
-        requiredSets: exercise.requiredSets || 3 // Default to 3 if not specified
+        requiredSets: exercise.requiredSets || 3
       }));
       
       const dataToSave = {
@@ -503,7 +503,21 @@ export function GymProvider({ children }) {
       console.log('Progress saved successfully', response.data);
     } catch (error) {
       console.error('Error saving progress:', error);
-      if (error.response && error.response.status === 401) {
+      if (error.response && error.response.status === 404) {
+        // If the document is not found, create a new one
+        try {
+          const newProgressResponse = await axiosInstance.post(`${hostName}/api/workouts/progress/new`, dataToSave);
+          localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(dataToSave));
+          console.log('New progress created successfully', newProgressResponse.data);
+        } catch (newError) {
+          console.error('Error creating new progress:', newError);
+          addNotification('Failed to create new progress: ' + (newError.response?.data?.message || newError.message), 'error');
+          throw newError;
+        }
+      } else if (error.response && error.response.status === 409) {
+        // Handle version conflict
+        addNotification('Progress data is out of sync. Please refresh and try again.', 'warning');
+      } else if (error.response && error.response.status === 401) {
         addNotification('Session expired. Please log in again.', 'error');
         logout();
       } else {
@@ -522,29 +536,71 @@ export function GymProvider({ children }) {
         getAuthConfig()
       );
       if (response.data) {
-        const progressData = response.data;
+        let progressData = response.data;
+        
+        // Ensure progressData has the expected structure
+        progressData = {
+          plan: progressData.plan || null,
+          exercises: progressData.exercises || [],
+          currentExerciseIndex: progressData.currentExerciseIndex || 0,
+          lastSetValues: progressData.lastSetValues || {},
+          startTime: progressData.startTime || new Date().toISOString(),
+          totalPauseTime: progressData.totalPauseTime || 0,
+          skippedPauses: progressData.skippedPauses || 0,
+          completedSets: progressData.completedSets || 0,
+          totalSets: progressData.totalSets || 0,
+          ...progressData
+        };
+  
         // Fetch full exercise details for the plan
         if (progressData.plan && progressData.plan.exercises) {
           progressData.plan.exercises = await Promise.all(
             progressData.plan.exercises.map(async (exercise, index) => {
-              let fullExercise;
-              if (typeof exercise === 'string' || !exercise.description) {
-                fullExercise = await getExerciseById(exercise._id || exercise);
-              } else {
-                fullExercise = exercise;
+              try {
+                let fullExercise;
+                if (typeof exercise === 'string' || !exercise.description) {
+                  fullExercise = await getExerciseById(exercise._id || exercise);
+                } else {
+                  fullExercise = exercise;
+                }
+                // Ensure requiredSets is set
+                fullExercise.requiredSets = progressData.exercises[index]?.requiredSets || 3;
+                return fullExercise;
+              } catch (error) {
+                console.error(`Error fetching exercise details: ${error.message}`);
+                return null; // Return null for failed exercise fetches
               }
-              // Ensure requiredSets is set
-              fullExercise.requiredSets = progressData.exercises[index]?.requiredSets || 3;
-              return fullExercise;
             })
           );
+          // Filter out any null exercises (failed fetches)
+          progressData.plan.exercises = progressData.plan.exercises.filter(Boolean);
         }
+  
+        // If the workout is empty (no exercises), return null
+        if (!progressData.plan || progressData.plan.exercises.length === 0) {
+          console.log('Workout progress is empty, returning null');
+          return null;
+        }
+  
         localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(progressData));
         return progressData;
       }
       return null;
     } catch (error) {
-      console.error('Error loading progress:', error);
+      console.error('Error loading progress from server:', error);
+      // If there's an error fetching from the server, try to load from localStorage
+      const localProgress = localStorage.getItem(`workoutProgress_${user.id}`);
+      if (localProgress) {
+        try {
+          const parsedProgress = JSON.parse(localProgress);
+          // Check if the locally stored progress is valid
+          if (parsedProgress && parsedProgress.plan && parsedProgress.plan.exercises && parsedProgress.plan.exercises.length > 0) {
+            return parsedProgress;
+          }
+        } catch (parseError) {
+          console.error('Error parsing local progress:', parseError);
+        }
+      }
       return null;
     }
   }, [user, API_URL, getAuthConfig, getExerciseById]);
