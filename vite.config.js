@@ -1,26 +1,37 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
-  plugins: [react()],
-  base: '/',
-  server: {
-    proxy: {
-      '/backend': {
-        // target: 'https://walrus-app-lqhsg.ondigitalocean.app',
-        target: 'http://192.168.178.42:4500',
-        changeOrigin: true,
-      }
-    }
-  },
-  resolve: {
-    alias: {
-      '@': '/src',
+export default defineConfig(({ mode }) => {
+  //Change between 'production' for DigitalOcean deployment and 'development' for local development
+  const isProduction = mode === 'production';
+  const backendUrl = isProduction
+    ? 'https://walrus-app-lqhsg.ondigitalocean.app/backend'
+    : 'http://192.168.178.42:4500';
+
+  return {
+    plugins: [react()],
+    base: '/',
+    server: {
+      proxy: {
+        '/api': {
+          target: backendUrl,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+      },
     },
-  },
-  build: {
-    outDir: 'dist',
-    assetsDir: 'assets',
-    emptyOutDir: true,
-  },
+    resolve: {
+      alias: {
+        '@': '/src',
+      },
+    },
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      emptyOutDir: true,
+    },
+    define: {
+      'import.meta.env.VITE_BACKEND_HOST': JSON.stringify(backendUrl),
+    },
+  };
 });

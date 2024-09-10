@@ -1,7 +1,6 @@
 {
   "rewrites": [
-    // { "source": "/api/(.*)", "destination": "https://walrus-app-lqhsg.ondigitalocean.app/backend/$1" },
-    { "source": "/api/(.*)", "destination": "http://192.168.178.42:4500/$1" },
+    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/**", "destination": "/index.html" }
   ]
 }

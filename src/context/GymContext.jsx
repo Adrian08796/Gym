@@ -12,8 +12,7 @@ import axiosInstance from "../utils/axiosConfig";
 import { useAuth } from "./AuthContext";
 import { useNotification } from "./NotificationContext";
 
-// export const hostName = "https://walrus-app-lqhsg.ondigitalocean.app/backend";
-export const hostName = "http://192.168.178.42:4500";
+export const hostName = import.meta.env.VITE_BACKEND_HOST;
 
 const GymContext = createContext();
 
@@ -135,25 +134,28 @@ export function GymProvider({ children }) {
   }, [user, addNotification, API_URL, getAuthConfig]);
 
   const fetchExercises = useCallback(async () => {
-    try {
-      const response = await axiosInstance.get(
-        `${API_URL}/exercises`,
-        getAuthConfig()
-      );
-      const formattedExercises = response.data.map(exercise => ({
-        ...exercise,
-        name: toTitleCase(exercise.name),
-        description: toTitleCase(exercise.description),
-        target: Array.isArray(exercise.target)
-          ? exercise.target.map(toTitleCase)
-          : toTitleCase(exercise.target),
-      }));
-      setExercises(formattedExercises);
-    } catch (error) {
-      console.error("Error fetching exercises:", error);
-      addNotification("Failed to fetch exercises", "error");
+    if (user) {
+      try {
+        const response = await axiosInstance.get(
+          `${API_URL}/exercises`,
+          getAuthConfig()
+        );
+        const formattedExercises = response.data.map(exercise => ({
+          ...exercise,
+          name: toTitleCase(exercise.name),
+          description: toTitleCase(exercise.description),
+          target: Array.isArray(exercise.target)
+            ? exercise.target.map(toTitleCase)
+            : toTitleCase(exercise.target),
+          isDefault: !exercise.user  // Add this line to identify default exercises
+        }));
+        setExercises(formattedExercises);
+      } catch (error) {
+        console.error("Error fetching exercises:", error);
+        addNotification("Failed to fetch exercises", "error");
+      }
     }
-  }, [API_URL, getAuthConfig, addNotification]);
+  }, [user, API_URL, getAuthConfig, addNotification]);
 
   const fetchWorkoutPlans = useCallback(async () => {
     if (user) {
@@ -167,11 +169,11 @@ export function GymProvider({ children }) {
             const fullExercises = await Promise.all(
               plan.exercises.map(async exercise => {
                 if (!exercise.description || !exercise.imageUrl) {
-                  const fullExercise = await axiosInstance.get(
+                  const exerciseResponse = await axiosInstance.get(
                     `${API_URL}/exercises/${exercise._id}`,
                     getAuthConfig()
                   );
-                  return fullExercise.data;
+                  return exerciseResponse.data;
                 }
                 return exercise;
               })
@@ -487,7 +489,8 @@ export function GymProvider({ children }) {
           ...set,
           completedAt: set.completedAt || new Date().toISOString()
         })),
-        notes: exercise.notes || ''
+        notes: exercise.notes || '',
+        requiredSets: exercise.requiredSets || 3
       }));
       
       const dataToSave = {
@@ -499,11 +502,25 @@ export function GymProvider({ children }) {
       console.log('Saving progress data:', dataToSave);
   
       const response = await axiosInstance.post(`${hostName}/api/workouts/progress`, dataToSave);
-      localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(progressData));
+      localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(dataToSave));
       console.log('Progress saved successfully', response.data);
     } catch (error) {
       console.error('Error saving progress:', error);
-      if (error.response && error.response.status === 401) {
+      if (error.response && error.response.status === 404) {
+        // If the document is not found, create a new one
+        try {
+          const newProgressResponse = await axiosInstance.post(`${hostName}/api/workouts/progress/new`, dataToSave);
+          localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(dataToSave));
+          console.log('New progress created successfully', newProgressResponse.data);
+        } catch (newError) {
+          console.error('Error creating new progress:', newError);
+          addNotification('Failed to create new progress: ' + (newError.response?.data?.message || newError.message), 'error');
+          throw newError;
+        }
+      } else if (error.response && error.response.status === 409) {
+        // Handle version conflict
+        addNotification('Progress data is out of sync. Please refresh and try again.', 'warning');
+      } else if (error.response && error.response.status === 401) {
         addNotification('Session expired. Please log in again.', 'error');
         logout();
       } else {
@@ -522,24 +539,71 @@ export function GymProvider({ children }) {
         getAuthConfig()
       );
       if (response.data) {
-        const progressData = response.data;
+        let progressData = response.data;
+        
+        // Ensure progressData has the expected structure
+        progressData = {
+          plan: progressData.plan || null,
+          exercises: progressData.exercises || [],
+          currentExerciseIndex: progressData.currentExerciseIndex || 0,
+          lastSetValues: progressData.lastSetValues || {},
+          startTime: progressData.startTime || new Date().toISOString(),
+          totalPauseTime: progressData.totalPauseTime || 0,
+          skippedPauses: progressData.skippedPauses || 0,
+          completedSets: progressData.completedSets || 0,
+          totalSets: progressData.totalSets || 0,
+          ...progressData
+        };
+  
         // Fetch full exercise details for the plan
         if (progressData.plan && progressData.plan.exercises) {
           progressData.plan.exercises = await Promise.all(
-            progressData.plan.exercises.map(async (exercise) => {
-              if (typeof exercise === 'string' || !exercise.description) {
-                return await getExerciseById(exercise._id || exercise);
+            progressData.plan.exercises.map(async (exercise, index) => {
+              try {
+                let fullExercise;
+                if (typeof exercise === 'string' || !exercise.description) {
+                  fullExercise = await getExerciseById(exercise._id || exercise);
+                } else {
+                  fullExercise = exercise;
+                }
+                // Ensure requiredSets is set
+                fullExercise.requiredSets = progressData.exercises[index]?.requiredSets || 3;
+                return fullExercise;
+              } catch (error) {
+                console.error(`Error fetching exercise details: ${error.message}`);
+                return null; // Return null for failed exercise fetches
               }
-              return exercise;
             })
           );
+          // Filter out any null exercises (failed fetches)
+          progressData.plan.exercises = progressData.plan.exercises.filter(Boolean);
         }
+  
+        // If the workout is empty (no exercises), return null
+        if (!progressData.plan || progressData.plan.exercises.length === 0) {
+          console.log('Workout progress is empty, returning null');
+          return null;
+        }
+  
         localStorage.setItem(`workoutProgress_${user.id}`, JSON.stringify(progressData));
         return progressData;
       }
       return null;
     } catch (error) {
-      console.error('Error loading progress:', error);
+      console.error('Error loading progress from server:', error);
+      // If there's an error fetching from the server, try to load from localStorage
+      const localProgress = localStorage.getItem(`workoutProgress_${user.id}`);
+      if (localProgress) {
+        try {
+          const parsedProgress = JSON.parse(localProgress);
+          // Check if the locally stored progress is valid
+          if (parsedProgress && parsedProgress.plan && parsedProgress.plan.exercises && parsedProgress.plan.exercises.length > 0) {
+            return parsedProgress;
+          }
+        } catch (parseError) {
+          console.error('Error parsing local progress:', parseError);
+        }
+      }
       return null;
     }
   }, [user, API_URL, getAuthConfig, getExerciseById]);
@@ -575,6 +639,42 @@ export function GymProvider({ children }) {
     }
   }, [user, API_URL, getAuthConfig, addNotification]);
 
+  const shareWorkoutPlan = async (planId) => {
+    try {
+      const response = await axiosInstance.post(`${API_URL}/workoutplans/${planId}/share`, {}, getAuthConfig());
+      addNotification('Workout plan shared successfully', 'success');
+      return response.data.shareLink;
+    } catch (error) {
+      console.error('Error sharing workout plan:', error);
+      addNotification('Failed to share workout plan', 'error');
+      throw error;
+    }
+  };
+
+  const importWorkoutPlan = async (shareId) => {
+    try {
+      console.log('Attempting to import workout plan with shareId:', shareId);
+      const response = await axiosInstance.post(`${hostName}/api/workoutplans/import/${shareId}`, {}, getAuthConfig());
+      console.log('Import response:', response.data);
+      addNotification('Workout plan imported successfully', 'success');
+      await fetchWorkoutPlans(); // Refresh workout plans
+      await fetchExercises(); // Refresh exercises
+      return response.data;
+    } catch (error) {
+      console.error('Error importing workout plan:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        throw new Error(error.response.data.message || 'Failed to import workout plan');
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        throw new Error('No response received from server');
+      } else {
+        console.error('Error details:', error.message);
+        throw error;
+      }
+    }
+  };
+
   const contextValue = useMemo(
     () => ({
       workouts,
@@ -599,6 +699,9 @@ export function GymProvider({ children }) {
       getExerciseHistory,
       getLastWorkoutForPlan,
       getExerciseById,
+      shareWorkoutPlan,
+      fetchExercises,
+      importWorkoutPlan,
     }),
     [
       workouts,
@@ -623,6 +726,8 @@ export function GymProvider({ children }) {
       getExerciseHistory,
       getLastWorkoutForPlan,
       getExerciseById,
+      shareWorkoutPlan,
+      importWorkoutPlan,
     ]
   );
 

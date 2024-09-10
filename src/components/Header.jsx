@@ -21,6 +21,7 @@ function Header() {
     { to: "/exercises", text: "Exercise Library" },
     { to: "/plans", text: "Workout Plans" },
     { to: "/workout-summary", text: "Workout History" },
+    { to: "/profile", text: "Profile" },
   ];
 
   const MenuItem = ({ to, text, onClick }) => (

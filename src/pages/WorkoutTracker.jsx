@@ -77,8 +77,7 @@ function WorkoutTracker() {
   const navigate = useNavigate();
   const nodeRef = useRef(null);
 
-  // const API_URL = 'https://walrus-app-lqhsg.ondigitalocean.app';
-  const API_URL = "http://192.168.178.42:4500";
+  const API_URL = import.meta.env.VITE_BACKEND_HOST;
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(
     currentPlan?._id,
@@ -154,7 +153,7 @@ function WorkoutTracker() {
       setIsLoading(true);
       try {
         const progress = await loadProgress();
-        if (progress && progress.plan) {
+        if (progress && progress.plan && progress.plan.exercises && progress.plan.exercises.length > 0) {
           const fullPlan = await loadFullPlanDetails(progress.plan);
           setCurrentPlan(fullPlan);
           setSets(progress.exercises.map(exercise => exercise.sets || []));
@@ -164,9 +163,16 @@ function WorkoutTracker() {
           setLastSetValues(progress.lastSetValues || {});
           setTotalPauseTime(progress.totalPauseTime || 0);
           setSkippedPauses(progress.skippedPauses || 0);
-          setRequiredSets(progress.requiredSets || {});
+          
+          // Set requiredSets
+          const newRequiredSets = {};
+          fullPlan.exercises.forEach((exercise, index) => {
+            newRequiredSets[exercise._id] = progress.exercises[index]?.requiredSets || 3;
+          });
+          setRequiredSets(newRequiredSets);
+          
           setCompletedSets(progress.completedSets || 0);
-          setTotalSets(progress.totalSets || 0);
+          setTotalSets(progress.totalSets || fullPlan.exercises.reduce((total, exercise) => total + (newRequiredSets[exercise._id] || 3), 0));
           
           // Restore input fields for the current exercise
           const currentExercise = fullPlan.exercises[progress.currentExerciseIndex || 0];
@@ -185,6 +191,7 @@ function WorkoutTracker() {
             }
           }
         } else {
+          // No valid progress found, try to load from localStorage
           const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
           if (storedPlan) {
             try {
@@ -194,10 +201,10 @@ function WorkoutTracker() {
                 setCurrentPlan(fullPlan);
                 loadStoredData(fullPlan);
               } else {
-                throw new Error("Invalid plan data");
+                throw new Error("Invalid plan data in localStorage");
               }
             } catch (error) {
-              console.error("Error loading workout plan:", error);
+              console.error("Error loading workout plan from localStorage:", error);
               addNotification(
                 "Error loading workout plan. Please select a new plan.",
                 "error"
@@ -205,7 +212,8 @@ function WorkoutTracker() {
               navigate("/plans");
             }
           } else {
-            addNotification("No workout plan selected", "error");
+            console.log("No workout plan found in progress or localStorage");
+            addNotification("No workout plan selected. Please choose a plan.", "info");
             navigate("/plans");
           }
         }
@@ -221,15 +229,20 @@ function WorkoutTracker() {
     loadWorkout();
   }, [navigate, addNotification, loadProgress, user.id]);
 
-  const loadFullPlanDetails = async plan => {
+  const loadFullPlanDetails = async (plan) => {
     if (!plan || !plan.exercises) {
       console.error("Invalid plan data:", plan);
       return null;
     }
     const fullExercises = await Promise.all(
-      plan.exercises.map(async exercise => {
+      plan.exercises.map(async (exercise) => {
         if (typeof exercise === "string" || !exercise.description) {
-          return await getExerciseById(exercise._id || exercise);
+          try {
+            return await getExerciseById(exercise._id || exercise);
+          } catch (error) {
+            console.error(`Error fetching exercise details: ${error.message}`);
+            return null;
+          }
         }
         return exercise;
       })
@@ -307,7 +320,7 @@ function WorkoutTracker() {
     saveDataToLocalStorage();
   }, [currentPlan, sets, currentExerciseIndex, notes, lastSetValues]);
 
-  const loadStoredData = plan => {
+  const loadStoredData = (plan) => {
     const initialTotalSets = plan.exercises.reduce(
       (total, exercise) => total + (exercise.requiredSets || 3),
       0
@@ -346,21 +359,21 @@ function WorkoutTracker() {
     const storedLastSetValues = localStorage.getItem(
       `lastSetValues_${user.id}`
     );
-
+  
     if (storedIndex !== null) {
       setCurrentExerciseIndex(parseInt(storedIndex, 10));
     }
-
+  
     if (storedNotes) {
       setNotes(JSON.parse(storedNotes));
     } else {
       setNotes(plan.exercises.map(() => ""));
     }
-
+  
     if (storedLastSetValues) {
       const parsedLastSetValues = JSON.parse(storedLastSetValues);
       setLastSetValues(parsedLastSetValues);
-
+  
       // Restore the input fields for the current exercise
       const currentExercise = plan.exercises[currentExerciseIndex];
       const lastValues = parsedLastSetValues[currentExercise._id];
@@ -376,7 +389,7 @@ function WorkoutTracker() {
         }
       }
     }
-
+  
     const initialRequiredSets = {};
     plan.exercises.forEach(exercise => {
       initialRequiredSets[exercise._id] = exercise.requiredSets || 3;
@@ -474,7 +487,7 @@ function WorkoutTracker() {
   const handleSetComplete = async () => {
     const currentExercise = currentPlan.exercises[currentExerciseIndex];
     let newSet;
-
+  
     if (currentExercise.category === "Strength") {
       if (!weight || !reps) {
         addNotification("Please enter both weight and reps", "error");
@@ -500,7 +513,7 @@ function WorkoutTracker() {
         skippedRest: isResting,
       };
     }
-
+  
     setSets(prevSets => {
       const newSets = [...prevSets];
       if (currentExercise.category === "Cardio") {
@@ -513,28 +526,30 @@ function WorkoutTracker() {
       }
       return newSets;
     });
-
-    setCompletedSets(prevCompletedSets => prevCompletedSets + 1);
-
+  
+    setCompletedSets(prevCompletedSets => {
+      const newCompletedSets = prevCompletedSets + 1;
+      return newCompletedSets;
+    });
+  
     setLastSetValues(prev => ({
       ...prev,
       [currentExercise._id]: newSet,
     }));
-
+  
     // Update progress
     const newProgress = calculateProgress();
     setProgression(newProgress);
-
+  
     // Save progress to database
     try {
-      const exercisesProgress = currentPlan.exercises.map(
-        (exercise, index) => ({
-          exercise: exercise._id,
-          sets: sets[index] || [],
-          notes: notes[index] || "",
-        })
-      );
-
+      const exercisesProgress = currentPlan.exercises.map((exercise, index) => ({
+        exercise: exercise._id,
+        sets: sets[index] || [],
+        notes: notes[index] || "",
+        requiredSets: requiredSets[exercise._id] || 3,
+      }));
+  
       await saveProgress({
         plan: currentPlan._id,
         exercises: exercisesProgress,
@@ -549,6 +564,7 @@ function WorkoutTracker() {
         totalPauseTime,
         skippedPauses,
       });
+  
       addNotification(
         `${
           currentExercise.category === "Cardio" ? "Exercise" : "Set"
@@ -559,21 +575,10 @@ function WorkoutTracker() {
       console.error("Error saving progress:", error);
       addNotification("Failed to save progress", "error");
     }
-
-    // Lines below will reset the input fields for Cardio exercises when an exercise is complete
-    if (currentExercise.category === 'Cardio') {
-      // setDuration('');
-      // setDistance('');
-      // setIntensity('');
-      // setIncline('');
-    }
-
+  
     // For cardio exercises, we don't start the rest timer
     if (currentExercise.category !== "Cardio") {
       startRestTimer();
-      // Lines below will reset the input fields for Strength exercises when a set is complete
-      // setWeight("");
-      // setReps("");
     }
   };
 
@@ -1012,7 +1017,7 @@ function WorkoutTracker() {
                       <p className="mb-2">
                         <strong>Sets completed:</strong>{" "}
                         {(sets[currentExerciseIndex] || []).length} /{" "}
-                        {requiredSets[currentExercise._id] || 0}
+                        {requiredSets[currentExercise._id] || 3}
                       </p>
                     )}
                   </div>
