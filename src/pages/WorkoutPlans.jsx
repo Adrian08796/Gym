@@ -35,7 +35,9 @@ function WorkoutPlans() {
     addWorkoutPlan, 
     updateWorkoutPlan, 
     fetchWorkoutPlans,
-    importWorkoutPlan
+    importWorkoutPlan,
+    exercises,
+    getExerciseById
   } = useGymContext();
   const [showForm, setShowForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
@@ -57,6 +59,10 @@ function WorkoutPlans() {
       setOngoingWorkout(JSON.parse(storedPlan));
     }
   }, []);
+
+  useEffect(() => {
+    fetchWorkoutPlans();
+  }, [fetchWorkoutPlans]);
 
   const handleStartWorkout = (plan) => {
     const planToSave = {
@@ -81,7 +87,19 @@ function WorkoutPlans() {
 
   const handleAddWorkoutPlan = async (plan) => {
     try {
-      await addWorkoutPlan(plan);
+      // Map exercise IDs or objects to full exercise objects
+      const fullExercises = await Promise.all(plan.exercises.map(async exerciseOrId => {
+        return await getExerciseById(exerciseOrId);
+      }));
+      
+      const validExercises = fullExercises.filter(Boolean);
+      
+      if (validExercises.length !== plan.exercises.length) {
+        addNotification('Some exercises could not be found. The plan will be created with available exercises.', 'warning');
+      }
+
+      const newPlan = { ...plan, exercises: validExercises };
+      await addWorkoutPlan(newPlan);
       handleCancelForm();
       await fetchWorkoutPlans();
       addNotification('Workout plan added successfully', 'success');
@@ -93,7 +111,19 @@ function WorkoutPlans() {
 
   const handleEditWorkoutPlan = async (plan) => {
     try {
-      await updateWorkoutPlan(plan._id, plan);
+      // Map exercise IDs or objects to full exercise objects
+      const fullExercises = await Promise.all(plan.exercises.map(async exerciseOrId => {
+        return await getExerciseById(exerciseOrId);
+      }));
+      
+      const validExercises = fullExercises.filter(Boolean);
+      
+      if (validExercises.length !== plan.exercises.length) {
+        addNotification('Some exercises could not be found. The plan will be updated with available exercises.', 'warning');
+      }
+
+      const updatedPlan = { ...plan, exercises: validExercises };
+      await updateWorkoutPlan(plan._id, updatedPlan);
       handleCancelForm();
       await fetchWorkoutPlans();
       addNotification('Workout plan updated successfully', 'success');
