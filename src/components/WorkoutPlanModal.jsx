@@ -27,7 +27,14 @@ function WorkoutPlanModal({ plan, onClose, onEdit, onStart }) {
               <h4 className="text-md font-medium">Exercises:</h4>
               <ul className="list-disc list-inside">
                 {plan.exercises.map((exercise, index) => (
-                  <li key={index} className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>{exercise.name}</li>
+                  <li key={exercise._id || index} className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                    {exercise.name}
+                    {exercise.importedFrom && (
+                      <span className="text-xs ml-2">
+                        (Imported from {exercise.importedFrom.username})
+                      </span>
+                    )}
+                  </li>
                 ))}
               </ul>
             </div>

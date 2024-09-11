@@ -40,6 +40,10 @@ function WorkoutPlanDetails() {
     return <div>Loading workout plan...</div>;
   }
 
+  if (!plan) {
+    return <div>Loading workout plan...</div>;
+  }
+
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-4">{plan.name}</h2>
@@ -49,7 +53,14 @@ function WorkoutPlanDetails() {
       <h3 className="text-xl font-semibold mt-4 mb-2">Exercises:</h3>
       <ul className="list-disc list-inside">
         {plan.exercises.map((exercise, index) => (
-          <li key={index}>{exercise.name}</li>
+          <li key={exercise._id || index}>
+            {exercise.name}
+            {exercise.importedFrom && (
+              <span className="text-sm text-gray-500 ml-2">
+                (Imported from {exercise.importedFrom.username})
+              </span>
+            )}
+          </li>
         ))}
       </ul>
 

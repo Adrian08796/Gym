@@ -89,7 +89,10 @@ function WorkoutPlans() {
     try {
       // Map exercise IDs or objects to full exercise objects
       const fullExercises = await Promise.all(plan.exercises.map(async exerciseOrId => {
-        return await getExerciseById(exerciseOrId);
+        if (typeof exerciseOrId === 'string') {
+          return await getExerciseById(exerciseOrId);
+        }
+        return exerciseOrId;
       }));
       
       const validExercises = fullExercises.filter(Boolean);
@@ -113,7 +116,10 @@ function WorkoutPlans() {
     try {
       // Map exercise IDs or objects to full exercise objects
       const fullExercises = await Promise.all(plan.exercises.map(async exerciseOrId => {
-        return await getExerciseById(exerciseOrId);
+        if (typeof exerciseOrId === 'string') {
+          return await getExerciseById(exerciseOrId);
+        }
+        return exerciseOrId;
       }));
       
       const validExercises = fullExercises.filter(Boolean);
