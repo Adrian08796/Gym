@@ -648,12 +648,63 @@ export function GymProvider({ children }) {
 
   const shareWorkoutPlan = async (planId) => {
     try {
-      const response = await axiosInstance.post(`${API_URL}/workoutplans/${planId}/share`, {}, getAuthConfig());
+      // First, fetch the full workout plan with all its exercises
+      const planResponse = await axiosInstance.get(`${API_URL}/workoutplans/${planId}`, getAuthConfig());
+      const fullPlan = planResponse.data;
+  
+      // If the plan doesn't have exercises, we can't proceed
+      if (!fullPlan.exercises || fullPlan.exercises.length === 0) {
+        throw new Error('The workout plan has no exercises');
+      }
+  
+      // Ensure all exercises are included, even user-specific ones
+    const exercisesWithDetails = await Promise.all(fullPlan.exercises.map(async (exercise) => {
+      try {
+        // Check if exercise is already a full object
+        if (typeof exercise === 'object' && exercise._id) {
+          return exercise;
+        }
+        // If it's an ID, fetch the exercise
+        const exerciseId = typeof exercise === 'string' ? exercise : exercise._id;
+        const exerciseResponse = await axiosInstance.get(`${API_URL}/exercises/${exerciseId}`, getAuthConfig());
+        return exerciseResponse.data;
+      } catch (error) {
+        console.error(`Error fetching exercise ${JSON.stringify(exercise)}:`, error);
+        return null;
+      }
+    }));
+  
+      // Filter out any null exercises (failed fetches)
+      const validExercises = exercisesWithDetails.filter(Boolean);
+  
+      // Update the plan with full exercise details
+      const planToShare = {
+        ...fullPlan,
+        exercises: validExercises
+      };
+  
+      // Now, share the plan with full exercise details
+      const shareResponse = await axiosInstance.post(`${API_URL}/workoutplans/${planId}/share`, planToShare, getAuthConfig());
+      
       addNotification('Workout plan shared successfully', 'success');
-      return response.data.shareLink;
+      return shareResponse.data.shareLink;
     } catch (error) {
       console.error('Error sharing workout plan:', error);
-      addNotification('Failed to share workout plan', 'error');
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+        addNotification(`Failed to share workout plan: ${error.response.data.message || error.response.statusText}`, 'error');
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('Error request:', error.request);
+        addNotification('Failed to share workout plan: No response received from server', 'error');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error message:', error.message);
+        addNotification(`Failed to share workout plan: ${error.message}`, 'error');
+      }
       throw error;
     }
   };
@@ -663,10 +714,63 @@ export function GymProvider({ children }) {
       console.log('Attempting to import workout plan with shareId:', shareId);
       const response = await axiosInstance.post(`${hostName}/api/workoutplans/import/${shareId}`, {}, getAuthConfig());
       console.log('Import response:', response.data);
+  
+      // Fetch full exercise details for the imported plan
+      const fullPlan = {
+        ...response.data,
+        exercises: await Promise.all(response.data.exercises.map(async (exercise) => {
+          // If the exercise is already a full object, return it
+          if (typeof exercise === 'object' && exercise.name && exercise.description) {
+            return {
+              ...exercise,
+              importedFrom: {
+                username: exercise.user ? exercise.user.username : 'Unknown',
+                importDate: new Date()
+              }
+            };
+          }
+          // Otherwise, fetch the full exercise details
+          try {
+            const exerciseResponse = await axiosInstance.get(`${API_URL}/exercises/${exercise}`, getAuthConfig());
+            return {
+              ...exerciseResponse.data,
+              importedFrom: {
+                username: exerciseResponse.data.user ? exerciseResponse.data.user.username : 'Unknown',
+                importDate: new Date()
+              }
+            };
+          } catch (error) {
+            console.error(`Error fetching exercise details for ID ${exercise}:`, error);
+            // If the exercise fetch fails, return a placeholder object
+            return {
+              _id: exercise,
+              name: 'Unknown Exercise',
+              description: 'Details not available',
+              category: 'Unknown',
+              target: ['Unknown'],
+              imageUrl: 'placeholder-image-url',
+              importedFrom: {
+                username: 'Unknown',
+                importDate: new Date()
+              }
+            };
+          }
+        }))
+      };
+  
+      // Add the imported plan to the local state
+      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan]);
+  
+      // Add any new exercises to the local exercises state
+      const newExercises = fullPlan.exercises.filter(exercise => 
+        !exercises.some(existingExercise => existingExercise._id === exercise._id)
+      );
+      if (newExercises.length > 0) {
+        setExercises(prevExercises => [...prevExercises, ...newExercises]);
+      }
+  
       addNotification('Workout plan imported successfully', 'success');
-      await fetchWorkoutPlans(); // Refresh workout plans
-      await fetchExercises(); // Refresh exercises
-      return response.data;
+      return fullPlan;
     } catch (error) {
       console.error('Error importing workout plan:', error);
       if (error.response) {
