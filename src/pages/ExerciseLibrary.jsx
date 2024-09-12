@@ -9,13 +9,14 @@ import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 
-const categories = ['Strength', 'Cardio', 'Flexibility'];
+const categories = ['Strength', 'Cardio', 'Flexibility', 'Imported'];
 const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'];
 
 const categoryColors = {
   Strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   Cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  Flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+  Flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+  Imported: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
 };
 
 function ExerciseLibrary() {
@@ -31,6 +32,7 @@ function ExerciseLibrary() {
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState([]);
 
   useEffect(() => {
+    console.log('FETCHING EXERCISES::::');
     fetchExercises();
   }, [fetchExercises]);
 
@@ -39,7 +41,8 @@ function ExerciseLibrary() {
       (exercise.name.toLowerCase().includes(filterText.toLowerCase()) ||
        exercise.description.toLowerCase().includes(filterText.toLowerCase()) ||
        (Array.isArray(exercise.target) && exercise.target.some(t => t.toLowerCase().includes(filterText.toLowerCase())))) &&
-      (selectedCategories.length === 0 || selectedCategories.includes(exercise.category)) &&
+      (selectedCategories.length === 0 || 
+       (selectedCategories.includes('Imported') ? exercise.importedFrom && exercise.importedFrom.username : selectedCategories.includes(exercise.category))) &&
       (selectedMuscleGroups.length === 0 || selectedMuscleGroups.some(group => exercise.target.includes(group)))
     );
   }, [exercises, filterText, selectedCategories, selectedMuscleGroups]);
@@ -103,22 +106,6 @@ function ExerciseLibrary() {
         : [...prev, group]
     );
   };
-
-  const renderExercises = useMemo(() => {
-    return filteredExercises.map(exercise => (
-      <div key={exercise._id} className="snap-center flex-shrink-0 w-80">
-        <div className="h-full">
-          <ExerciseItem 
-            exercise={exercise}
-            onClick={() => setSelectedExercise(exercise)}
-            onEdit={exercise.isDefault ? null : handleEdit}
-            onDelete={exercise.isDefault ? null : handleDelete}
-            onAddToPlan={handleAddToPlan}
-          />
-        </div>
-      </div>
-    ));
-  }, [filteredExercises, handleEdit, handleDelete, handleAddToPlan, setSelectedExercise]);
 
   return (
     <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
@@ -195,7 +182,6 @@ function ExerciseLibrary() {
               </div>
             </div>
           ))}
-          {renderExercises}
         </div>
       </div>
 

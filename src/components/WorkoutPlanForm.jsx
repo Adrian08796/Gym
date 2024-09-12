@@ -16,7 +16,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   useEffect(() => {
     if (initialPlan) {
       setPlanName(initialPlan.name);
-      setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id));
+      setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id || exercise));
       setWorkoutType(initialPlan.type || '');
       setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
     } else {
@@ -31,7 +31,9 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
     e.preventDefault();
     const workoutPlan = {
       name: planName,
-      exercises: selectedExercises,
+      exercises: selectedExercises.map(exerciseId => 
+        typeof exerciseId === 'object' ? exerciseId._id : exerciseId
+      ),
       type: workoutType,
       scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null
     };
@@ -58,11 +60,12 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
 
   const filteredExercises = exercises.filter(exercise =>
     exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    exercise.target.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
+    (Array.isArray(exercise.target) && exercise.target.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())))
   );
 
   const groupedExercises = filteredExercises.reduce((acc, exercise) => {
-    exercise.target.forEach(target => {
+    const targets = Array.isArray(exercise.target) ? exercise.target : [exercise.target];
+    targets.forEach(target => {
       if (!acc[target]) {
         acc[target] = [];
       }
@@ -142,6 +145,11 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
                     />
                     <label htmlFor={`exercise-${exercise._id}`} className="text-sm">
                       {exercise.name}
+                      {exercise.importedFrom && (
+                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                          (Imported from {exercise.importedFrom.username})
+                        </span>
+                      )}
                     </label>
                   </div>
                 ))}
@@ -151,10 +159,17 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           <div className={`border rounded p-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} overflow-y-auto h-96`}>
             <h3 className="font-bold mb-2">Selected Exercises</h3>
             {selectedExercises.map(exerciseId => {
-              const exercise = exercises.find(e => e._id === exerciseId);
+              const exercise = exercises.find(e => e._id === exerciseId) || { name: 'Unknown Exercise', _id: exerciseId };
               return (
                 <div key={exerciseId} className="flex items-center justify-between mb-2">
-                  <span className="text-sm">{exercise.name}</span>
+                  <span className="text-sm">
+                    {exercise.name}
+                    {exercise.importedFrom && (
+                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                        (Imported from {exercise.importedFrom.username})
+                      </span>
+                    )}
+                  </span>
                   <button
                     type="button"
                     onClick={() => handleExerciseToggle(exerciseId)}

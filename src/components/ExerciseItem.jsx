@@ -84,7 +84,7 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
           <FiTarget className="mr-1" />
           <span>{Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}</span>
         </div>
-        {isImported && (
+        {exercise.importedFrom && exercise.importedFrom.username && (
           <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
             <FiUser className="mr-1" />
             <span>Imported from {exercise.importedFrom.username}</span>

@@ -45,7 +45,8 @@ function WorkoutPlanSelector({ onSelect, onClose }) {
               onClick={() => handleSelect(plan)}
               className="block w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mb-2 text-gray-800 dark:text-gray-200"
             >
-              {plan.name}
+              <span>{plan.name}</span>
+              <span className="text-xs text-gray-500 ml-2">({plan.exercises.length} exercises)</span>
             </button>
           ))
         )}
