@@ -8,6 +8,7 @@ import ExerciseModal from '../components/ExerciseModal';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
+import '../index.css';
 
 const categories = ['Strength', 'Cardio', 'Flexibility', 'Imported'];
 const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'];
@@ -109,7 +110,7 @@ function ExerciseLibrary() {
 
   return (
     <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
-      <h1 className="text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise Library</h1>
+      <h1 className="header text-2xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise <span className='headerSpan'>Library</span></h1>
 
       <div className="mb-6 lg:mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex-grow">

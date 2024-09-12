@@ -295,7 +295,7 @@ function WorkoutPlans() {
 
   return (
     <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      <h1 className="text-3xl font-bold mb-4">Workout Plans</h1>
+      <h1 className="header text-3xl font-bold mb-4">Workout <span className='headerSpan'>Plans</span></h1>
       
       {ongoingWorkout && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">

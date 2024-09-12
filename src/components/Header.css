@@ -1,0 +1,43 @@
+.nav-btn {
+    display: inline-block;
+    padding: .3rem 1rem;
+    background: transparent;
+    color: #45FFCA;
+    border: 2px solid #45FFCA;
+    border-radius: 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.5s ease;
+}
+
+.nav-btn:hover {
+    background: #45FFCA;;
+    color: #fff;;
+    box-shadow: 0 0 20px #45FFCA;
+}
+
+.logoSpan{
+    color:#45FFCA;
+}
+
+.logo {
+    font-size: 3rem;
+    color: var(--text-color);
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+}
+
+.logo:hover {
+    transform: scale(1.1);
+}
+
+.headerSpan{
+    color:#45FFCA;
+}
+
+.header {
+    color: var(--text-color);
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+}

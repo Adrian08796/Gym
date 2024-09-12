@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import '../components/Header.css';
 
 function Header() {
   const { user, logout } = useAuth();
@@ -27,7 +28,7 @@ function Header() {
   const MenuItem = ({ to, text, onClick }) => (
     <Link 
       to={to} 
-      className="block py-2 px-4 text-sm hover:bg-gray-700 text-gray-300 hover:text-white"
+      className="nav-btn"
       onClick={() => {
         setIsMenuOpen(false);
         onClick && onClick();
@@ -50,7 +51,7 @@ function Header() {
     <header className="bg-gray-800 text-white">
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
-          <Link to="/" className="text-2xl font-heading font-bold">Gym App</Link>
+          <Link to="/" className="logo text-5xl font-heading font-bold">Level <span className='logoSpan'>Up</span></Link>
           
           {/* Desktop Menu */}
           <div className="hidden md:flex space-x-4 items-center">
@@ -61,7 +62,7 @@ function Header() {
                 ))}
                 <button 
                   onClick={handleLogout}
-                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
+                  className="nav-btn"
                 >
                   Logout
                 </button>

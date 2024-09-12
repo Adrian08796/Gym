@@ -63,7 +63,7 @@ function UserProfile() {
 
   return (
     <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
-      <h1 className="text-3xl font-bold mb-6">User Profile</h1>
+      <h1 className="header text-3xl font-bold mb-6">User <span className='headerSpan'>Profile</span></h1>
       
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Profile Information</h2>

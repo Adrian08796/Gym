@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser } from 'react-icons/fi';
+import '../components/ExerciseItem.css';
 
 function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
