@@ -108,7 +108,7 @@ input[type="number"], textarea {
 
 /* Progress bar styles */
 .progress-bar {
-  height: 8px;
+  height: 2px;
   background-color: #e9ecef;
   border-radius: 4px;
   overflow: hidden;
@@ -116,7 +116,7 @@ input[type="number"], textarea {
 
 .progress-bar-fill {
   height: 100%;
-  background-color: #3490dc;
+  background-color: #45FFCA;
   transition: width 300ms ease-in-out;
 }
 
@@ -219,18 +219,26 @@ input[type="number"], textarea {
 }
 
 .dark-mode .btn-primary {
-  background-color: #4299e1;
+  background-color: #1F2937;
 }
 
 .dark-mode .btn-primary:hover {
-  background-color: #3182ce;
+  background-color: #4a5568;
 }
 
 .dark-mode .btn-secondary {
-  background-color: #718096;
+  background-color: #1F2937;
+  border: 2px solid #45FFCA;
 }
 
 .dark-mode .btn-secondary:hover {
+  background-color: #4a5568;
+}
+.dark-mode .btn-primary-previous {
+  background-color: #1F2937;
+}
+
+.dark-mode .btn-primary-previous:hover {
   background-color: #4a5568;
 }
 

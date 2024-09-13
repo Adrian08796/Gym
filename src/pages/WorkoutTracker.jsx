@@ -917,11 +917,11 @@ function WorkoutTracker() {
       <div className="relative mb-6">
         <button
           onClick={handleCancelWorkout}
-          className="absolute top-0 right-0 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          className="border-solid border-2 border-bg-white absolute top-0 right-0 bg-btn-close hover:bg-btn-hover text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           disabled={isConfirmingCancel}>
-          <FiX />
+          <FiX stroke-width="6"/>
         </button>
-        <h2 className="text-3xl font-bold text-center">Workout Tracker</h2>
+        <h2 className="header text-3xl font-bold text-center">Workout <span className="headerSpan">Tracker</span></h2>
         <h3 className="text-xl text-center mt-2">{currentPlan.name}</h3>
       </div>
 
@@ -946,11 +946,11 @@ function WorkoutTracker() {
             <button
               key={exercise._id}
               onClick={() => handleExerciseChange(index)}
-              className={`w-3 h-3 rounded-full focus:outline-none transition-all duration-200 ${
+              className={`w-4 h-4 rounded-full focus:outline-none transition-all duration-200 ${
                 index === currentExerciseIndex
-                  ? "bg-blue-500 w-4 h-4"
+                  ? "bg-color1 w-5 h-5"
                   : isExerciseComplete(exercise._id, sets[index] || [])
-                  ? "bg-green-500"
+                  ? "bg-white"
                   : "bg-gray-300 dark:bg-gray-600"
               }`}
               title={exercise.name}
@@ -981,7 +981,7 @@ function WorkoutTracker() {
                     <div
                       className="flex justify-between items-center cursor-pointer"
                       onClick={toggleExerciseDetails}>
-                      <h4 className="text-lg font-semibold mb-2">
+                      <h4 className="headerSpan text-lg font-semibold mb-2">
                         {currentExercise.name}
                       </h4>
                       {isExerciseDetailsOpen ? (
@@ -1027,7 +1027,7 @@ function WorkoutTracker() {
                 <div className="mb-4 flex justify-between items-center">
                   <button
                     onClick={handleSetComplete}
-                    className="btn btn-primary">
+                    className="btn btn-secondary">
                     {currentExercise.category === "Cardio"
                       ? "Complete Exercise"
                       : "Complete Set"}
@@ -1116,7 +1116,7 @@ function WorkoutTracker() {
           onClick={() =>
             handleExerciseChange(Math.max(0, currentExerciseIndex - 1))
           }
-          className={`btn btn-secondary ${
+          className={`btn btn-primary-previous ${
             currentExerciseIndex === 0 ? "opacity-50 cursor-not-allowed" : ""
           }`}
           disabled={currentExerciseIndex === 0}>
