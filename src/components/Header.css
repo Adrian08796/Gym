@@ -2,12 +2,35 @@
 
 .nav-btn {
     display: inline-block;
-    padding: 0.3rem 0.75rem;
+    padding: 0.25rem 0.5rem;
     background: transparent;
     color: #45FFCA;
     border: 2px solid #45FFCA;
-    border-radius: 1rem;
-    font-size: 0.75rem; /* Smaller base size for mobile */
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.nav-btn-cycle {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    color: #45FFCA;
+    border: 2px solid #45FFCA;
+    border-radius: full;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.nav-btn-cycle {
+    display: inline-block;
+    font-size: 0.75rem;
     font-weight: 600;
     transition: all 0.3s ease;
     text-align: center;
@@ -15,21 +38,28 @@
 }
 
 @media (min-width: 640px) {
+    .nav-btn-cycle {
+        font-size: 0.875rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .nav-btn-cycle {
+        font-size: 1rem;
+    }
+}
+
+@media (min-width: 640px) {
     .nav-btn {
-        font-size: 0.875rem; /* Slightly larger for small screens */
-        padding: 0.3rem 1rem;
+        padding: 0.3rem 0.75rem;
+        font-size: 0.875rem;
     }
 }
 
 @media (min-width: 768px) {
     .nav-btn {
-        font-size: 0.9rem; /* Medium size for medium screens */
-    }
-}
-
-@media (min-width: 1024px) {
-    .nav-btn {
-        font-size: 1rem; /* Full size for large screens */
+        padding: 0.3rem 1rem;
+        font-size: 1rem;
     }
 }
 
@@ -44,7 +74,7 @@
 }
 
 .logo {
-    font-size: 1.5rem; /* Smaller base size for mobile */
+    font-size: 1.25rem;
     color: white;
     font-weight: 800;
     cursor: pointer;
@@ -53,19 +83,19 @@
 
 @media (min-width: 640px) {
     .logo {
-        font-size: 2rem;
+        font-size: 1.5rem;
     }
 }
 
 @media (min-width: 768px) {
     .logo {
-        font-size: 2.5rem;
+        font-size: 1.75rem;
     }
 }
 
 @media (min-width: 1024px) {
     .logo {
-        font-size: 3rem;
+        font-size: 2rem;
     }
 }
 
