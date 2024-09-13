@@ -6,6 +6,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { FiEye, FiEyeOff, FiUser, FiLock } from 'react-icons/fi';
+import '../components/Header.css';
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -91,7 +92,7 @@ function Login() {
             <div className="flex items-center justify-between mt-4">
               <button
                 type="submit"
-                className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-900 transition duration-300 ease-in-out"
+                className="nav-btn"
               >
                 Login
               </button>
@@ -102,7 +103,7 @@ function Login() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Don't have an account?{' '}
-            <Link to="/register" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+            <Link to="/register" className="nav-btn inline-block mt-2">
               Sign up
             </Link>
           </p>

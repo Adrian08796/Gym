@@ -18,17 +18,17 @@ function Header() {
 
   const menuItems = [
     { to: "/dashboard", text: "Dashboard" },
-    { to: "/tracker", text: "Workout Tracker" },
-    { to: "/exercises", text: "Exercise Library" },
-    { to: "/plans", text: "Workout Plans" },
-    { to: "/workout-summary", text: "Workout History" },
+    { to: "/tracker", text: "Tracker" },
+    { to: "/exercises", text: "Exercises" },
+    { to: "/plans", text: "Plans" },
+    { to: "/workout-summary", text: "History" },
     { to: "/profile", text: "Profile" },
   ];
 
   const MenuItem = ({ to, text, onClick }) => (
     <Link 
       to={to} 
-      className="nav-btn"
+      className="nav-btn block w-full text-left px-4 py-2 text-sm hover:bg-gray-700 transition duration-300"
       onClick={() => {
         setIsMenuOpen(false);
         onClick && onClick();
@@ -41,7 +41,8 @@ function Header() {
   const AuthButton = ({ to, text }) => (
     <Link 
       to={to} 
-      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
+      className="nav-btn"
+      onClick={() => setIsMenuOpen(false)}
     >
       {text}
     </Link>
@@ -51,22 +52,15 @@ function Header() {
     <header className="bg-gray-800 text-white">
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
-          <Link to="/" className="logo text-5xl font-heading font-bold">Level <span className='logoSpan'>Up</span></Link>
+          <Link to="/" className="logo font-heading font-bold">Level <span className='logoSpan'>Up</span></Link>
           
           {/* Desktop Menu */}
-          <div className="hidden md:flex space-x-4 items-center">
+          <nav className="hidden lg:flex space-x-2 xl:space-x-4 items-center">
+            {user && menuItems.map((item) => (
+              <MenuItem key={item.to} to={item.to} text={item.text} />
+            ))}
             {user ? (
-              <>
-                {menuItems.map((item) => (
-                  <MenuItem key={item.to} to={item.to} text={item.text} />
-                ))}
-                <button 
-                  onClick={handleLogout}
-                  className="nav-btn"
-                >
-                  Logout
-                </button>
-              </>
+              <button onClick={handleLogout} className="nav-btn">Logout</button>
             ) : (
               <>
                 <AuthButton to="/login" text="Login" />
@@ -75,15 +69,15 @@ function Header() {
             )}
             <button 
               onClick={toggleDarkMode}
-              className="ml-4 p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition duration-300 ease-in-out"
+              className="ml-2 xl:ml-4 p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition duration-300 ease-in-out"
             >
               {darkMode ? '🌞' : '🌙'}
             </button>
-          </div>
+          </nav>
 
           {/* Mobile Menu Button */}
           <button 
-            className="md:hidden text-white focus:outline-none"
+            className="lg:hidden text-white focus:outline-none"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? (
@@ -100,19 +94,21 @@ function Header() {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden mt-4 bg-gray-700 rounded-lg shadow-lg">
+          <nav className="lg:hidden mt-4 bg-gray-700 rounded-lg shadow-lg">
             {user ? (
               <>
                 {menuItems.map((item) => (
                   <MenuItem key={item.to} to={item.to} text={item.text} />
                 ))}
-                <MenuItem to="/" text="Logout" onClick={handleLogout} />
+                <button onClick={handleLogout} className="nav-btn block w-full text-left px-4 py-2 text-sm hover:bg-gray-600">
+                  Logout
+                </button>
               </>
             ) : (
-              <>
+              <div className="p-4 space-y-2">
                 <AuthButton to="/login" text="Login" />
                 <AuthButton to="/register" text="Register" />
-              </>
+              </div>
             )}
             <button 
               onClick={() => {
@@ -123,7 +119,7 @@ function Header() {
             >
               {darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             </button>
-          </div>
+          </nav>
         )}
       </div>
     </header>
