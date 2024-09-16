@@ -73,6 +73,13 @@
     color: #45FFCA;
 }
 
+
+/* text glow for Up */
+.logo:hover .logoSpan {
+    text-shadow: 0px 0px 10px rgb(69, 255, 202);
+    transition: all 0.3s ease;
+}
+
 .logo {
     font-size: 1.25rem;
     color: white;
