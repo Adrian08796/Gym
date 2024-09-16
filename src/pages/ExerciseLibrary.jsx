@@ -8,7 +8,8 @@ import ExerciseModal from '../components/ExerciseModal';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import '../index.css';
+import { FiFilter, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import './ExerciseLibrary.css';
 
 const categories = ['Strength', 'Cardio', 'Flexibility', 'Imported'];
 const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'];
@@ -31,6 +32,7 @@ function ExerciseLibrary() {
   const [filterText, setFilterText] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     console.log('FETCHING EXERCISES::::');
@@ -108,6 +110,57 @@ function ExerciseLibrary() {
     );
   };
 
+  const FilterDropdown = () => (
+    <div className="relative">
+      <button
+        onClick={() => setShowFilters(!showFilters)}
+        className="flex items-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
+      >
+        <FiFilter className="mr-2" />
+        Filters
+        {showFilters ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
+      </button>
+      {showFilters && (
+        <div className="absolute z-10 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg">
+          <div className="p-4">
+            <h3 className="text-lg font-semibold mb-2">Categories</h3>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {categories.map(category => (
+                <button
+                  key={category}
+                  onClick={() => toggleCategory(category)}
+                  className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    selectedCategories.includes(category)
+                      ? categoryColors[category]
+                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Muscle Groups</h3>
+            <div className="flex flex-wrap gap-2">
+              {muscleGroups.map(group => (
+                <button
+                  key={group}
+                  onClick={() => toggleMuscleGroup(group)}
+                  className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    selectedMuscleGroups.includes(group)
+                      ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
+                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {group}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
       <h1 data-aos="fade-up" className="header text-2xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise <span className='headerSpan'>Library</span></h1>
@@ -122,44 +175,7 @@ function ExerciseLibrary() {
             className="w-full px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
           />
         </div>
-      </div>
-
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Categories</h2>
-        <div className="flex flex-wrap gap-2">
-          {categories.map(category => (
-            <button
-              key={category}
-              onClick={() => toggleCategory(category)}
-              className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                selectedCategories.includes(category)
-                  ? categoryColors[category]
-                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-              }`}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Muscle Groups</h2>
-        <div className="flex flex-wrap gap-2">
-          {muscleGroups.map(group => (
-            <button
-              key={group}
-              onClick={() => toggleMuscleGroup(group)}
-              className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                selectedMuscleGroups.includes(group)
-                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
-                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-              }`}
-            >
-              {group}
-            </button>
-          ))}
-        </div>
+        <FilterDropdown />
       </div>
 
       <AddExerciseForm 
@@ -168,11 +184,12 @@ function ExerciseLibrary() {
         onCancel={handleCancelEdit}
       />
 
-      <div className="overflow-x-auto pb-4">
-        <div className="flex space-x-4 snap-x snap-mandatory w-full">
+      {/* Mobile view */}
+      <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4 hide-scrollbar">
+        <div className="flex space-x-4 snap-x snap-mandatory w-full pt-4">
           {filteredExercises.map((exercise) => (
-            <div key={exercise._id} className="snap-center flex-shrink-0 w-80">
-              <div className="h-full">
+            <div key={exercise._id} className="snap-center flex-shrink-0 w-[calc(100%-2rem)] sm:w-80 pr-4">
+              <div className="h-full row">
                 <ExerciseItem 
                   exercise={exercise}
                   onClick={() => setSelectedExercise(exercise)}
@@ -184,6 +201,21 @@ function ExerciseLibrary() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Desktop view (grid layout) */}
+      <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filteredExercises.map((exercise) => (
+          <div key={exercise._id} className="h-full row">
+            <ExerciseItem 
+              exercise={exercise}
+              onClick={() => setSelectedExercise(exercise)}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onAddToPlan={handleAddToPlan}
+            />
+          </div>
+        ))}
       </div>
 
       {selectedExercise && (

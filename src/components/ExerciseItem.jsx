@@ -32,19 +32,18 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
   };
 
   const buttonStyles = {
-    base: 'text-xs font-semibold py-2 px-3 rounded-full transition-all duration-300 flex items-center justify-center',
+    base: 'text-xs font-semibold p-2 rounded transition-all duration-300 flex items-center justify-center',
     edit: 'bg-emerald-500 hover:bg-emerald-600 text-white',
     delete: 'bg-emerald-500 hover:bg-emerald-600 text-white',
     addToPlan: 'bg-emerald-500 hover:bg-emerald-600 text-white'
   };
 
-  const ActionButton = ({ action, style, icon, text }) => (
+  const ActionButton = ({ action, style, icon }) => (
     <button 
       onClick={(e) => handleAction(action, e)}
       className={`${buttonStyles.base} ${style} opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0`}
     >
       {icon}
-      <span className="ml-1">{text}</span>
     </button>
   );
 
@@ -61,7 +60,6 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
   );
 
   const isImported = exercise.importedFrom && exercise.importedFrom.username;
-
 
   return (
     <div 
@@ -92,11 +90,11 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
           </div>
         )}
       </div>
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
-        <div className="flex justify-between space-x-2">
-          <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} text="Edit" />
-          <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} text="Delete" />
-          <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} text="Add to Plan" />
+      <div className="absolute bottom-0 left-0 right-0 p-2 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+        <div className="flex justify-end space-x-2">
+          <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} />
+          <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} />
+          <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} />
         </div>
       </div>
       {isDeleteConfirmOpen && <DeleteConfirmation />}

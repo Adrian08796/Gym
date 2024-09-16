@@ -1,10 +1,14 @@
-.box {
-    padding: 30px 30px 50px 30px;
-    height: 40rem;
-    background: #1F2937;
+.row {
+    background: #111827;
     border-radius: 28px;
     border: 1px solid transparent;
     box-shadow: 0 0 5px #45FFCA;
+    padding: 20px;
     transition: all 0.5s ease;
+}
+
+.row:hover {
+    border: 1px solid #45FFCA;
+    transform: translateY(-5px) scale(1.03);
     cursor: pointer;
 }
