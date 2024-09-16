@@ -96,20 +96,20 @@ function Dashboard() {
 
   return (
     <div className="p-6 bg-gray-100 dark:bg-gray-900 min-h-screen">
-      <h2 className="header text-3xl font-bold mb-8 text-gray-800 dark:text-white">Workout <span className='headerSpan'>Dashboard</span></h2>
+      <h2 data-aos="fade-up" className="header text-3xl font-bold mb-8 text-gray-800 dark:text-white">Workout <span className='headerSpan'>Dashboard</span></h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <StatCard 
           icon={<FiActivity className="h-6 w-6" />}
           title="Total Workouts"
           value={totalWorkouts}
-          color="bg-blue-500"
+          color="bg-#111827"
         />
         <StatCard 
           icon={<FiClock className="h-6 w-6" />}
           title="Average Workout Duration"
           value={`${averageWorkoutDuration.toFixed(1)} minutes`}
-          color="bg-green-500"
+          color="bg-#111827"
         />
       </div>
 

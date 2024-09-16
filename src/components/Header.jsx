@@ -1,10 +1,12 @@
 // src/components/Header.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from './ThemeToggle';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 import '../components/Header.css';
 
 function Header() {
@@ -16,6 +18,10 @@ function Header() {
     logout();
     setIsMenuOpen(false);
   };
+
+  useEffect(() => {
+    AOS.refresh();
+  }, [isMenuOpen]);
 
   const menuItems = [
     { to: "/dashboard", text: "Dashboard" },
@@ -99,7 +105,11 @@ function Header() {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <nav className="lg:hidden mt-4 bg-gray-700 rounded-lg shadow-lg">
+          <nav 
+            className="lg:hidden mt-4 bg-gray-700 rounded-lg shadow-lg"
+            data-aos="fade-down"
+            data-aos-duration="300"
+          >
             {user ? (
               <>
                 {menuItems.map((item) => (

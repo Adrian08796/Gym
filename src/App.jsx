@@ -1,6 +1,8 @@
 // src/App.jsx
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 import Home from './pages/Home';
 import WorkoutTracker from './pages/WorkoutTracker';
 import ExerciseLibrary from './pages/ExerciseLibrary';
@@ -36,6 +38,12 @@ function AppContent() {
   const authContext = useAuth();
   
   useEffect(() => {
+    // Initialize AOS
+    AOS.init({
+      duration: 1000,
+      once: true,
+    });
+
     window.authContext = authContext;
 
     const handleActivity = () => {
@@ -59,6 +67,11 @@ function AppContent() {
       window.removeEventListener('scroll', handleActivity);
     };
   }, [authContext, updateActivity]);
+
+  useEffect(() => {
+    // Refresh AOS when content changes
+    AOS.refresh();
+  });
 
   if (loading) {
     return <div>Loading...</div>;
