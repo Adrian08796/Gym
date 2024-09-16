@@ -7,7 +7,7 @@ const ThemeToggle = () => {
   return (
     <button 
       onClick={toggleDarkMode}
-      className="nav-btn-cycle relative rounded-full p-1 transition-all duration-300 ease-in-out focus:outline-none overflow-hidden"
+      className="test nav-btn-cycle relative rounded-full p-1 transition-all duration-300 ease-in-out focus:outline-none overflow-hidden"
       style={{
         width: '5rem',
         height: '2.5rem',

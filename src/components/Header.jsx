@@ -70,8 +70,12 @@ function Header() {
                 <AuthButton to="/register" text="Register" />
               </>
             )}
-            <ThemeToggle />
           </nav>
+
+          {/* ThemeToggle - Moved outside of the nav for desktop */}
+          <div className="hidden lg:block">
+            <ThemeToggle />
+          </div>
 
           {/* Mobile Menu Button and ThemeToggle */}
           <div className="lg:hidden flex items-center space-x-4">

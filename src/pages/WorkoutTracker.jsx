@@ -1091,11 +1091,11 @@ function WorkoutTracker() {
                           width: `${(remainingRestTime / restTime) * 100}%`,
                         }}></div>
                     </div>
-                    <button
+                    {/* <button
                       onClick={skipRestTimer}
                       className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline">
                       Skip Rest
-                    </button>
+                    </button> */}
                     {canVibrate() && (
                       <p className="text-sm mt-2">
                         Your device will vibrate when the rest time is over.

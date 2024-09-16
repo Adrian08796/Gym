@@ -7,7 +7,7 @@ function NotificationToast() {
   const { notifications, removeNotification } = useNotification();
 
   return (
-    <div className="fixed top-4 right-4 z-50">
+    <div className="fixed top-60 right-60 z-50">
       {notifications.map((notification) => (
         <div
           key={notification.id}
