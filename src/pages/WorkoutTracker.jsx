@@ -941,7 +941,7 @@ function WorkoutTracker() {
       </div>
 
       <div className="mb-4 flex justify-center items-center">
-        <div className="flex space-x-2 overflow-x-auto py-2 px-4 carousel-container">
+        <div className="flex items-center space-x-2 overflow-x-auto py-2 px-4 carousel-container">
           {currentPlan.exercises.map((exercise, index) => (
             <button
               key={exercise._id}
