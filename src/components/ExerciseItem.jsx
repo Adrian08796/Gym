@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser } from 'react-icons/fi';
+import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
 import '../components/ExerciseItem.css';
 
 function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
@@ -25,11 +26,12 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
     setIsDeleteConfirmOpen(false);
   };
 
-  const categoryColors = {
-    Strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    Cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    Flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+  const categoryIcons = {
+    Strength: <PiBarbellBold size={20} />,
+    Cardio: <PiHeartbeatBold size={20} />,
+    Flexibility: null // You can add an icon for Flexibility if desired
   };
+
 
   const buttonStyles = {
     base: 'text-xs font-semibold p-2 rounded transition-all duration-300 flex items-center justify-center',
@@ -72,8 +74,8 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
           alt={exercise.name} 
           className="w-full h-full object-cover transition-transform duration-300 transform group-hover:scale-110"
         />
-        <div className={`absolute top-2 right-2 ${categoryColors[exercise.category] || 'bg-gray-500 text-white'} rounded-full px-3 py-1 text-xs font-semibold shadow-md`}>
-          {exercise.category}
+        <div className="absolute top-2 right-2 w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center">
+          {categoryIcons[exercise.category]}
         </div>
       </div>
       <div className="p-4 flex-grow flex flex-col">

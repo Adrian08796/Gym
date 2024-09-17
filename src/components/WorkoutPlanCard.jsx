@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useGymContext } from '../context/GymContext';
 import { FiPlay, FiEdit, FiTrash2, FiShare2, FiUser } from 'react-icons/fi';
+import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
 
 function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const { darkMode } = useTheme();
@@ -33,13 +34,6 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     setIsDeleteConfirmOpen(false);
   };
 
-  const typeColors = {
-    strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    other: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-  };
-
   const buttonStyles = {
     base: 'text-xs font-semibold py-1 px-2 rounded transition-all duration-200 flex items-center justify-center',
     start: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md',
@@ -48,10 +42,17 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     share: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'
   };
 
-  const TypeBadge = () => (
-    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${typeColors[plan.type] || typeColors.other}`}>
-      {plan.type || 'Other'}
-    </span>
+  const typeIcons = {
+    strength: <PiBarbellBold size={20} />,
+    cardio: <PiHeartbeatBold size={20} />,
+    flexibility: null,
+    other: null
+  };
+
+  const TypeIcon = () => (
+    <div className="w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center">
+      {typeIcons[plan.type]}
+    </div>
   );
 
   const ActionButton = ({ action, style, icon, text }) => (
@@ -99,9 +100,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     <div className={`row relative border rounded-lg p-4 mb-4  ${darkMode ? ' text-white' : 'bg-white text-gray-800'} transition-transform duration-300 hover:shadow-xl`}>
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-xl font-semibold">{plan.name}</h3>
-        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${typeColors[plan.type] || typeColors.other}`}>
-          {plan.type || 'Other'}
-        </span>
+        <TypeIcon />
       </div>
       <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
         Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
