@@ -898,32 +898,33 @@ function WorkoutTracker() {
   };
 
   return (
-    <div
-      className={`workout-tracker container mx-auto mt-8 p-4 ${
-        darkMode ? "dark-mode bg-gray-800 text-white" : "bg-white text-gray-800"
-      }`}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}>
-      {exerciseHistoryError && (
-        <div
-          className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4"
-          role="alert">
-          <p className="font-bold">Error</p>
-          <p>{exerciseHistoryError}</p>
-        </div>
-      )}
+    <>
+      <h2 data-aos="fade-up" className="header text-3xl font-bold text-center mb-4">Workout <span className="headerSpan">Tracker</span></h2>
+      <div
+        className={`workout-tracker container mx-auto mt-8 p-4 ${
+          darkMode ? "dark-mode bg-gray-800 text-white" : "bg-white text-gray-800"
+        }`}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}>
+        {exerciseHistoryError && (
+          <div
+            className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4"
+            role="alert">
+            <p className="font-bold">Error</p>
+            <p>{exerciseHistoryError}</p>
+          </div>
+        )}
 
-      <div className="relative mb-6">
-        <button
-          onClick={handleCancelWorkout}
-          className="border-solid border-2 border-bg-white absolute top-0 right-0 bg-btn-close hover:bg-btn-hover text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          disabled={isConfirmingCancel}>
-          <FiX stroke-width="6"/>
-        </button>
-        <h2 className="header text-3xl font-bold text-center">Workout <span className="headerSpan">Tracker</span></h2>
-        <h3 className="text-xl text-center mt-2">{currentPlan.name}</h3>
-      </div>
+        <div className="relative mb-6">
+          <button
+            onClick={handleCancelWorkout}
+            className="border-solid border-2 border-bg-white absolute top-0 right-0 bg-btn-close hover:bg-btn-hover text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            disabled={isConfirmingCancel}>
+            <FiX stroke-width="6"/>
+          </button>
+          <h3 className="text-xl text-center mt-2">{currentPlan.name}</h3>
+        </div>
 
       <div className="mb-4 text-lg text-center">
         Elapsed Time: {formatTime(elapsedTime)}
@@ -1246,6 +1247,7 @@ function WorkoutTracker() {
         )}
       </div>
     </div>
+    </>
   );
 }
 

@@ -106,25 +106,27 @@ function Header() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <nav 
-            className="lg:hidden mt-4 bg-gray-700 rounded-lg shadow-lg"
-            data-aos="fade-down"
+            className="lg:hidden mt-4 bg-gray-700 rounded-lg shadow-lg absolute right-0 w-64 z-50"
+            data-aos="fade-left"
             data-aos-duration="300"
           >
-            {user ? (
-              <>
-                {menuItems.map((item) => (
-                  <MenuItem key={item.to} to={item.to} text={item.text} />
-                ))}
-                <button onClick={handleLogout} className="nav-btn block w-full text-left hover:bg-gray-600">
-                  Logout
-                </button>
-              </>
-            ) : (
-              <div className="p-4 space-y-2">
-                <AuthButton to="/login" text="Login" />
-                <AuthButton to="/register" text="Register" />
-              </div>
-            )}
+            <div className="p-4 space-y-2">
+              {user ? (
+                <>
+                  {menuItems.map((item) => (
+                    <MenuItem key={item.to} to={item.to} text={item.text} />
+                  ))}
+                  <button onClick={handleLogout} className="nav-btn block w-full text-left hover:bg-gray-600">
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <AuthButton to="/login" text="Login" />
+                  <AuthButton to="/register" text="Register" />
+                </>
+              )}
+            </div>
           </nav>
         )}
       </div>
