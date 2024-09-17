@@ -70,7 +70,7 @@ function WorkoutSummary() {
 
   return (
     <div className={`container mx-auto mt-8 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-      <h2 data-aos="fade-up" className="header text-2xl font-bold mb-4">Workout <span className='headerSpan'>History</span></h2>
+      <h2 data-aos="fade-up" className="header text-center text-3xl font-bold mb-4">Workout <span className='headerSpan'>History</span></h2>
       <div className="mb-4 flex justify-between items-center">
         <button
           onClick={toggleSortOrder}

@@ -62,12 +62,14 @@ function UserProfile() {
   const averageDuration = totalWorkouts > 0 ? totalDuration / totalWorkouts / (1000 * 60) : 0;
 
   return (
-    <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
-      <h1 data-aos="fade-up" className="header text-3xl font-bold mb-6">User <span className='headerSpan'>Profile</span></h1>
-      
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Profile Information</h2>
-        {isEditing ? (
+    <>
+      <h1 data-aos="fade-up" className="header text-3xl font-bold mb-6 text-center">
+        User <span className='headerSpan'>Profile</span>
+      </h1>
+      <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4">Profile Information</h2>
+          {isEditing ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="username" className="block mb-1">Username</label>
@@ -167,7 +169,8 @@ function UserProfile() {
         <p><strong>Total Workouts:</strong> {totalWorkouts}</p>
         <p><strong>Average Workout Duration:</strong> {averageDuration.toFixed(1)} minutes</p>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

@@ -294,21 +294,23 @@ function WorkoutPlans() {
   };
 
   return (
-    <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      <h1 data-aos="fade-up" className="header text-3xl font-bold mb-4">Workout <span className='headerSpan'>Plans</span></h1>
-      
-      {ongoingWorkout && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-          <p className="font-bold">Ongoing Workout</p>
-          <p>You have an unfinished workout: {ongoingWorkout.name}</p>
-          <button
-            onClick={handleResumeWorkout}
-            className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Resume Workout
-          </button>
-        </div>
-      )}
+    <>
+      <h1 data-aos="fade-up" className="header text-3xl font-bold mb-4 text-center">
+        Workout <span className='headerSpan'>Plans</span>
+      </h1>
+      <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'}`}>
+        {ongoingWorkout && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
+            <p className="font-bold">Ongoing Workout</p>
+            <p>You have an unfinished workout: {ongoingWorkout.name}</p>
+            <button
+              onClick={handleResumeWorkout}
+              className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Resume Workout
+            </button>
+          </div>
+        )}
 
       <div className="mb-4 flex flex-wrap items-center justify-between">
         <button
@@ -425,7 +427,8 @@ function WorkoutPlans() {
           onStart={handleStartWorkout}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
