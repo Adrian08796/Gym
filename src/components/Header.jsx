@@ -59,9 +59,16 @@ function Header() {
     <header className={`bg-gray-800 text-white ${darkMode ? 'dark' : ''}`}>
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
-          <Link to="/" className="logo font-heading font-bold">
-            Level <span className='logoSpan'>Up</span>
-          </Link>
+          <div className="flex items-center">
+            <Link to="/" className="logo font-heading font-bold flex items-center">
+              Level <span className='logoSpan'>Up</span>
+              <div className="pyramid-container">
+                <div className="pyramid-level level-1"></div>
+                <div className="pyramid-level level-2"></div>
+                <div className="pyramid-level level-3"></div>
+              </div>
+            </Link>
+          </div>
           
           {/* Desktop Menu */}
           <nav className="hidden lg:flex items-center space-x-2 xl:space-x-4">
