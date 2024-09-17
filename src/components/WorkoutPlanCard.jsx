@@ -96,7 +96,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   };
 
   return (
-    <div className={`relative border rounded-lg p-4 mb-4 shadow-sm ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} transition-transform duration-300 hover:shadow-xl`}>
+    <div className={`row relative border rounded-lg p-4 mb-4  ${darkMode ? ' text-white' : 'bg-white text-gray-800'} transition-transform duration-300 hover:shadow-xl`}>
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-xl font-semibold">{plan.name}</h3>
         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${typeColors[plan.type] || typeColors.other}`}>
