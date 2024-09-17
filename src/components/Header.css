@@ -133,7 +133,7 @@
     width: 24px; /* Width of the widest level */
     margin-left: 8px;
     position: absolute;
-    bottom: 12px;
+    bottom: auto;
     right: 85%; 
   }
   
@@ -144,7 +144,7 @@
     animation: lightUp 4s infinite;
     
   }
-  
+
   .level-1 {
     width: 8px;
     height: 4px;
@@ -162,6 +162,59 @@
     height: 4px;
     animation-delay: 0s;
   }
+
+/* @media (min-width: 640px) {
+    .level-1 {
+    width: 6px;
+    height: 4px;
+    animation-delay: 1s;
+    }
+    .level-2 {
+    width: 12px;
+    height: 4px;
+    animation-delay: 0.5s;
+    }
+    .level-3 {
+        width: 18px;
+        height: 4px;
+        animation-delay: 0s;
+    }
+}
+@media (min-width: 768px) {
+    .level-1 {
+    width: 6px;
+    height: 4px;
+    animation-delay: 1s;
+    }
+    .level-2 {
+    width: 12px;
+    height: 4px;
+    animation-delay: 0.5s;
+    }
+    .level-3 {
+        width: 18px;
+        height: 4px;
+        animation-delay: 0s;
+    }
+}
+@media (min-width: 1024px) {
+    .level-1 {
+    width: 6px;
+    height: 4px;
+    animation-delay: 1s;
+    }
+    .level-2 {
+    width: 12px;
+    height: 4px;
+    animation-delay: 0.5s;
+    }
+    .level-3 {
+        width: 18px;
+        height: 4px;
+        animation-delay: 0s;
+    }
+} */
+
   
   @keyframes lightUp {
     0%, 80%, 100% { opacity: 0; }
