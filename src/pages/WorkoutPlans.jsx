@@ -182,7 +182,7 @@ function WorkoutPlans() {
           </div>
         )}
 
-        <div className="mb-4 flex flex-wrap items-center justify-between">
+<div className="mb-4 flex flex-wrap items-center justify-between">
           <button
             onClick={() => {
               setShowForm(!showForm);
@@ -226,7 +226,7 @@ function WorkoutPlans() {
           />
           <button
             onClick={handleImportPlan}
-            className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-2 rounded text-xs sm:text-sm sm:px-3 ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={isImporting}
           >
             {isImporting ? 'Importing...' : 'Import Plan'}

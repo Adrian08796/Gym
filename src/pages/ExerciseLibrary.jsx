@@ -116,8 +116,8 @@ function ExerciseLibrary() {
         onClick={() => setShowFilters(!showFilters)}
         className="flex items-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
       >
-        <FiFilter className="mr-2" />
-        Filters
+        <FiFilter className="mr-2 md:mr-0" />
+        <span className="hidden md:inline">Filters</span>
         {showFilters ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
       </button>
       {showFilters && (
@@ -238,7 +238,7 @@ function ExerciseLibrary() {
         />
       )}
 
-      <div className="mt-8">
+      {/* <div className="mt-8">
         <h2 className="text-xl font-semibold mb-2">Filters Legend</h2>
         <div className="flex flex-wrap gap-4">
           {categories.map(category => (
@@ -252,7 +252,7 @@ function ExerciseLibrary() {
             <span>Muscle Group</span>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

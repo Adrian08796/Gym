@@ -902,7 +902,7 @@ function WorkoutTracker() {
       <h2 data-aos="fade-up" className="header text-3xl font-bold text-center mb-4">Workout <span className="headerSpan">Tracker</span></h2>
       <div
         className={`workout-tracker container mx-auto mt-8 p-4 ${
-          darkMode ? "dark-mode bg-gray-800 text-white" : "bg-white text-gray-800"
+          darkMode ? 'dark-mode bg-gray-800 text-white' : 'bg-white text-gray-800'
         }`}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -919,11 +919,11 @@ function WorkoutTracker() {
         <div className="relative mb-6">
           <button
             onClick={handleCancelWorkout}
-            className="border-solid border-2 border-bg-white absolute top-0 right-0 bg-btn-close hover:bg-btn-hover text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="border-solid border-2 border-bg-white absolute top-0 right-0 bg-btn-close hover:bg-btn-hover text-white font-bold py-1 px-2 sm:py-2 sm:px-4 rounded focus:outline-none focus:shadow-outline text-xs sm:text-base"
             disabled={isConfirmingCancel}>
-            <FiX stroke-width="6"/>
+            <FiX strokeWidth="3" className="w-4 h-4 sm:w-6 sm:h-6" />
           </button>
-          <h3 className="text-xl text-center mt-2">{currentPlan.name}</h3>
+          <h3 className="text-xl text-center mt-2 pr-12 sm:pr-0">{currentPlan.name}</h3>
         </div>
 
       <div className="mb-4 text-lg text-center">
