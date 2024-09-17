@@ -75,7 +75,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   }, {});
 
   return (
-    <form onSubmit={handleSubmit} className={`max-w-4xl mx-auto mt-8 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} shadow-md rounded px-8 pt-6 pb-8 mb-4`}>
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
       <div className="mb-4">
         <label htmlFor="planName" className="block text-sm font-bold mb-2">
           Workout Plan Name
@@ -119,7 +119,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
         />
       </div>
       <div className="mb-4">
-        <label className="block text-sm font-bold mb-2">
+        <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
           Select Exercises
         </label>
         <input
@@ -145,7 +145,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
                     />
                     <label htmlFor={`exercise-${exercise._id}`} className="text-sm">
                       {exercise.name}
-                      {exercise.importedFrom && (
+                      {exercise.importedFrom && exercise.importedFrom.username && (
                         <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
                           (Imported from {exercise.importedFrom.username})
                         </span>
@@ -164,7 +164,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
                 <div key={exerciseId} className="flex items-center justify-between mb-2">
                   <span className="text-sm">
                     {exercise.name}
-                    {exercise.importedFrom && (
+                    {exercise.importedFrom && exercise.importedFrom.username && (
                       <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
                         (Imported from {exercise.importedFrom.username})
                       </span>
