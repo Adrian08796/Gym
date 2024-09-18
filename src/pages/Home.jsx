@@ -1,9 +1,50 @@
 // src/pages/Home.jsx
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { FiActivity } from 'react-icons/fi';
+
 function Home() {
+  const [ongoingWorkout, setOngoingWorkout] = useState(null);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
+      if (storedPlan) {
+        setOngoingWorkout(JSON.parse(storedPlan));
+      }
+    }
+  }, [user]);
+
   return (
-    <div className="text-gray-900 dark:text-gray-100">
-      <h1 data-aos="fade-up" className="text-3xl font-bold text-center my-8">Welcome to Your Gym App</h1>
-      <p className="text-center">This is where your fitness journey begins!</p>
+    <div className="text-gray-900 dark:text-gray-100 p-6">
+      <h1 data-aos="fade-up" className="text-3xl font-bold text-center my-8">
+        Welcome <span className="text-emerald-500">{user ? user.username : "Guest"}</span> to Your Gym App
+      </h1>
+      <p className="text-center mb-8">This is where your fitness journey begins!</p>
+
+      {ongoingWorkout && (
+        <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-#111827 text-white mr-4">
+                <FiActivity className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Ongoing Workout</p>
+                <p className="text-2xl font-semibold text-gray-700 dark:text-gray-200">{ongoingWorkout.name}</p>
+              </div>
+            </div>
+          </div>
+          <Link 
+            to="/tracker" 
+            className="mt-4 inline-block bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 font-bold py-2 px-4 rounded transition-colors duration-300"
+          >
+            Resume Workout
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
