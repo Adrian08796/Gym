@@ -54,7 +54,7 @@ function WorkoutPlanDetails() {
       <ul className="list-disc list-inside">
         {plan.exercises.map((exercise, index) => (
           <li key={exercise._id || index}>
-            {exercise.name}
+            {index + 1}. {exercise.name}
             {exercise.importedFrom && (
               <span className="text-sm text-gray-500 ml-2">
                 (Imported from {exercise.importedFrom.username})

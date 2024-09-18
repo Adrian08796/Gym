@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   const [planName, setPlanName] = useState('');
@@ -16,7 +17,9 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   useEffect(() => {
     if (initialPlan) {
       setPlanName(initialPlan.name);
-      setSelectedExercises(initialPlan.exercises.map(exercise => exercise._id || exercise));
+      setSelectedExercises(initialPlan.exercises.map(exercise => 
+        typeof exercise === 'string' ? exercises.find(e => e._id === exercise) : exercise
+      ));
       setWorkoutType(initialPlan.type || '');
       setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
     } else {
@@ -25,15 +28,13 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       setWorkoutType('');
       setScheduledDate('');
     }
-  }, [initialPlan]);
+  }, [initialPlan, exercises]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const workoutPlan = {
       name: planName,
-      exercises: selectedExercises.map(exerciseId => 
-        typeof exerciseId === 'object' ? exerciseId._id : exerciseId
-      ),
+      exercises: selectedExercises.map(exercise => exercise._id),
       type: workoutType,
       scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null
     };
@@ -50,12 +51,24 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
     onCancel();
   };
 
-  const handleExerciseToggle = (exerciseId) => {
-    setSelectedExercises(prevSelected =>
-      prevSelected.includes(exerciseId)
-        ? prevSelected.filter(id => id !== exerciseId)
-        : [...prevSelected, exerciseId]
+  const handleExerciseToggle = (exercise) => {
+    setSelectedExercises(prev => 
+      prev.some(e => e._id === exercise._id)
+        ? prev.filter(e => e._id !== exercise._id)
+        : [...prev, exercise]
     );
+  };
+
+  const onDragEnd = (result) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const items = Array.from(selectedExercises);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setSelectedExercises(items);
   };
 
   const filteredExercises = exercises.filter(exercise =>
@@ -139,8 +152,8 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
                     <input
                       type="checkbox"
                       id={`exercise-${exercise._id}`}
-                      checked={selectedExercises.includes(exercise._id)}
-                      onChange={() => handleExerciseToggle(exercise._id)}
+                      checked={selectedExercises.some(e => e._id === exercise._id)}
+                      onChange={() => handleExerciseToggle(exercise)}
                       className="mr-2"
                     />
                     <label htmlFor={`exercise-${exercise._id}`} className="text-sm">
@@ -158,28 +171,43 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           </div>
           <div className={`border rounded p-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} overflow-y-auto h-96`}>
             <h3 className="font-bold mb-2">Selected Exercises</h3>
-            {selectedExercises.map(exerciseId => {
-              const exercise = exercises.find(e => e._id === exerciseId) || { name: 'Unknown Exercise', _id: exerciseId };
-              return (
-                <div key={exerciseId} className="flex items-center justify-between mb-2">
-                  <span className="text-sm">
-                    {exercise.name}
-                    {exercise.importedFrom && exercise.importedFrom.username && (
-                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                        (Imported from {exercise.importedFrom.username})
-                      </span>
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleExerciseToggle(exerciseId)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    Remove
-                  </button>
-                </div>
-              );
-            })}
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="selected-exercises">
+                {(provided) => (
+                  <ul {...provided.droppableProps} ref={provided.innerRef}>
+                    {selectedExercises.map((exercise, index) => (
+                      <Draggable key={exercise._id} draggableId={exercise._id} index={index}>
+                        {(provided) => (
+                          <li
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className="flex items-center justify-between mb-2 bg-gray-200 dark:bg-gray-600 p-2 rounded"
+                          >
+                            <span className="text-sm">
+                              {exercise.name}
+                              {exercise.importedFrom && exercise.importedFrom.username && (
+                                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                  (Imported from {exercise.importedFrom.username})
+                                </span>
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleExerciseToggle(exercise)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </ul>
+                )}
+              </Droppable>
+            </DragDropContext>
           </div>
         </div>
       </div>
