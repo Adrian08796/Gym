@@ -1,6 +1,7 @@
 // src/pages/ExerciseLibrary.jsx
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
 import WorkoutPlanSelector from '../components/WorkoutPlanSelector';
@@ -33,6 +34,7 @@ function ExerciseLibrary() {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
 
   useEffect(() => {
     console.log('FETCHING EXERCISES::::');
@@ -110,6 +112,22 @@ function ExerciseLibrary() {
     );
   };
 
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const exerciseId = result.draggableId;
+    const newPosition = result.destination.index;
+
+    if (result.source.droppableId === 'exerciseLibrary' && selectedPlanId) {
+      // When dragging from exercise library to a plan
+      addExerciseToPlan(selectedPlanId, exerciseId, newPosition);
+    } else if (result.source.droppableId === result.destination.droppableId) {
+      // When reordering within a plan
+      const planId = result.source.droppableId;
+      reorderExercisesInPlan(planId, exerciseId, newPosition);
+    }
+  };
+
   const FilterDropdown = () => (
     <div className="relative">
       <button
@@ -162,98 +180,106 @@ function ExerciseLibrary() {
   );
 
   return (
-    <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
-      <h1 data-aos="fade-up" className="header text-center text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise <span className='headerSpan'>Library</span></h1>
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
+        <h1 data-aos="fade-up" className="header text-center text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise <span className='headerSpan'>Library</span></h1>
 
-      <div className="mb-6 lg:mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex-grow">
-          <input
-            type="text"
-            placeholder="Search exercises..."
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-            className="w-full px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
-          />
-        </div>
-        <FilterDropdown />
-      </div>
-
-      <AddExerciseForm 
-        onSave={handleSave} 
-        initialExercise={editingExercise}
-        onCancel={handleCancelEdit}
-      />
-
-      {/* Mobile view */}
-      <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4 hide-scrollbar">
-        <div className="flex space-x-4 snap-x snap-mandatory w-full pt-4">
-          {filteredExercises.map((exercise) => (
-            <div key={exercise._id} className="snap-center flex-shrink-0 w-[calc(100%-2rem)] sm:w-80 pr-4">
-              <div className="h-full row">
-                <ExerciseItem 
-                  exercise={exercise}
-                  onClick={() => setSelectedExercise(exercise)}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onAddToPlan={handleAddToPlan}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Desktop view (grid layout) */}
-      <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredExercises.map((exercise) => (
-          <div key={exercise._id} className="h-full row">
-            <ExerciseItem 
-              exercise={exercise}
-              onClick={() => setSelectedExercise(exercise)}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onAddToPlan={handleAddToPlan}
+        <div className="mb-6 lg:mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex-grow">
+            <input
+              type="text"
+              placeholder="Search exercises..."
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              className="w-full px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
             />
           </div>
-        ))}
-      </div>
+          <FilterDropdown />
+        </div>
 
-      {selectedExercise && (
-        <ExerciseModal
-          exercise={selectedExercise}
-          onClose={() => setSelectedExercise(null)}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onAddToPlan={handleAddToPlan}
+        <AddExerciseForm 
+          onSave={handleSave} 
+          initialExercise={editingExercise}
+          onCancel={handleCancelEdit}
         />
-      )}
 
-      {showWorkoutPlanSelector && (
         <WorkoutPlanSelector
-          onSelect={handleSelectWorkoutPlan}
-          onClose={() => {
-            setShowWorkoutPlanSelector(false);
-            setExerciseToAddToPlan(null);
-          }}
+          onSelect={(plan) => setSelectedPlanId(plan._id)}
+          selectedPlanId={selectedPlanId}
         />
-      )}
 
-      {/* <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-2">Filters Legend</h2>
-        <div className="flex flex-wrap gap-4">
-          {categories.map(category => (
-            <div key={category} className="flex items-center">
-              <span className={`w-4 h-4 rounded-full mr-2 ${categoryColors[category]}`}></span>
-              <span>{category}</span>
+        <Droppable droppableId="exerciseLibrary">
+          {(provided) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            >
+              {filteredExercises.map((exercise, index) => (
+                <Draggable key={exercise._id} draggableId={exercise._id} index={index}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                    >
+                      <ExerciseItem 
+                        exercise={exercise}
+                        onClick={() => setSelectedExercise(exercise)}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onAddToPlan={handleAddToPlan}
+                        isDragging={snapshot.isDragging}
+                      />
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
             </div>
-          ))}
-          <div className="flex items-center">
-            <span className="w-4 h-4 rounded-full mr-2 bg-purple-100 dark:bg-purple-900"></span>
-            <span>Muscle Group</span>
+          )}
+        </Droppable>
+
+        {/* Mobile view */}
+        <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4 hide-scrollbar">
+          <div className="flex space-x-4 snap-x snap-mandatory w-full pt-4">
+            {filteredExercises.map((exercise) => (
+              <div key={exercise._id} className="snap-center flex-shrink-0 w-[calc(100%-2rem)] sm:w-80 pr-4">
+                <div className="h-full row">
+                  <ExerciseItem 
+                    exercise={exercise}
+                    onClick={() => setSelectedExercise(exercise)}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onAddToPlan={handleAddToPlan}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div> */}
-    </div>
+
+        {selectedExercise && (
+          <ExerciseModal
+            exercise={selectedExercise}
+            onClose={() => setSelectedExercise(null)}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onAddToPlan={handleAddToPlan}
+          />
+        )}
+
+        {showWorkoutPlanSelector && (
+          <WorkoutPlanSelector
+            onSelect={handleSelectWorkoutPlan}
+            onClose={() => {
+              setShowWorkoutPlanSelector(false);
+              setExerciseToAddToPlan(null);
+            }}
+          />
+        )}
+      </div>
+    </DragDropContext>
   );
 }
 

@@ -434,32 +434,32 @@ export function GymProvider({ children }) {
     }
   };
 
-  const addExerciseToPlan = async (planId, exerciseId) => {
+  const addExerciseToPlan = async (planId, exerciseId, position) => {
     if (!planId || !exerciseId) {
       throw new Error("Plan ID and Exercise ID are required");
     }
-    console.log(`Attempting to add exercise ${exerciseId} to plan ${planId}`);
-
+    console.log(`Attempting to add exercise ${exerciseId} to plan ${planId} at position ${position}`);
+  
     const plan = workoutPlans.find(p => p._id === planId);
     if (!plan) {
       console.error("Plan not found");
       addNotification("Plan not found", "error");
       return { success: false, error: "Plan not found" };
     }
-
+  
     if (plan.exercises.some(e => e._id === exerciseId)) {
       console.log("Exercise is already in the workout plan");
       addNotification("This exercise is already in the workout plan", "info");
       return { success: false, alreadyInPlan: true };
     }
-
+  
     try {
       const response = await axiosInstance.post(
         `${API_URL}/workoutplans/${planId}/exercises`,
-        { exerciseId },
+        { exerciseId, position },
         getAuthConfig()
       );
-
+  
       console.log("Server response:", response.data);
       setWorkoutPlans(prevPlans =>
         prevPlans.map(p => (p._id === planId ? response.data : p))
@@ -470,6 +470,32 @@ export function GymProvider({ children }) {
       console.error("Error adding exercise to plan:", error);
       addNotification(
         `Failed to add exercise to plan: ${
+          error.response ? error.response.data.message : error.message
+        }`,
+        "error"
+      );
+      return { success: false, error };
+    }
+  };
+
+  const reorderExercisesInPlan = async (planId, exerciseId, newPosition) => {
+    try {
+      const response = await axiosInstance.put(
+        `${API_URL}/workoutplans/${planId}/reorder`,
+        { exerciseId, newPosition },
+        getAuthConfig()
+      );
+  
+      console.log("Server response:", response.data);
+      setWorkoutPlans(prevPlans =>
+        prevPlans.map(p => (p._id === planId ? response.data : p))
+      );
+      addNotification("Exercises reordered successfully", "success");
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error("Error reordering exercises in plan:", error);
+      addNotification(
+        `Failed to reorder exercises: ${
           error.response ? error.response.data.message : error.message
         }`,
         "error"
@@ -746,6 +772,7 @@ export function GymProvider({ children }) {
       fetchWorkoutHistory,
       fetchWorkoutPlans,
       addExerciseToPlan,
+      reorderExercisesInPlan,
       saveProgress,
       clearWorkout,
       loadProgress,

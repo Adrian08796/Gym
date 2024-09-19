@@ -1,9 +1,10 @@
+// src/components/ExerciseItem.jsx
 import React, { useState } from 'react';
-import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser, FiMove } from 'react-icons/fi';
 import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
 import '../components/ExerciseItem.css';
 
-function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
+function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDragging }) {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const handleAction = (action, e) => {
@@ -31,7 +32,6 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
     Cardio: <PiHeartbeatBold size={20} />,
     Flexibility: null // You can add an icon for Flexibility if desired
   };
-
 
   const buttonStyles = {
     base: 'text-xs font-semibold p-2 rounded transition-all duration-300 flex items-center justify-center',
@@ -65,9 +65,12 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
 
   return (
     <div 
-      className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-pointer h-full flex flex-col"
+      className={`group relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-move h-full flex flex-col ${isDragging ? 'opacity-50' : ''}`}
       onClick={() => onClick(exercise)}
     >
+      <div className="absolute top-2 left-2 w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <FiMove className="text-gray-600 dark:text-gray-300" />
+      </div>
       <div className="relative h-48 overflow-hidden">
         <img 
           src={exercise.imageUrl} 
@@ -85,7 +88,7 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
           <FiTarget className="mr-1" />
           <span>{Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}</span>
         </div>
-        {exercise.importedFrom && exercise.importedFrom.username && (
+        {isImported && (
           <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
             <FiUser className="mr-1" />
             <span>Imported from {exercise.importedFrom.username}</span>

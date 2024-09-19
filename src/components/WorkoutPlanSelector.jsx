@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 
-function WorkoutPlanSelector({ onSelect, onClose }) {
+function WorkoutPlanSelector({ onSelect, onClose, selectedPlanId }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const { fetchWorkoutPlans } = useGymContext();
@@ -23,9 +23,8 @@ function WorkoutPlanSelector({ onSelect, onClose }) {
     getWorkoutPlans();
   }, [fetchWorkoutPlans]);
 
-  const handleSelect = async (plan) => {
-    await onSelect(plan);
-    onClose();
+  const handleSelect = (plan) => {
+    onSelect(plan);
   };
 
   if (isLoading) {
@@ -33,30 +32,24 @@ function WorkoutPlanSelector({ onSelect, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-[60]">
-      <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-xl max-w-md w-full m-4">
-        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Select Workout Plan</h2>
-        {workoutPlans.length === 0 ? (
-          <p className="text-gray-700 dark:text-gray-300">No workout plans available. Create a plan first.</p>
-        ) : (
-          workoutPlans.map((plan) => (
-            <button
-              key={plan._id}
-              onClick={() => handleSelect(plan)}
-              className="block w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mb-2 text-gray-800 dark:text-gray-200"
-            >
-              <span>{plan.name}</span>
-              <span className="text-xs text-gray-500 ml-2">({plan.exercises.length} exercises)</span>
-            </button>
-          ))
-        )}
-        <button
-          onClick={onClose}
-          className="mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Cancel
-        </button>
-      </div>
+    <div className="mb-4">
+      <select
+        value={selectedPlanId || ''}
+        onChange={(e) => handleSelect(workoutPlans.find(plan => plan._id === e.target.value))}
+        className="w-full p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800"
+      >
+        <option value="">Select a workout plan for drag and drop</option>
+        {workoutPlans.map((plan) => (
+          <option key={plan._id} value={plan._id}>
+            {plan.name} ({plan.exercises.length} exercises)
+          </option>
+        ))}
+      </select>
+      {selectedPlanId && (
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          Drag exercises to add them to the selected plan.
+        </p>
+      )}
     </div>
   );
 }
