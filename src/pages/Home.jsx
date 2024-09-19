@@ -9,13 +9,30 @@ function Home() {
   const { user } = useAuth();
 
   useEffect(() => {
+  const fetchWorkoutPlan = async () => {
     if (user) {
       const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
       if (storedPlan) {
         setOngoingWorkout(JSON.parse(storedPlan));
+      } else {
+        try {
+          const response = await fetch(`/api/workoutPlan/${user.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            setOngoingWorkout(data);
+            localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(data));
+          } else {
+            console.error('Failed to fetch workout plan from server');
+          }
+        } catch (error) {
+          console.error('Error fetching workout plan:', error);
+        }
       }
     }
-  }, [user]);
+  };
+
+  fetchWorkoutPlan();
+}, [user]);
 
   return (
     <div className="text-gray-900 dark:text-gray-100 p-6">

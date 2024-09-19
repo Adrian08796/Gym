@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 
-function WorkoutPlanSelector({ onSelect, onClose, selectedPlanId }) {
+function WorkoutPlanSelector({ onSelect, selectedPlanId, isDragging }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const { fetchWorkoutPlans } = useGymContext();
@@ -32,11 +32,11 @@ function WorkoutPlanSelector({ onSelect, onClose, selectedPlanId }) {
   }
 
   return (
-    <div className="mb-4">
+    <div className={`mb-4 ${isDragging ? 'pointer-events-auto' : ''}`}>
       <select
         value={selectedPlanId || ''}
-        onChange={(e) => handleSelect(workoutPlans.find(plan => plan._id === e.target.value))}
-        className="w-full p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800"
+        onChange={(e) => onSelect(workoutPlans.find(plan => plan._id === e.target.value))}
+        className={`w-full p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800`}
       >
         <option value="">Select a workout plan for drag and drop</option>
         {workoutPlans.map((plan) => (
@@ -47,7 +47,7 @@ function WorkoutPlanSelector({ onSelect, onClose, selectedPlanId }) {
       </select>
       {selectedPlanId && (
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Drag exercises to add them to the selected plan.
+          Drag exercises here to add them to the selected plan.
         </p>
       )}
     </div>

@@ -23,7 +23,7 @@ const categoryColors = {
 };
 
 function ExerciseLibrary() {
-  const { exercises, updateExercise, deleteExercise, addExerciseToPlan, fetchExercises } = useGymContext();
+  const { exercises, updateExercise, deleteExercise, addExerciseToPlan, reorderExercisesInPlan, fetchExercises } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const [editingExercise, setEditingExercise] = useState(null);
@@ -35,6 +35,7 @@ function ExerciseLibrary() {
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     console.log('FETCHING EXERCISES::::');
@@ -65,6 +66,10 @@ function ExerciseLibrary() {
   const handleAddToPlan = (exercise) => {
     setExerciseToAddToPlan(exercise);
     setShowWorkoutPlanSelector(true);
+  };
+
+  const handleSelectPlan = (plan) => {
+    setSelectedPlanId(plan._id);
   };
 
   const handleSave = (savedExercise) => {
@@ -112,19 +117,24 @@ function ExerciseLibrary() {
     );
   };
 
+  const onDragStart = () => {
+    setIsDragging(true);
+  };
+
   const onDragEnd = (result) => {
-    if (!result.destination) return;
-
+    setIsDragging(false);
+    const { source, destination } = result;
+  
+    if (!destination) return;
+  
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+  
     const exerciseId = result.draggableId;
-    const newPosition = result.destination.index;
-
-    if (result.source.droppableId === 'exerciseLibrary' && selectedPlanId) {
-      // When dragging from exercise library to a plan
-      addExerciseToPlan(selectedPlanId, exerciseId, newPosition);
-    } else if (result.source.droppableId === result.destination.droppableId) {
-      // When reordering within a plan
-      const planId = result.source.droppableId;
-      reorderExercisesInPlan(planId, exerciseId, newPosition);
+  
+    if (destination.droppableId === 'workoutPlanDropZone' && selectedPlanId) {
+      addExerciseToPlan(selectedPlanId, exerciseId, destination.index);
+    } else if (source.droppableId === 'exerciseLibrary' && destination.droppableId === 'exerciseLibrary') {
+      console.log('Reordering exercises:', source.index, destination.index);
     }
   };
 
@@ -180,7 +190,7 @@ function ExerciseLibrary() {
   );
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
+    <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
         <h1 data-aos="fade-up" className="header text-center text-3xl lg:text-4xl font-bold mb-6 lg:mb-8">Exercise <span className='headerSpan'>Library</span></h1>
 
@@ -203,10 +213,22 @@ function ExerciseLibrary() {
           onCancel={handleCancelEdit}
         />
 
-        <WorkoutPlanSelector
-          onSelect={(plan) => setSelectedPlanId(plan._id)}
-          selectedPlanId={selectedPlanId}
-        />
+<Droppable droppableId="workoutPlanDropZone">
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className={`workout-plan-drop-zone ${isDragging ? 'active' : ''}`}
+            >
+              <WorkoutPlanSelector
+                onSelect={handleSelectPlan}
+                selectedPlanId={selectedPlanId}
+                isDragging={isDragging}
+              />
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
 
         <Droppable droppableId="exerciseLibrary">
           {(provided) => (
