@@ -213,7 +213,7 @@ function ExerciseLibrary() {
           onCancel={handleCancelEdit}
         />
 
-<Droppable droppableId="workoutPlanDropZone">
+        <Droppable droppableId="workoutPlanDropZone">
           {(provided, snapshot) => (
             <div
               ref={provided.innerRef}
@@ -230,56 +230,40 @@ function ExerciseLibrary() {
           )}
         </Droppable>
 
-        <Droppable droppableId="exerciseLibrary">
+        <Droppable droppableId="exerciseLibrary" direction="horizontal">
           {(provided) => (
             <div
               {...provided.droppableProps}
               ref={provided.innerRef}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              className="exercise-library-container overflow-x-auto pb-4"
             >
-              {filteredExercises.map((exercise, index) => (
-                <Draggable key={exercise._id} draggableId={exercise._id} index={index}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                    >
-                      <ExerciseItem 
-                        exercise={exercise}
-                        onClick={() => setSelectedExercise(exercise)}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onAddToPlan={handleAddToPlan}
-                        isDragging={snapshot.isDragging}
-                      />
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
+              <div className="exercise-library-inner flex space-x-4 snap-x snap-mandatory w-full pt-4 pl-4">
+                {filteredExercises.map((exercise, index) => (
+                  <Draggable key={exercise._id} draggableId={exercise._id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        className="snap-center flex-shrink-0 w-[calc(100%-2rem)] sm:w-80"
+                      >
+                        <ExerciseItem 
+                          exercise={exercise}
+                          onClick={() => setSelectedExercise(exercise)}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onAddToPlan={handleAddToPlan}
+                          isDragging={snapshot.isDragging}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
             </div>
           )}
         </Droppable>
-
-        {/* Mobile view */}
-        <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4 hide-scrollbar">
-          <div className="flex space-x-4 snap-x snap-mandatory w-full pt-4">
-            {filteredExercises.map((exercise) => (
-              <div key={exercise._id} className="snap-center flex-shrink-0 w-[calc(100%-2rem)] sm:w-80 pr-4">
-                <div className="h-full row">
-                  <ExerciseItem 
-                    exercise={exercise}
-                    onClick={() => setSelectedExercise(exercise)}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onAddToPlan={handleAddToPlan}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {selectedExercise && (
           <ExerciseModal

@@ -27,14 +27,58 @@
     pointer-events: none;
   }
 
-/* Hide scrollbar for Chrome, Safari and Opera */
-
-.hide-scrollbar::-webkit-scrollbar {
-    display: none;
+  .exercise-library-container {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
   
-  /* Hide scrollbar for IE, Edge and Firefox */
-  .hide-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+  .exercise-library-inner {
+    padding-left: 1rem;
+  }
+  
+  /* Hide scrollbar for mobile devices */
+  @media (max-width: 640px) {
+    .exercise-library-container {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  
+    .exercise-library-container::-webkit-scrollbar {
+      display: none;
+    }
+  }
+  
+  /* Show scrollbar for larger screens */
+  @media (min-width: 641px) {
+    .exercise-library-container {
+      overflow-x: auto;
+    }
+  
+    .exercise-library-container::-webkit-scrollbar {
+      height: 8px;
+    }
+  
+    .exercise-library-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+  
+    .exercise-library-container::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+  
+    .exercise-library-container::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+  }
+  
+  /* Add styles for horizontal scroll snap */
+  .snap-x {
+    scroll-snap-type: x mandatory;
+  }
+  
+  .snap-center {
+    scroll-snap-align: center;
   }
