@@ -624,6 +624,7 @@ export function GymProvider({ children }) {
       return null;
     } catch (error) {
       console.error('Error loading progress from server:', error);
+      addNotification('Failed to load workout progress from server', 'error');
       // If there's an error fetching from the server, try to load from localStorage
       const localProgress = localStorage.getItem(`workoutProgress_${user.id}`);
       if (localProgress) {
@@ -639,7 +640,7 @@ export function GymProvider({ children }) {
       }
       return null;
     }
-  }, [user, API_URL, getAuthConfig, getExerciseById]);
+  }, [user, API_URL, getAuthConfig, getExerciseById, addNotification]);
 
   const clearWorkout = useCallback(async () => {
     if (!user) return;
