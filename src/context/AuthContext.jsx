@@ -45,6 +45,17 @@ export function AuthProvider({ children }) {
   }, INACTIVITY_TIMEOUT);
 }, [logout]);
 
+const updateExperienceLevel = useCallback(async (level) => {
+  try {
+    const response = await axiosInstance.put('/api/users/experience-level', { experienceLevel: level });
+    setUser(prevUser => ({ ...prevUser, experienceLevel: response.data.experienceLevel }));
+    return response.data;
+  } catch (error) {
+    console.error('Error updating experience level:', error);
+    throw error;
+  }
+}, []);
+
   const register = async (username, email, password) => {
     try {
       console.log('Attempting to register user:', username);
@@ -227,7 +238,8 @@ export function AuthProvider({ children }) {
     refreshToken,
     updateUser,
     changePassword,
-    updateActivity
+    updateActivity,
+    updateExperienceLevel,
   };
 
   return (

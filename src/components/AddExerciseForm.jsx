@@ -21,6 +21,12 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const { addExercise, updateExercise } = useGymContext();
   const { addNotification } = useNotification();
 
+  const [recommendations, setRecommendations] = useState({
+    beginner: { weight: 0, reps: 10, sets: 3 },
+    intermediate: { weight: 0, reps: 10, sets: 3 },
+    advanced: { weight: 0, reps: 10, sets: 3 }
+  });
+
   useEffect(() => {
     if (initialExercise) {
       setName(initialExercise.name);
@@ -29,6 +35,11 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       setImageUrl(initialExercise.imageUrl);
       setCategory(initialExercise.category || '');
       setIsExpanded(true);
+      setRecommendations(initialExercise.recommendations || {
+        beginner: { weight: 0, reps: 10, sets: 3 },
+        intermediate: { weight: 0, reps: 10, sets: 3 },
+        advanced: { weight: 0, reps: 10, sets: 3 }
+      });
     } else {
       resetForm();
     }
@@ -40,6 +51,11 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     setTarget([]);
     setImageUrl('');
     setCategory('');
+    setRecommendations({
+      beginner: { weight: 0, reps: 10, sets: 3 },
+      intermediate: { weight: 0, reps: 10, sets: 3 },
+      advanced: { weight: 0, reps: 10, sets: 3 }
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -69,7 +85,8 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       imageUrl, 
       category, 
       exerciseType, 
-      measurementType 
+      measurementType,
+      recommendations
     };
 
     try {
@@ -89,6 +106,16 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleRecommendationChange = (level, field, value) => {
+    setRecommendations(prev => ({
+      ...prev,
+      [level]: {
+        ...prev[level],
+        [field]: value
+      }
+    }));
   };
 
   const handleTargetChange = (group) => {
@@ -118,7 +145,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     <div className="mb-8">
       <button
         onClick={toggleForm}
-        className="mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
+        className="mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-2 px-4 rounded"
       >
         {isExpanded ? 'Hide Form' : 'Add New Exercise'}
       </button>
@@ -217,17 +244,69 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             />
           </div>
 
+          {/* Recommendations for Strength exercises */}
+      {category === 'Strength' && (
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Recommendations</h3>
+          {['beginner', 'intermediate', 'advanced'].map(level => (
+            <div key={level} className="mb-4">
+              <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {level.charAt(0).toUpperCase() + level.slice(1)}
+              </h4>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-weight`}>
+                    Weight (kg)
+                  </label>
+                  <input
+                    id={`${level}-weight`}
+                    type="number"
+                    value={recommendations[level].weight}
+                    onChange={(e) => handleRecommendationChange(level, 'weight', Number(e.target.value))}
+                    className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-reps`}>
+                    Reps
+                  </label>
+                  <input
+                    id={`${level}-reps`}
+                    type="number"
+                    value={recommendations[level].reps}
+                    onChange={(e) => handleRecommendationChange(level, 'reps', Number(e.target.value))}
+                    className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-sets`}>
+                    Sets
+                  </label>
+                  <input
+                    id={`${level}-sets`}
+                    type="number"
+                    value={recommendations[level].sets}
+                    onChange={(e) => handleRecommendationChange(level, 'sets', Number(e.target.value))}
+                    className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
           {/* Submit and Cancel buttons */}
           <div className="flex items-center justify-between">
             <button
-              className={`mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-2 px-4 rounded ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               type="submit"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Saving...' : (initialExercise ? 'Update Exercise' : 'Add Exercise')}
             </button>
             <button
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded focus:outline-none focus:shadow-outline"
+              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
               type="button"
               onClick={handleCancel}
             >

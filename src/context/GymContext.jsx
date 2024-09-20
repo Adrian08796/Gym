@@ -746,6 +746,7 @@ export function GymProvider({ children }) {
       fetchWorkoutHistory,
       fetchWorkoutPlans,
       addExerciseToPlan,
+      reorderExercisesInPlan,
       saveProgress,
       clearWorkout,
       loadProgress,
@@ -781,6 +782,7 @@ export function GymProvider({ children }) {
       getLastWorkoutForPlan,
       getExerciseById,
       shareWorkoutPlan,
+      fetchExercises,
       importWorkoutPlan,
     ]
   );

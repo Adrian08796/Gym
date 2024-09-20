@@ -2,10 +2,12 @@
 import React, { useState } from 'react';
 import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser, FiMove } from 'react-icons/fi';
 import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
+import { useAuth } from '../context/AuthContext';
 import '../components/ExerciseItem.css';
 
 function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDragging }) {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const { user } = useAuth(); // Add this line to get the user object
 
   const handleAction = (action, e) => {
     e.stopPropagation();
@@ -63,6 +65,10 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDrag
 
   const isImported = exercise.importedFrom && exercise.importedFrom.username;
 
+  // Get the user's experience level or set it to 'beginner' if not available
+  const experienceLevel = user?.experienceLevel || 'beginner';
+  const recommendations = exercise.recommendations?.[experienceLevel] || {};
+
   return (
     <div 
       className={`row group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-move h-full flex flex-col ${isDragging ? 'opacity-50' : ''}`}
@@ -88,6 +94,14 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDrag
           <FiTarget className="mr-1" />
           <span>{Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}</span>
         </div>
+        {exercise.category === 'Strength' && (
+          <div className="text-gray-600 dark:text-gray-400 text-xs">
+            <p>Recommended for {experienceLevel}:</p>
+            <p>Weight: {recommendations.weight} kg</p>
+            <p>Reps: {recommendations.reps}</p>
+            <p>Sets: {recommendations.sets}</p>
+          </div>
+        )}
         {isImported && (
           <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
             <FiUser className="mr-1" />
