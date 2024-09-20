@@ -2,37 +2,49 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useGymContext } from '../context/GymContext';
 import { FiActivity } from 'react-icons/fi';
 
 function Home() {
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
   const { user } = useAuth();
+  const { loadProgress } = useGymContext();
 
   useEffect(() => {
-  const fetchWorkoutPlan = async () => {
-    if (user) {
-      const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
-      if (storedPlan) {
-        setOngoingWorkout(JSON.parse(storedPlan));
-      } else {
+    const fetchWorkoutPlan = async () => {
+      if (user) {
         try {
-          const response = await fetch(`/api/workoutPlan/${user.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            setOngoingWorkout(data);
-            localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(data));
+          // First, try to load progress from the server
+          const serverProgress = await loadProgress();
+          
+          if (serverProgress && serverProgress.plan) {
+            setOngoingWorkout(serverProgress.plan);
+            localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(serverProgress.plan));
           } else {
-            console.error('Failed to fetch workout plan from server');
+            // If no server data, check localStorage
+            const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
+            if (storedPlan) {
+              setOngoingWorkout(JSON.parse(storedPlan));
+            } else {
+              // If no localStorage data, make a separate API call
+              const response = await fetch(`/api/workoutPlan/${user.id}`);
+              if (response.ok) {
+                const data = await response.json();
+                setOngoingWorkout(data);
+                localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(data));
+              } else {
+                console.error('Failed to fetch workout plan from server');
+              }
+            }
           }
         } catch (error) {
           console.error('Error fetching workout plan:', error);
         }
       }
-    }
-  };
+    };
 
-  fetchWorkoutPlan();
-}, [user]);
+    fetchWorkoutPlan();
+  }, [user, loadProgress]);
 
   return (
     <div className="text-gray-900 dark:text-gray-100 p-6">
