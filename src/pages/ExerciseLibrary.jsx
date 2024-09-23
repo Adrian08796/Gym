@@ -36,6 +36,7 @@ function ExerciseLibrary() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  
 
   useEffect(() => {
     console.log('FETCHING EXERCISES::::');
@@ -53,6 +54,10 @@ function ExerciseLibrary() {
     );
   }, [exercises, filterText, selectedCategories, selectedMuscleGroups]);
 
+  const handleView = (exercise) => {
+    setSelectedExercise(exercise);
+  };
+
   const handleEdit = (exercise) => {
     setEditingExercise(exercise);
     setSelectedExercise(null);
@@ -63,9 +68,25 @@ function ExerciseLibrary() {
     setSelectedExercise(null);
   };
 
-  const handleAddToPlan = (exercise) => {
-    setExerciseToAddToPlan(exercise);
-    setShowWorkoutPlanSelector(true);
+  const handleAddToPlan = async (exercise) => {
+    if (!selectedPlanId) {
+      addNotification('Please select a workout plan first', 'warning');
+      return;
+    }
+
+    try {
+      const result = await addExerciseToPlan(selectedPlanId, exercise._id);
+      if (result.success) {
+        addNotification(`Exercise added to plan`, 'success');
+      } else if (result.alreadyInPlan) {
+        // The notification is already handled in the GymContext
+      } else {
+        // The error notification is already handled in the GymContext
+      }
+    } catch (error) {
+      console.error('Error adding exercise to plan:', error);
+      addNotification('Failed to add exercise to plan', 'error');
+    }
   };
 
   const handleSelectPlan = (plan) => {
@@ -135,6 +156,7 @@ function ExerciseLibrary() {
       addExerciseToPlan(selectedPlanId, exerciseId, destination.index);
     } else if (source.droppableId === 'exerciseLibrary' && destination.droppableId === 'exerciseLibrary') {
       console.log('Reordering exercises:', source.index, destination.index);
+      // Implement reordering logic here if needed
     }
   };
 
@@ -249,10 +271,10 @@ function ExerciseLibrary() {
                       >
                         <ExerciseItem 
                           exercise={exercise}
-                          onClick={() => setSelectedExercise(exercise)}
+                          onView={() => setSelectedExercise(exercise)}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
-                          onAddToPlan={handleAddToPlan}
+                          onAddToPlan={() => handleAddToPlan(exercise)}
                           isDragging={snapshot.isDragging}
                         />
                       </div>
@@ -264,6 +286,16 @@ function ExerciseLibrary() {
             </div>
           )}
         </Droppable>
+
+        {selectedExercise && (
+          <ExerciseModal
+            exercise={selectedExercise}
+            onClose={() => setSelectedExercise(null)}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onAddToPlan={() => handleAddToPlan(selectedExercise)}
+          />
+        )}
 
         {selectedExercise && (
           <ExerciseModal

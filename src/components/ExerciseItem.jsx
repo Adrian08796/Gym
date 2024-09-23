@@ -1,11 +1,11 @@
 // src/components/ExerciseItem.jsx
 import React, { useState } from 'react';
-import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser, FiMove } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser, FiMove, FiEye } from 'react-icons/fi';
 import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
 import { useAuth } from '../context/AuthContext';
 import '../components/ExerciseItem.css';
 
-function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDragging }) {
+function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragging }) {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const { user } = useAuth();
 
@@ -39,7 +39,8 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDrag
     base: 'text-xs font-semibold p-2 rounded transition-all duration-300 flex items-center justify-center',
     edit: 'bg-emerald-500 hover:bg-emerald-600 text-white',
     delete: 'bg-emerald-500 hover:bg-emerald-600 text-white',
-    addToPlan: 'bg-emerald-500 hover:bg-emerald-600 text-white'
+    addToPlan: 'bg-emerald-500 hover:bg-emerald-600 text-white',
+    view: 'bg-emerald-500 hover:bg-emerald-600 text-white'
   };
 
   const ActionButton = ({ action, style, icon }) => (
@@ -71,7 +72,6 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDrag
   return (
     <div 
       className={`row group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-move h-full flex flex-col ${isDragging ? 'opacity-50' : ''}`}
-      onClick={() => onClick(exercise)}
     >
       <div className="absolute top-2 left-2 w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         <FiMove className="text-gray-600 dark:text-gray-300" />
@@ -110,6 +110,7 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDrag
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-2 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <div className="flex justify-end space-x-2">
+          <ActionButton action={onView} style={buttonStyles.view} icon={<FiEye />} />
           <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} />
           <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} />
           <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} />

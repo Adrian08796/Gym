@@ -23,8 +23,10 @@ function WorkoutPlanSelector({ onSelect, selectedPlanId, isDragging }) {
     getWorkoutPlans();
   }, [fetchWorkoutPlans]);
 
-  const handleSelect = (plan) => {
-    onSelect(plan);
+  const handleSelect = (e) => {
+    const planId = e.target.value;
+    const selectedPlan = workoutPlans.find(plan => plan._id === planId);
+    onSelect(selectedPlan);
   };
 
   if (isLoading) {
@@ -35,7 +37,7 @@ function WorkoutPlanSelector({ onSelect, selectedPlanId, isDragging }) {
     <div className={`mb-4 ${isDragging ? 'pointer-events-auto' : ''}`}>
       <select
         value={selectedPlanId || ''}
-        onChange={(e) => onSelect(workoutPlans.find(plan => plan._id === e.target.value))}
+        onChange={handleSelect}
         className={`w-full p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800`}
       >
         <option value="">Select a workout plan for drag and drop</option>
@@ -47,7 +49,7 @@ function WorkoutPlanSelector({ onSelect, selectedPlanId, isDragging }) {
       </select>
       {selectedPlanId && (
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Drag exercises here to add them to the selected plan.
+          Drag exercises here or use the "+" button to add them to the selected plan.
         </p>
       )}
     </div>
