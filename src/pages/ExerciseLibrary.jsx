@@ -83,15 +83,10 @@ function ExerciseLibrary() {
     }
 
     try {
-      const result = await addExerciseToPlan(selectedPlan._id, exercise._id);
-      if (result.success) {
+      const { success, updatedPlan } = await addExerciseToPlan(selectedPlan._id, exercise._id);
+      if (success) {
         addNotification(`Exercise added to plan`, 'success');
-        // Refresh the selected plan to update the exercise list
-        handleSelectPlan(selectedPlan);
-      } else if (result.alreadyInPlan) {
-        // The notification is already handled in the GymContext
-      } else {
-        // The error notification is already handled in the GymContext
+        setSelectedPlan(updatedPlan);
       }
     } catch (error) {
       console.error('Error adding exercise to plan:', error);
@@ -343,12 +338,11 @@ function ExerciseLibrary() {
 
         {showWorkoutPlanSelector && (
           <WorkoutPlanSelector
-            onSelect={handleSelectWorkoutPlan}
-            onClose={() => {
-              setShowWorkoutPlanSelector(false);
-              setExerciseToAddToPlan(null);
-            }}
-          />
+          onSelect={handleSelectPlan}
+          selectedPlan={selectedPlan}
+          isDragging={isDragging}
+          onRemoveExercise={handleRemoveFromPlan}
+        />
         )}
       </div>
     </DragDropContext>

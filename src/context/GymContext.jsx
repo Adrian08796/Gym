@@ -475,46 +475,25 @@ export function GymProvider({ children }) {
     }
   };
 
-  const addExerciseToPlan = async (planId, exerciseId, position) => {
-    if (!planId || !exerciseId) {
-      throw new Error("Plan ID and Exercise ID are required");
-    }
-    console.log(`Attempting to add exercise ${exerciseId} to plan ${planId} at position ${position}`);
-  
-    const plan = workoutPlans.find(p => p._id === planId);
-    if (!plan) {
-      console.error("Plan not found");
-      addNotification("Plan not found", "error");
-      return { success: false, error: "Plan not found" };
-    }
-  
-    if (plan.exercises.some(e => e._id === exerciseId)) {
-      console.log("Exercise is already in the workout plan");
-      addNotification("This exercise is already in the workout plan", "info");
-      return { success: false, alreadyInPlan: true };
-    }
-  
+  const addExerciseToPlan = async (planId, exerciseId) => {
     try {
       const response = await axiosInstance.post(
         `${API_URL}/workoutplans/${planId}/exercises`,
-        { exerciseId, position },
+        { exerciseId },
         getAuthConfig()
       );
-  
-      console.log("Server response:", response.data);
       setWorkoutPlans(prevPlans =>
         prevPlans.map(p => (p._id === planId ? response.data : p))
       );
       addNotification("Exercise added to plan successfully", "success");
-      return { success: true, data: response.data };
+      return { success: true, updatedPlan: response.data };
     } catch (error) {
       console.error("Error adding exercise to plan:", error);
-      addNotification(
-        `Failed to add exercise to plan: ${
-          error.response ? error.response.data.message : error.message
-        }`,
-        "error"
-      );
+      if (error.response && error.response.data && error.response.data.message) {
+        addNotification(error.response.data.message, "error");
+      } else {
+        addNotification("Failed to add exercise to plan", "error");
+      }
       return { success: false, error };
     }
   };

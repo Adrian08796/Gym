@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { FiX, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 
-function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging }) {
+function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onAddExercise }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
@@ -24,6 +24,16 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging }) {
     };
     getWorkoutPlans();
   }, [fetchWorkoutPlans]);
+
+  useEffect(() => {
+    if (selectedPlan) {
+      setWorkoutPlans(prevPlans =>
+        prevPlans.map(plan => 
+          plan._id === selectedPlan._id ? selectedPlan : plan
+        )
+      );
+    }
+  }, [selectedPlan]);
 
   const handleSelect = (e) => {
     const planId = e.target.value;
