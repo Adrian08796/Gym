@@ -519,6 +519,28 @@ export function GymProvider({ children }) {
     }
   };
 
+  const removeExerciseFromPlan = async (planId, exerciseId) => {
+    try {
+      const response = await axiosInstance.delete(
+        `${API_URL}/workoutplans/${planId}/exercises/${exerciseId}`,
+        getAuthConfig()
+      );
+      setWorkoutPlans(prevPlans =>
+        prevPlans.map(p => p._id === planId ? response.data : p)
+      );
+      addNotification("Exercise removed from plan successfully", "success");
+      return { success: true, updatedPlan: response.data };
+    } catch (error) {
+      console.error("Error removing exercise from plan:", error);
+      if (error.response && error.response.status === 404) {
+        addNotification("Exercise not found in the workout plan", "error");
+      } else {
+        addNotification("Failed to remove exercise from plan", "error");
+      }
+      throw error;
+    }
+  };
+
   const reorderExercisesInPlan = async (planId, exerciseId, newPosition) => {
     try {
       const response = await axiosInstance.put(
@@ -806,6 +828,7 @@ export function GymProvider({ children }) {
       fetchExercises,
       importWorkoutPlan,
       updateExerciseRecommendations,
+      removeExerciseFromPlan,
     }),
     [
       workouts,
@@ -835,6 +858,7 @@ export function GymProvider({ children }) {
       fetchExercises,
       importWorkoutPlan,
       updateExerciseRecommendations,
+      removeExerciseFromPlan,
     ]
   );
 

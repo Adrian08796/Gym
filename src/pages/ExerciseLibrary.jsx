@@ -23,9 +23,6 @@ const categoryColors = {
 };
 
 function ExerciseLibrary() {
-  const { exercises, updateExercise, deleteExercise, addExerciseToPlan, reorderExercisesInPlan, fetchExercises } = useGymContext();
-  const { addNotification } = useNotification();
-  const { darkMode } = useTheme();
   const [editingExercise, setEditingExercise] = useState(null);
   const [showWorkoutPlanSelector, setShowWorkoutPlanSelector] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
@@ -34,12 +31,23 @@ function ExerciseLibrary() {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const { 
+    exercises, 
+    updateExercise, 
+    deleteExercise, 
+    addExerciseToPlan, 
+    removeExerciseFromPlan, 
+    fetchWorkoutPlans, 
+    fetchExercises 
+  } = useGymContext();
+  const { addNotification } = useNotification();
+  const { darkMode } = useTheme();
   
 
   useEffect(() => {
-    console.log('FETCHING EXERCISES::::');
     fetchExercises();
   }, [fetchExercises]);
 
@@ -69,15 +77,17 @@ function ExerciseLibrary() {
   };
 
   const handleAddToPlan = async (exercise) => {
-    if (!selectedPlanId) {
+    if (!selectedPlan) {
       addNotification('Please select a workout plan first', 'warning');
       return;
     }
 
     try {
-      const result = await addExerciseToPlan(selectedPlanId, exercise._id);
+      const result = await addExerciseToPlan(selectedPlan._id, exercise._id);
       if (result.success) {
         addNotification(`Exercise added to plan`, 'success');
+        // Refresh the selected plan to update the exercise list
+        handleSelectPlan(selectedPlan);
       } else if (result.alreadyInPlan) {
         // The notification is already handled in the GymContext
       } else {
@@ -89,13 +99,36 @@ function ExerciseLibrary() {
     }
   };
 
-  const handleSelectPlan = (plan) => {
-    setSelectedPlanId(plan._id);
+  const handleRemoveFromPlan = async (planId, exerciseId) => {
+    try {
+      await removeExerciseFromPlan(planId, exerciseId);
+      addNotification('Exercise removed from plan', 'success');
+      // Refresh the selected plan to update the exercise list
+      handleSelectPlan(selectedPlan);
+    } catch (error) {
+      console.error('Error removing exercise from plan:', error);
+      addNotification('Failed to remove exercise from plan', 'error');
+    }
+  };
+
+  const handleSelectPlan = async (plan) => {
+    setSelectedPlan(plan);
+    if (plan) {
+      try {
+        const fullPlan = await fetchWorkoutPlans().then(plans => 
+          plans.find(p => p._id === plan._id)
+        );
+        setSelectedPlan(fullPlan);
+      } catch (error) {
+        console.error('Error fetching full plan details:', error);
+        addNotification('Failed to load full plan details', 'error');
+      }
+    }
   };
 
   const handleSave = (savedExercise) => {
     setEditingExercise(null);
-    // Optionally, you can refresh the exercise list here
+    fetchExercises();  // Refresh the exercise list
   };
 
   const handleSelectWorkoutPlan = async (plan) => {
@@ -152,8 +185,8 @@ function ExerciseLibrary() {
   
     const exerciseId = result.draggableId;
   
-    if (destination.droppableId === 'workoutPlanDropZone' && selectedPlanId) {
-      addExerciseToPlan(selectedPlanId, exerciseId, destination.index);
+    if (destination.droppableId === 'workoutPlanDropZone' && selectedPlan) {
+      handleAddToPlan({ _id: exerciseId });
     } else if (source.droppableId === 'exerciseLibrary' && destination.droppableId === 'exerciseLibrary') {
       console.log('Reordering exercises:', source.index, destination.index);
       // Implement reordering logic here if needed
@@ -244,8 +277,9 @@ function ExerciseLibrary() {
             >
               <WorkoutPlanSelector
                 onSelect={handleSelectPlan}
-                selectedPlanId={selectedPlanId}
+                selectedPlan={selectedPlan}
                 isDragging={isDragging}
+                onRemoveExercise={handleRemoveFromPlan}
               />
               {provided.placeholder}
             </div>
@@ -293,7 +327,7 @@ function ExerciseLibrary() {
             onClose={() => setSelectedExercise(null)}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onAddToPlan={() => handleAddToPlan(selectedExercise)}
+            onAddToPlan={handleAddToPlan}
           />
         )}
 
