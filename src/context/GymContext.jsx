@@ -64,12 +64,12 @@ export function GymProvider({ children }) {
     if (typeof exerciseOrId === 'object' && exerciseOrId !== null) {
       return exerciseOrId; // It's already a full exercise object
     }
-
+  
     if (!exerciseOrId || typeof exerciseOrId !== 'string') {
       console.error('Invalid exerciseId provided to getExerciseById:', exerciseOrId);
       return null;
     }
-
+  
     try {
       console.log(`Fetching exercise details for exerciseId: ${exerciseOrId}`);
       const response = await axiosInstance.get(
@@ -77,7 +77,18 @@ export function GymProvider({ children }) {
         getAuthConfig()
       );
       console.log('Exercise details response:', response.data);
-      return response.data;
+  
+      // Ensure the exercise object has a recommendations property
+      const exercise = response.data;
+      if (!exercise.recommendations) {
+        exercise.recommendations = {
+          beginner: { weight: 0, reps: 10, sets: 3 },
+          intermediate: { weight: 0, reps: 10, sets: 3 },
+          advanced: { weight: 0, reps: 10, sets: 3 }
+        };
+      }
+  
+      return exercise;
     } catch (error) {
       console.error('Error fetching exercise details:', error);
       if (error.response) {
@@ -324,6 +335,36 @@ export function GymProvider({ children }) {
     }
   };
 
+  const updateExerciseRecommendations = useCallback(async (exerciseId, level, newRecommendations) => {
+    try {
+      const response = await axiosInstance.put(
+        `${API_URL}/exercises/${exerciseId}/recommendations`,
+        { level, recommendations: newRecommendations },
+        getAuthConfig()
+      );
+      
+      // Update the local state
+      setExercises(prevExercises => 
+        prevExercises.map(exercise => 
+          exercise._id === exerciseId 
+            ? { 
+                ...exercise, 
+                recommendations: {
+                  ...exercise.recommendations,
+                  [level]: newRecommendations
+                }
+              }
+            : exercise
+        )
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Error updating exercise recommendations:', error);
+      throw error;
+    }
+  }, [API_URL, getAuthConfig]);
+
   const deleteExercise = async id => {
     try {
       await axiosInstance.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
@@ -523,13 +564,15 @@ export function GymProvider({ children }) {
           completedAt: set.completedAt || new Date().toISOString()
         })),
         notes: exercise.notes || '',
-        requiredSets: exercise.requiredSets || 3
+        requiredSets: exercise.requiredSets || 3,
+        recommendations: exercise.recommendations || {} // Include recommendations
       }));
       
       const dataToSave = {
         ...progressData,
         exercises: formattedExercises,
-        userId: user.id
+        userId: user.id,
+        experienceLevel: user.experienceLevel // Include user's experience level
       };
       
       console.log('Saving progress data:', dataToSave);
@@ -585,6 +628,7 @@ export function GymProvider({ children }) {
           skippedPauses: progressData.skippedPauses || 0,
           completedSets: progressData.completedSets || 0,
           totalSets: progressData.totalSets || 0,
+          experienceLevel: progressData.experienceLevel || user.experienceLevel || 'beginner',
           ...progressData
         };
   
@@ -599,8 +643,13 @@ export function GymProvider({ children }) {
                 } else {
                   fullExercise = exercise;
                 }
-                // Ensure requiredSets is set
+                // Ensure requiredSets and recommendations are set
                 fullExercise.requiredSets = progressData.exercises[index]?.requiredSets || 3;
+                fullExercise.recommendations = fullExercise.recommendations || {
+                  beginner: { weight: 0, reps: 10, sets: 3 },
+                  intermediate: { weight: 0, reps: 10, sets: 3 },
+                  advanced: { weight: 0, reps: 10, sets: 3 }
+                };
                 return fullExercise;
               } catch (error) {
                 console.error(`Error fetching exercise details: ${error.message}`);
@@ -756,6 +805,7 @@ export function GymProvider({ children }) {
       shareWorkoutPlan,
       fetchExercises,
       importWorkoutPlan,
+      updateExerciseRecommendations,
     }),
     [
       workouts,
@@ -784,6 +834,7 @@ export function GymProvider({ children }) {
       shareWorkoutPlan,
       fetchExercises,
       importWorkoutPlan,
+      updateExerciseRecommendations,
     ]
   );
 

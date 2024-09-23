@@ -1,6 +1,6 @@
 // src/components/AddExerciseForm.jsx
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 
@@ -9,6 +9,7 @@ const muscleGroups = [
 ];
 
 const categories = ['Strength', 'Cardio', 'Flexibility'];
+const experienceLevels = ['beginner', 'intermediate', 'advanced'];
 
 function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [name, setName] = useState('');
@@ -113,7 +114,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       ...prev,
       [level]: {
         ...prev[level],
-        [field]: value
+        [field]: Number(value)
       }
     }));
   };
@@ -245,56 +246,56 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           </div>
 
           {/* Recommendations for Strength exercises */}
-      {category === 'Strength' && (
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Recommendations</h3>
-          {['beginner', 'intermediate', 'advanced'].map(level => (
-            <div key={level} className="mb-4">
-              <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {level.charAt(0).toUpperCase() + level.slice(1)}
-              </h4>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-weight`}>
-                    Weight (kg)
-                  </label>
-                  <input
-                    id={`${level}-weight`}
-                    type="number"
-                    value={recommendations[level].weight}
-                    onChange={(e) => handleRecommendationChange(level, 'weight', Number(e.target.value))}
-                    className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                  />
+          {category === 'Strength' && (
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Recommendations</h3>
+              {experienceLevels.map(level => (
+                <div key={level} className="mb-4">
+                  <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {level.charAt(0).toUpperCase() + level.slice(1)}
+                  </h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-weight`}>
+                        Weight (kg)
+                      </label>
+                      <input
+                        id={`${level}-weight`}
+                        type="number"
+                        value={recommendations[level].weight}
+                        onChange={(e) => handleRecommendationChange(level, 'weight', e.target.value)}
+                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-reps`}>
+                        Reps
+                      </label>
+                      <input
+                        id={`${level}-reps`}
+                        type="number"
+                        value={recommendations[level].reps}
+                        onChange={(e) => handleRecommendationChange(level, 'reps', e.target.value)}
+                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-sets`}>
+                        Sets
+                      </label>
+                      <input
+                        id={`${level}-sets`}
+                        type="number"
+                        value={recommendations[level].sets}
+                        onChange={(e) => handleRecommendationChange(level, 'sets', e.target.value)}
+                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-reps`}>
-                    Reps
-                  </label>
-                  <input
-                    id={`${level}-reps`}
-                    type="number"
-                    value={recommendations[level].reps}
-                    onChange={(e) => handleRecommendationChange(level, 'reps', Number(e.target.value))}
-                    className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-sets`}>
-                    Sets
-                  </label>
-                  <input
-                    id={`${level}-sets`}
-                    type="number"
-                    value={recommendations[level].sets}
-                    onChange={(e) => handleRecommendationChange(level, 'sets', Number(e.target.value))}
-                    className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                  />
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
           {/* Submit and Cancel buttons */}
           <div className="flex items-center justify-between">

@@ -7,7 +7,7 @@ import '../components/ExerciseItem.css';
 
 function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDragging }) {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const { user } = useAuth(); // Add this line to get the user object
+  const { user } = useAuth();
 
   const handleAction = (action, e) => {
     e.stopPropagation();
@@ -65,7 +65,6 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDrag
 
   const isImported = exercise.importedFrom && exercise.importedFrom.username;
 
-  // Get the user's experience level or set it to 'beginner' if not available
   const experienceLevel = user?.experienceLevel || 'beginner';
   const recommendations = exercise.recommendations?.[experienceLevel] || {};
 
@@ -95,11 +94,11 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan, isDrag
           <span>{Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}</span>
         </div>
         {exercise.category === 'Strength' && (
-          <div className="text-gray-600 dark:text-gray-400 text-xs">
-            <p>Recommended for {experienceLevel}:</p>
-            <p>Weight: {recommendations.weight} kg</p>
-            <p>Reps: {recommendations.reps}</p>
-            <p>Sets: {recommendations.sets}</p>
+          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            <p>Recommended for {experienceLevel}s:</p>
+            <p>Weight: {recommendations.weight || 0} kg</p>
+            <p>Reps: {recommendations.reps || 0}</p>
+            <p>Sets: {recommendations.sets || 0}</p>
           </div>
         )}
         {isImported && (

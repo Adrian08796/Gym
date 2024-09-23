@@ -62,6 +62,7 @@ function WorkoutTracker() {
   const [intensity, setIntensity] = useState("");
   const [incline, setIncline] = useState("");
   const [exerciseHistoryError, setExerciseHistoryError] = useState(null);
+  const [userExperienceLevel, setUserExperienceLevel] = useState('beginner');  
 
   const {
     addWorkout,
@@ -70,6 +71,7 @@ function WorkoutTracker() {
     getExerciseHistory,
     loadProgress,
     getExerciseById,
+    updateExerciseRecommendations,
   } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
@@ -425,26 +427,59 @@ function WorkoutTracker() {
     localStorage.setItem(`totalSets_${user.id}`, totalSets.toString());
   };
 
+  useEffect(() => {
+    if (user && user.experienceLevel) {
+      setUserExperienceLevel(user.experienceLevel);
+    }
+  }, [user]);
+
+  const loadExerciseRecommendations = useCallback(async (exerciseId) => {
+    const exercise = await getExerciseById(exerciseId);
+    if (exercise && exercise.recommendations && exercise.recommendations[userExperienceLevel]) {
+      const rec = exercise.recommendations[userExperienceLevel];
+      setWeight(rec.weight.toString());
+      setReps(rec.reps.toString());
+      setRequiredSets(prevSets => ({
+        ...prevSets,
+        [exerciseId]: rec.sets
+      }));
+    }
+  }, [getExerciseById, userExperienceLevel]);
+
+  useEffect(() => {
+    if (currentPlan && currentPlan.exercises && currentPlan.exercises[currentExerciseIndex]) {
+      const currentExercise = currentPlan.exercises[currentExerciseIndex];
+      loadExerciseRecommendations(currentExercise._id);
+    }
+  }, [currentPlan, currentExerciseIndex, loadExerciseRecommendations]);
+
   const renderExerciseInputs = () => {
     const currentExercise = currentPlan.exercises[currentExerciseIndex];
+    const recommendation = currentExercise.recommendations?.[userExperienceLevel];
 
     if (currentExercise.category === "Strength") {
       return (
-        <div className="mb-4 flex">
-          <input
-            type="number"
-            placeholder="Weight (kg)"
-            value={weight}
-            onChange={e => setWeight(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
-          />
-          <input
-            type="number"
-            placeholder="Reps"
-            value={reps}
-            onChange={e => setReps(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
+        <div className="mb-4 flex flex-col">
+          <div className="flex mb-2">
+            <div className="relative w-full mr-2">
+              <input
+                type="number"
+                value={weight}
+                onChange={e => setWeight(e.target.value)}
+                className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+              <span className="placeholder-text">Weight (kg)</span>
+            </div>
+            <div className="relative w-full">
+              <input
+                type="number"
+                value={reps}
+                onChange={e => setReps(e.target.value)}
+                className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+              <span className="placeholder-text">Reps</span>
+            </div>
+          </div>
         </div>
       );
     } else if (currentExercise.category === "Cardio") {
@@ -490,7 +525,7 @@ function WorkoutTracker() {
   
     if (currentExercise.category === "Strength") {
       if (!weight || !reps) {
-        addNotification("Please enter both weight and reps", "error");
+        addNotification('Please enter both weight and reps', 'error');
         return;
       }
       newSet = {
@@ -499,6 +534,19 @@ function WorkoutTracker() {
         completedAt: new Date().toISOString(),
         skippedRest: isResting,
       };
+
+      // Update the exercise recommendations
+      try {
+        await updateExerciseRecommendations(currentExercise._id, user.experienceLevel, {
+          weight: Number(weight),
+          reps: Number(reps),
+          sets: requiredSets[currentExercise._id] || 3
+        });
+      } catch (error) {
+        console.error('Failed to update exercise recommendations:', error);
+        // Optionally, you can show a notification to the user
+        // addNotification('Failed to update exercise recommendations', 'error');
+      }
     } else if (currentExercise.category === "Cardio") {
       if (!duration) {
         addNotification("Please enter at least the duration", "error");

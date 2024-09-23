@@ -247,3 +247,34 @@ input[type="number"], textarea {
   color: #e2e8f0;
 }
 
+.input-with-placeholder {
+  position: relative;
+  padding-right: 80px !important; /* Adjust this value as needed */
+}
+
+.input-with-placeholder::-webkit-outer-spin-button,
+.input-with-placeholder::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input-with-placeholder[type=number] {
+  -moz-appearance: textfield;
+}
+
+.placeholder-text {
+  position: absolute;
+  top: 33%;
+  right: 8px; /* Adjust this value to move left/right */
+  transform: translateY(-50%);
+  color: #6b7280; /* Adjust color as needed */
+  pointer-events: none;
+  font-size: 0.875rem; /* Adjust font size as needed */
+  background-color: transparent;
+  padding: 0 4px;
+  transition: opacity 0.2s;
+}
+
+.input-with-placeholder:focus + .placeholder-text {
+  opacity: 0.5;
+}
