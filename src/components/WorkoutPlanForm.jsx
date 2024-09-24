@@ -1,10 +1,10 @@
 // src/components/WorkoutPlanForm.jsx
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useAuth } from '../context/AuthContext';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   const [planName, setPlanName] = useState('');
@@ -43,21 +43,18 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       exercises: selectedExercises.map(exercise => exercise._id),
       type: workoutType,
       scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null,
-      isDefault: isDefault
     };
     
-    if (initialPlan) {
-      workoutPlan._id = initialPlan._id;
-    }
-
     try {
       let savedPlan;
-      if (isDefault && user.isAdmin) {
+      if (initialPlan) {
+        savedPlan = await updateWorkoutPlan(initialPlan._id, workoutPlan);
+      } else if (isDefault && user.isAdmin) {
         savedPlan = await addDefaultWorkoutPlan(workoutPlan);
       } else {
-        savedPlan = initialPlan ? await updateWorkoutPlan(initialPlan._id, workoutPlan) : await addWorkoutPlan(workoutPlan);
+        savedPlan = await addWorkoutPlan(workoutPlan);
       }
-      await onSubmit(savedPlan);
+      onSubmit(savedPlan);
     } catch (error) {
       console.error('Error saving workout plan:', error);
     }
