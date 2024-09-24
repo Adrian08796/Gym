@@ -286,6 +286,19 @@ export function GymProvider({ children }) {
       throw error;
     }
   };
+  // Admin add default exercise
+  const addDefaultExercise = async (exerciseData) => {
+    try {
+      const response = await axiosInstance.post(`${API_URL}/exercises/default`, exerciseData, getAuthConfig());
+      setExercises(prevExercises => [...prevExercises, response.data]);
+      addNotification('Default exercise added successfully', 'success');
+      return response.data;
+    } catch (error) {
+      console.error('Error adding default exercise:', error);
+      addNotification('Failed to add default exercise', 'error');
+      throw error;
+    }
+  };
 
   const addExercise = async exercise => {
     try {
@@ -375,6 +388,19 @@ export function GymProvider({ children }) {
     } catch (error) {
       console.error("Error deleting exercise:", error);
       addNotification("Failed to delete exercise", "error");
+      throw error;
+    }
+  };
+  // Admin add default workout plan
+  const addDefaultWorkoutPlan = async (planData) => {
+    try {
+      const response = await axiosInstance.post(`${API_URL}/workoutplans/default`, planData, getAuthConfig());
+      setWorkoutPlans(prevPlans => [...prevPlans, response.data]);
+      addNotification('Default workout plan added successfully', 'success');
+      return response.data;
+    } catch (error) {
+      console.error('Error adding default workout plan:', error);
+      addNotification('Failed to add default workout plan', 'error');
       throw error;
     }
   };
@@ -808,6 +834,8 @@ export function GymProvider({ children }) {
       importWorkoutPlan,
       updateExerciseRecommendations,
       removeExerciseFromPlan,
+      addDefaultExercise,
+      addDefaultWorkoutPlan,
     }),
     [
       workouts,
@@ -838,6 +866,8 @@ export function GymProvider({ children }) {
       importWorkoutPlan,
       updateExerciseRecommendations,
       removeExerciseFromPlan,
+      addDefaultExercise,
+      addDefaultWorkoutPlan,
     ]
   );
 
