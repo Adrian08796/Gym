@@ -9,6 +9,7 @@ import ExerciseModal from '../components/ExerciseModal';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext'; // Add this import
 import { FiFilter, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import './ExerciseLibrary.css';
 
@@ -33,6 +34,7 @@ function ExerciseLibrary() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const { user } = useAuth();
 
   const { 
     exercises, 

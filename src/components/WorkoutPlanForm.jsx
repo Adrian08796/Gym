@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { useAuth } from '../context/AuthContext';
 
 function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   const [planName, setPlanName] = useState('');
@@ -11,8 +12,11 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   const [workoutType, setWorkoutType] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const { exercises } = useGymContext();
+  const [isDefault, setIsDefault] = useState(false);
+  const { exercises, addWorkoutPlan, updateWorkoutPlan, addDefaultWorkoutPlan } = useGymContext();
   const { darkMode } = useTheme();
+  const { user } = useAuth();
+
 
   useEffect(() => {
     if (initialPlan) {
@@ -22,11 +26,13 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       ));
       setWorkoutType(initialPlan.type || '');
       setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
+      setIsDefault(initialPlan.isDefault || false);
     } else {
       setPlanName('');
       setSelectedExercises([]);
       setWorkoutType('');
       setScheduledDate('');
+      setIsDefault(false);
     }
   }, [initialPlan, exercises]);
 
@@ -36,14 +42,25 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       name: planName,
       exercises: selectedExercises.map(exercise => exercise._id),
       type: workoutType,
-      scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null
+      scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null,
+      isDefault: isDefault
     };
     
     if (initialPlan) {
       workoutPlan._id = initialPlan._id;
     }
 
-    await onSubmit(workoutPlan);
+    try {
+      let savedPlan;
+      if (isDefault && user.isAdmin) {
+        savedPlan = await addDefaultWorkoutPlan(workoutPlan);
+      } else {
+        savedPlan = initialPlan ? await updateWorkoutPlan(initialPlan._id, workoutPlan) : await addWorkoutPlan(workoutPlan);
+      }
+      await onSubmit(savedPlan);
+    } catch (error) {
+      console.error('Error saving workout plan:', error);
+    }
   };
 
   const handleCancel = (e) => {
@@ -211,6 +228,19 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           </div>
         </div>
       </div>
+      {user.isAdmin && (
+        <div className="mb-4">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={isDefault}
+              onChange={(e) => setIsDefault(e.target.checked)}
+              className="form-checkbox h-5 w-5 text-emerald-500"
+            />
+            <span className="ml-2 text-gray-700 dark:text-gray-300">Set as Default Workout Plan (Admin Only)</span>
+          </label>
+        </div>
+      )}
       <div className="flex items-center justify-between mt-6">
         <button
           type="submit"

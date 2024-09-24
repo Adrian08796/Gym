@@ -5,9 +5,7 @@ import axiosInstance from '../utils/axiosConfig';
 
 const AuthContext = createContext();
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -112,7 +110,10 @@ const updateExperienceLevel = useCallback(async (level) => {
       if (response.data?.accessToken && response.data?.refreshToken && response.data?.user) {
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
-        setUser(response.data.user);
+        setUser({
+          ...response.data.user,
+          isAdmin: response.data.user.isAdmin || false
+        });
         
         setTimeout(() => refreshToken(true), 1000);
         

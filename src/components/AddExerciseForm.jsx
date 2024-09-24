@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 
 const muscleGroups = [
   'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'
@@ -19,8 +20,10 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [category, setCategory] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const { addExercise, updateExercise } = useGymContext();
+  const [isDefault, setIsDefault] = useState(false);
+  const { addExercise, updateExercise, addDefaultExercise } = useGymContext();
   const { addNotification } = useNotification();
+  const { user } = useAuth();
 
   const [recommendations, setRecommendations] = useState({
     beginner: { weight: 0, reps: 10, sets: 3 },
@@ -41,6 +44,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
         intermediate: { weight: 0, reps: 10, sets: 3 },
         advanced: { weight: 0, reps: 10, sets: 3 }
       });
+      setIsDefault(initialExercise.isDefault || false);
     } else {
       resetForm();
     }
@@ -87,7 +91,8 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       category, 
       exerciseType, 
       measurementType,
-      recommendations
+      recommendations,
+      isDefault
     };
 
     try {
@@ -96,7 +101,11 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
         savedExercise = await updateExercise(initialExercise._id, exercise);
         addNotification('Exercise updated successfully', 'success');
       } else {
-        savedExercise = await addExercise(exercise);
+        if (isDefault && user.isAdmin) {
+          savedExercise = await addDefaultExercise(exercise);
+        } else {
+          savedExercise = await addExercise(exercise);
+        }
         addNotification('Exercise added successfully', 'success');
       }
       resetForm();
@@ -143,6 +152,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   };
 
   return (
+    
     <div className="mb-8">
       <button
         onClick={toggleForm}
@@ -296,7 +306,19 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               ))}
             </div>
           )}
-
+          {user.isAdmin && (
+            <div className="mb-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={isDefault}
+                  onChange={(e) => setIsDefault(e.target.checked)}
+                  className="form-checkbox h-5 w-5 text-emerald-500"
+                />
+                <span className="ml-2 text-gray-700 dark:text-gray-300">Set as Default Exercise (Admin Only)</span>
+              </label>
+            </div>
+          )}
           {/* Submit and Cancel buttons */}
           <div className="flex items-center justify-between">
             <button
