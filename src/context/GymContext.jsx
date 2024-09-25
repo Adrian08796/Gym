@@ -567,19 +567,33 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
 
   const addExerciseToPlan = async (planId, exerciseId) => {
     try {
+      console.log('Adding exercise to plan:', planId, exerciseId);
+      
+      // Check if the exercise is already in the plan
+      const currentPlan = workoutPlans.find(plan => plan._id === planId);
+      if (currentPlan && currentPlan.exercises.some(ex => ex._id === exerciseId)) {
+        addNotification("This exercise is already in the plan", "warning");
+        return { success: false, error: 'Duplicate exercise' };
+      }
+  
       const response = await axiosInstance.post(
         `${API_URL}/workoutplans/${planId}/exercises`,
         { exerciseId },
         getAuthConfig()
       );
+  
       setWorkoutPlans(prevPlans =>
-        prevPlans.map(p => (p._id === planId ? response.data : p))
+        prevPlans.map(p => p._id === planId ? response.data : p)
       );
       addNotification("Exercise added to plan successfully", "success");
       return { success: true, updatedPlan: response.data };
     } catch (error) {
       console.error("Error adding exercise to plan:", error);
-      if (error.response && error.response.data && error.response.data.message) {
+      if (error.response && error.response.status === 400 && error.response.data.message === 'Exercise already in the workout plan') {
+        addNotification("This exercise is already in the plan", "warning");
+      } else if (error.response && error.response.status === 404) {
+        addNotification("Workout plan not found", "error");
+      } else if (error.response && error.response.data && error.response.data.message) {
         addNotification(error.response.data.message, "error");
       } else {
         addNotification("Failed to add exercise to plan", "error");
@@ -590,6 +604,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
 
   const removeExerciseFromPlan = async (planId, exerciseId) => {
     try {
+      console.log(`Removing exercise ${exerciseId} from plan ${planId}`);
       const response = await axiosInstance.delete(
         `${API_URL}/workoutplans/${planId}/exercises/${exerciseId}`,
         getAuthConfig()
@@ -602,7 +617,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
     } catch (error) {
       console.error("Error removing exercise from plan:", error);
       if (error.response && error.response.status === 404) {
-        addNotification("Exercise not found in the workout plan", "error");
+        addNotification("Exercise or workout plan not found", "error");
       } else {
         addNotification("Failed to remove exercise from plan", "error");
       }

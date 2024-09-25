@@ -83,12 +83,22 @@ function ExerciseLibrary() {
       addNotification('Please select a workout plan first', 'warning');
       return;
     }
-
+  
+    // Check if the exercise is already in the plan
+    if (selectedPlan.exercises.some(ex => ex._id === exercise._id)) {
+      addNotification('This exercise is already in the plan', 'warning');
+      return;
+    }
+  
     try {
-      const { success, updatedPlan } = await addExerciseToPlan(selectedPlan._id, exercise._id);
+      const { success, updatedPlan, error } = await addExerciseToPlan(selectedPlan._id, exercise._id);
       if (success) {
         addNotification(`Exercise added to plan`, 'success');
         setSelectedPlan(updatedPlan);
+      } else if (error === 'Duplicate exercise') {
+        // This case is handled by the addExerciseToPlan function
+      } else {
+        addNotification('Failed to add exercise to plan', 'error');
       }
     } catch (error) {
       console.error('Error adding exercise to plan:', error);
@@ -173,7 +183,6 @@ function ExerciseLibrary() {
   };
 
   const onDragEnd = (result) => {
-    setIsDragging(false);
     const { source, destination } = result;
   
     if (!destination) return;

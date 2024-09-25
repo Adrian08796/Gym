@@ -1,14 +1,16 @@
 // src/components/WorkoutPlanSelector.jsx
 
 import React, { useState, useEffect } from 'react';
-import { useGymContext } from '../context/GymContext';
 import { FiX, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { useGymContext } from '../context/GymContext';
+import { useNotification } from '../context/NotificationContext';
 
-function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onAddExercise }) {
+function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExercise }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const { fetchWorkoutPlans, removeExerciseFromPlan } = useGymContext();
+  const { addNotification } = useNotification();
 
   useEffect(() => {
     const getWorkoutPlans = async () => {
@@ -18,16 +20,17 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onAddExercise
         setWorkoutPlans(plans || []);
       } catch (error) {
         console.error('Error fetching workout plans:', error);
+        addNotification('Failed to fetch workout plans', 'error');
       } finally {
         setIsLoading(false);
       }
     };
     getWorkoutPlans();
-  }, [fetchWorkoutPlans]);
+  }, [fetchWorkoutPlans, addNotification]);
 
   useEffect(() => {
     if (selectedPlan) {
-      setWorkoutPlans(prevPlans =>
+      setWorkoutPlans(prevPlans => 
         prevPlans.map(plan => 
           plan._id === selectedPlan._id ? selectedPlan : plan
         )
@@ -51,9 +54,11 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onAddExercise
         if (selectedPlan && selectedPlan._id === planId) {
           onSelect(updatedPlan);
         }
+        addNotification("Exercise removed from plan successfully", "success");
       }
     } catch (error) {
       console.error('Error removing exercise from plan:', error);
+      addNotification("Failed to remove exercise from plan", "error");
     }
   };
 
@@ -65,7 +70,10 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onAddExercise
     <div className={`mb-4 ${isDragging ? 'pointer-events-auto' : ''}`}>
       <select
         value={selectedPlan?._id || ''}
-        onChange={handleSelect}
+        onChange={(e) => {
+          const selected = workoutPlans.find(plan => plan._id === e.target.value);
+          onSelect(selected);
+        }}
         className={`w-full p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800`}
       >
         <option value="">Select a workout plan for drag and drop</option>
@@ -79,6 +87,12 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onAddExercise
         <div className="mt-4">
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-lg font-semibold">Exercises in {selectedPlan.name}:</h3>
+            <button 
+              onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
+              className="text-blue-500 hover:text-blue-700"
+            >
+              {isPreviewExpanded ? <FiChevronUp /> : <FiChevronDown />}
+            </button>
           </div>
           <div className={`overflow-hidden transition-all duration-300 ${isPreviewExpanded ? 'max-h-96' : 'max-h-24'}`}>
             <div className="flex overflow-x-auto pb-2 hide-scrollbar">
