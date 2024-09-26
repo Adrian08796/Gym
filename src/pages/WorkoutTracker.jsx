@@ -400,7 +400,6 @@ function WorkoutTracker() {
   };
 
   const saveDataToLocalStorage = () => {
-    console.log("SAVED TO LOCAL STORAGE", user);
     if (currentPlan) {
       localStorage.setItem(
         `currentPlan_${user.id}`,
