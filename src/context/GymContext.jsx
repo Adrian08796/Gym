@@ -162,10 +162,12 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
   const fetchExercises = useCallback(async () => {
     if (user) {
       try {
+        console.log('Fetching exercises...');
         const response = await axiosInstance.get(
           `${API_URL}/exercises`,
           getAuthConfig()
         );
+        console.log('Fetched exercises:', response.data);
         const formattedExercises = response.data.map(exercise => ({
           ...exercise,
           name: toTitleCase(exercise.name),
@@ -173,11 +175,15 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
           target: Array.isArray(exercise.target)
             ? exercise.target.map(toTitleCase)
             : toTitleCase(exercise.target),
-          isDefault: !exercise.user  // Add this line to identify default exercises
+          isDefault: !exercise.user
         }));
+        console.log('Formatted exercises:', formattedExercises);
         setExercises(formattedExercises);
       } catch (error) {
         console.error("Error fetching exercises:", error);
+        if (error.response) {
+          console.error("Error response:", error.response.data);
+        }
         addNotification("Failed to fetch exercises", "error");
       }
     }
@@ -410,17 +416,22 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
 
   const deleteExercise = async id => {
     try {
-      await axiosInstance.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
-      setExercises(prevExercises =>
-        prevExercises.filter(exercise => exercise._id !== id)
-      );
-      addNotification("Exercise deleted successfully", "success");
+      const response = await axiosInstance.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
+      if (response.data.message === 'Exercise removed from your view') {
+        // For normal users, just remove the exercise from the local state
+        setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
+      } else {
+        // For admins or user's own custom exercises, remove from state as before
+        setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
+      }
+      addNotification(response.data.message, 'success');
     } catch (error) {
       console.error("Error deleting exercise:", error);
       addNotification("Failed to delete exercise", "error");
       throw error;
     }
   };
+
   // Admin add default workout plan
   const addDefaultWorkoutPlan = async (planData) => {
     try {

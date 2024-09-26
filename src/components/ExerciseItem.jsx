@@ -1,6 +1,6 @@
 // src/components/ExerciseItem.jsx
 import React, { useState } from 'react';
-import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser, FiMove, FiEye } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser, FiEye } from 'react-icons/fi';
 import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
 import { useAuth } from '../context/AuthContext';
 import '../components/ExerciseItem.css';
@@ -43,10 +43,11 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
     view: 'bg-emerald-500 hover:bg-emerald-600 text-white'
   };
 
-  const ActionButton = ({ action, style, icon }) => (
+  const ActionButton = ({ action, style, icon, label }) => (
     <button 
       onClick={(e) => handleAction(action, e)}
       className={`${buttonStyles.base} ${style} opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0`}
+      aria-label={label}
     >
       {icon}
     </button>
@@ -65,7 +66,6 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
   );
 
   const isImported = exercise.importedFrom && exercise.importedFrom.username;
-
   const experienceLevel = user?.experienceLevel || 'beginner';
   const recommendations = exercise.recommendations?.[experienceLevel] || {};
 
@@ -107,10 +107,10 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-2 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <div className="flex justify-end space-x-2">
-          <ActionButton action={onView} style={buttonStyles.view} icon={<FiEye />} />
-          <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} />
-          <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} />
-          <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} />
+          <ActionButton action={onView} style={buttonStyles.view} icon={<FiEye />} label="View exercise" />
+          <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} label="Edit exercise" />
+          <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} label="Delete exercise" />
+          <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} label="Add to plan" />
         </div>
       </div>
       {isDeleteConfirmOpen && <DeleteConfirmation />}
