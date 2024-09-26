@@ -67,7 +67,13 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
 
   const isImported = exercise.importedFrom && exercise.importedFrom.username;
   const experienceLevel = user?.experienceLevel || 'beginner';
-  const recommendations = exercise.recommendations?.[experienceLevel] || {};
+
+  const getUserRecommendation = () => {
+    const userRec = exercise.userRecommendations?.find(rec => rec.user === user.id);
+    return userRec ? userRec.recommendation : null;
+  };
+
+  const recommendation = getUserRecommendation() || exercise.recommendations?.[experienceLevel] || {};
 
   return (
     <div 
@@ -92,10 +98,19 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
         </div>
         {exercise.category === 'Strength' && (
           <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            <p>Recommended for {experienceLevel}s:</p>
-            <p>Weight: {recommendations.weight || 0} kg</p>
-            <p>Reps: {recommendations.reps || 0}</p>
-            <p>Sets: {recommendations.sets || 0}</p>
+            <p>Your Recommendation:</p>
+            <p>Weight: {recommendation.weight || 0} kg</p>
+            <p>Reps: {recommendation.reps || 0}</p>
+            <p>Sets: {recommendation.sets || 0}</p>
+          </div>
+        )}
+        {exercise.category === 'Cardio' && (
+          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            <p>Your Recommendation:</p>
+            <p>Duration: {recommendation.duration || 0} minutes</p>
+            {recommendation.distance && <p>Distance: {recommendation.distance} km</p>}
+            {recommendation.intensity && <p>Intensity: {recommendation.intensity}</p>}
+            {recommendation.incline && <p>Incline: {recommendation.incline}%</p>}
           </div>
         )}
         {isImported && (

@@ -72,6 +72,7 @@ function WorkoutTracker() {
     loadProgress,
     getExerciseById,
     updateExerciseRecommendations,
+    updateUserRecommendation,
   } = useGymContext();
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
@@ -533,18 +534,18 @@ function WorkoutTracker() {
         completedAt: new Date().toISOString(),
         skippedRest: isResting,
       };
-
-      // Update the exercise recommendations
+  
+      // Update the user-specific recommendation
       try {
-        await updateExerciseRecommendations(currentExercise._id, user.experienceLevel, {
+        await updateUserRecommendation(currentExercise._id, {
           weight: Number(weight),
           reps: Number(reps),
           sets: requiredSets[currentExercise._id] || 3
         });
       } catch (error) {
-        console.error('Failed to update exercise recommendations:', error);
+        console.error('Failed to update user-specific recommendation:', error);
         // Optionally, you can show a notification to the user
-        // addNotification('Failed to update exercise recommendations', 'error');
+        // addNotification('Failed to update exercise recommendation', 'error');
       }
     } else if (currentExercise.category === "Cardio") {
       if (!duration) {
@@ -559,6 +560,18 @@ function WorkoutTracker() {
         completedAt: new Date().toISOString(),
         skippedRest: isResting,
       };
+  
+      // Update the user-specific recommendation for cardio exercises
+      try {
+        await updateUserRecommendation(currentExercise._id, {
+          duration: Number(duration),
+          distance: distance ? Number(distance) : undefined,
+          intensity: intensity ? Number(intensity) : undefined,
+          incline: incline ? Number(incline) : undefined
+        });
+      } catch (error) {
+        console.error('Failed to update user-specific recommendation for cardio:', error);
+      }
     }
   
     setSets(prevSets => {
@@ -574,10 +587,7 @@ function WorkoutTracker() {
       return newSets;
     });
   
-    setCompletedSets(prevCompletedSets => {
-      const newCompletedSets = prevCompletedSets + 1;
-      return newCompletedSets;
-    });
+    setCompletedSets(prevCompletedSets => prevCompletedSets + 1);
   
     setLastSetValues(prev => ({
       ...prev,
@@ -613,9 +623,7 @@ function WorkoutTracker() {
       });
   
       addNotification(
-        `${
-          currentExercise.category === "Cardio" ? "Exercise" : "Set"
-        } completed and progress saved!`,
+        `${currentExercise.category === "Cardio" ? "Exercise" : "Set"} completed and progress saved!`,
         "success"
       );
     } catch (error) {

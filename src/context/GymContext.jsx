@@ -894,6 +894,16 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
     }
   };
 
+  const updateUserRecommendation = async (exerciseId, recommendation) => {
+    try {
+      await axiosInstance.put(`${API_URL}/exercises/${exerciseId}/user-recommendation`, recommendation, getAuthConfig());
+      addNotification('Exercise recommendation updated', 'success');
+    } catch (error) {
+      console.error('Error updating user recommendation:', error);
+      addNotification('Failed to update exercise recommendation', 'error');
+    }
+  };
+
   const contextValue = useMemo(
     () => ({
       workouts,
@@ -926,6 +936,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       removeExerciseFromPlan,
       addDefaultExercise,
       addDefaultWorkoutPlan,
+      updateUserRecommendation,
     }),
     [
       workouts,
@@ -958,6 +969,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       removeExerciseFromPlan,
       addDefaultExercise,
       addDefaultWorkoutPlan,
+      updateUserRecommendation,
     ]
   );
 
