@@ -26,6 +26,10 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const { addNotification } = useNotification();
   const { user } = useAuth();
 
+  useEffect(() => {
+    console.log('DEBUGG:::: User:', user);
+  } , [user]);
+
   const [recommendations, setRecommendations] = useState({
     beginner: { weight: 0, reps: 10, sets: 3, duration: 30, distance: 1, intensity: 5, incline: 0 },
     intermediate: { weight: 0, reps: 12, sets: 4, duration: 45, distance: 2, intensity: 7, incline: 1 },
@@ -299,7 +303,8 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           {(actingAsAdmin ? experienceLevels : [user.experienceLevel]).map(level => (
             <div key={level} className="mb-4">
               <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {level ? level.charAt(0).toUpperCase() + level.slice(1) : 'Unknown Level'}
+                {console.log("LEVEL:::", level)}
+                {typeof level === "string" && level.charAt(0).toUpperCase() + level.slice(1)}
               </h4>
               <div className="grid grid-cols-3 gap-2">
                 {category === 'Strength' && (
