@@ -68,12 +68,42 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
   const isImported = exercise.importedFrom && exercise.importedFrom.username;
   const experienceLevel = user?.experienceLevel || 'beginner';
 
-  const getUserRecommendation = () => {
-    const userRec = exercise.userRecommendations?.find(rec => rec.user === user.id);
-    return userRec ? userRec.recommendation : null;
+  const getUserExerciseData = () => {
+    const userExercise = exercise.userExercises?.find(ue => ue.user === user.id);
+    return userExercise || {};
   };
 
-  const recommendation = getUserRecommendation() || exercise.recommendations?.[experienceLevel] || {};
+  const userExerciseData = getUserExerciseData();
+  const recommendation = userExerciseData.recommendation || exercise.recommendations?.[experienceLevel] || {};
+
+  const displayName = userExerciseData.name || exercise.name;
+  const displayDescription = userExerciseData.description || exercise.description;
+  const displayTarget = userExerciseData.target || exercise.target;
+  const displayImageUrl = userExerciseData.imageUrl || exercise.imageUrl;
+
+  const renderRecommendation = () => {
+    if (exercise.category === 'Strength') {
+      return (
+        <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p>Your Recommendation:</p>
+          <p>Weight: {recommendation?.weight || 0} kg</p>
+          <p>Reps: {recommendation?.reps || 0}</p>
+          <p>Sets: {recommendation?.sets || 0}</p>
+        </div>
+      );
+    } else if (exercise.category === 'Cardio') {
+      return (
+        <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p>Your Recommendation:</p>
+          <p>Duration: {recommendation?.duration || 0} minutes</p>
+          {recommendation?.distance && <p>Distance: {recommendation.distance} km</p>}
+          {recommendation?.intensity && <p>Intensity: {recommendation.intensity}</p>}
+          {recommendation?.incline && <p>Incline: {recommendation.incline}%</p>}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div 
@@ -81,8 +111,8 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
     >
       <div className="relative h-48 overflow-hidden">
         <img 
-          src={exercise.imageUrl} 
-          alt={exercise.name} 
+          src={displayImageUrl} 
+          alt={displayName} 
           className="w-full h-full object-cover transition-transform duration-300 transform group-hover:scale-110"
         />
         <div className="absolute top-2 right-2 w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center">
@@ -90,29 +120,13 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
         </div>
       </div>
       <div className="p-4 flex-grow flex flex-col">
-        <h3 className="font-heading text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{exercise.name}</h3>
-        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 flex-grow line-clamp-3">{exercise.description}</p>
+        <h3 className="font-heading text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{displayName}</h3>
+        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 flex-grow line-clamp-3">{displayDescription}</p>
         <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
           <FiTarget className="mr-1" />
-          <span>{Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}</span>
+          <span>{Array.isArray(displayTarget) ? displayTarget.join(', ') : displayTarget}</span>
         </div>
-        {exercise.category === 'Strength' && (
-          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            <p>Your Recommendation:</p>
-            <p>Weight: {recommendation.weight || 0} kg</p>
-            <p>Reps: {recommendation.reps || 0}</p>
-            <p>Sets: {recommendation.sets || 0}</p>
-          </div>
-        )}
-        {exercise.category === 'Cardio' && (
-          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            <p>Your Recommendation:</p>
-            <p>Duration: {recommendation.duration || 0} minutes</p>
-            {recommendation.distance && <p>Distance: {recommendation.distance} km</p>}
-            {recommendation.intensity && <p>Intensity: {recommendation.intensity}</p>}
-            {recommendation.incline && <p>Incline: {recommendation.incline}%</p>}
-          </div>
-        )}
+        {renderRecommendation()}
         {isImported && (
           <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
             <FiUser className="mr-1" />

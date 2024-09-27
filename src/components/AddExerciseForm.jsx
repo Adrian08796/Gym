@@ -21,34 +21,44 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDefault, setIsDefault] = useState(false);
+  const [actingAsAdmin, setActingAsAdmin] = useState(false);
   const { addExercise, updateExercise, addDefaultExercise } = useGymContext();
   const { addNotification } = useNotification();
   const { user } = useAuth();
 
   const [recommendations, setRecommendations] = useState({
-    beginner: { weight: 0, reps: 10, sets: 3 },
-    intermediate: { weight: 0, reps: 10, sets: 3 },
-    advanced: { weight: 0, reps: 10, sets: 3 }
+    beginner: { weight: 0, reps: 10, sets: 3, duration: 30, distance: 1, intensity: 5, incline: 0 },
+    intermediate: { weight: 0, reps: 12, sets: 4, duration: 45, distance: 2, intensity: 7, incline: 1 },
+    advanced: { weight: 0, reps: 15, sets: 5, duration: 60, distance: 3, intensity: 9, incline: 2 }
   });
 
   useEffect(() => {
     if (initialExercise) {
-      setName(initialExercise.name);
-      setDescription(initialExercise.description);
-      setTarget(Array.isArray(initialExercise.target) ? initialExercise.target : [initialExercise.target]);
-      setImageUrl(initialExercise.imageUrl);
+      console.log('Initial exercise:', initialExercise);
+      setName(initialExercise.name || '');
+      setDescription(initialExercise.description || '');
+      setTarget(Array.isArray(initialExercise.target) ? initialExercise.target : [initialExercise.target] || []);
+      setImageUrl(initialExercise.imageUrl || '');
       setCategory(initialExercise.category || '');
       setIsExpanded(true);
-      setRecommendations(initialExercise.recommendations || {
-        beginner: { weight: 0, reps: 10, sets: 3 },
-        intermediate: { weight: 0, reps: 10, sets: 3 },
-        advanced: { weight: 0, reps: 10, sets: 3 }
-      });
       setIsDefault(initialExercise.isDefault || false);
+      setActingAsAdmin(user.isAdmin && initialExercise.isDefault);
+
+      // Handle recommendations based on user role and exercise data
+      const updatedRecommendations = { ...recommendations };
+      experienceLevels.forEach(level => {
+        if (initialExercise.recommendations && initialExercise.recommendations[level]) {
+          updatedRecommendations[level] = {
+            ...updatedRecommendations[level],
+            ...initialExercise.recommendations[level]
+          };
+        }
+      });
+      setRecommendations(updatedRecommendations);
     } else {
       resetForm();
     }
-  }, [initialExercise]);
+  }, [initialExercise, user.isAdmin]);
 
   const resetForm = () => {
     setName('');
@@ -57,33 +67,35 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     setImageUrl('');
     setCategory('');
     setRecommendations({
-      beginner: { weight: 0, reps: 10, sets: 3 },
-      intermediate: { weight: 0, reps: 10, sets: 3 },
-      advanced: { weight: 0, reps: 10, sets: 3 }
+      beginner: { weight: 0, reps: 10, sets: 3, duration: 30, distance: 1, intensity: 5, incline: 0 },
+      intermediate: { weight: 0, reps: 12, sets: 4, duration: 45, distance: 2, intensity: 7, incline: 1 },
+      advanced: { weight: 0, reps: 15, sets: 5, duration: 60, distance: 3, intensity: 9, incline: 2 }
     });
+    setIsDefault(false);
+    setActingAsAdmin(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
-
+  
     if (target.length === 0) {
       addNotification('Please select at least one target muscle group', 'error');
       setIsSubmitting(false);
       return;
     }
-
+  
     if (!category) {
       addNotification('Please select a category', 'error');
       setIsSubmitting(false);
       return;
     }
-
+  
     const exerciseType = category === 'Strength' ? 'strength' : 'cardio';
     const measurementType = category === 'Strength' ? 'weight_reps' : 'duration';
-
-    const exercise = { 
+  
+    let exerciseData = { 
       name, 
       description, 
       target, 
@@ -91,27 +103,52 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       category, 
       exerciseType, 
       measurementType,
-      recommendations,
       isDefault
     };
+
+    if (actingAsAdmin) {
+      exerciseData.recommendations = recommendations;
+    } else {
+      exerciseData.recommendations = {
+        [user.experienceLevel]: recommendations[user.experienceLevel]
+      };
+    }
+  
+    console.log('Submitting exercise:', exerciseData);
 
     try {
       let savedExercise;
       if (initialExercise) {
-        savedExercise = await updateExercise(initialExercise._id, exercise);
+        if (actingAsAdmin) {
+          savedExercise = await updateExercise(initialExercise._id, {
+            ...initialExercise,
+            ...exerciseData
+          });
+        } else {
+          // If not acting as admin, only update the user's experience level
+          savedExercise = await updateExercise(initialExercise._id, {
+            ...initialExercise,
+            recommendations: {
+              ...initialExercise.recommendations,
+              [user.experienceLevel]: exerciseData.recommendations[user.experienceLevel]
+            }
+          });
+        }
         addNotification('Exercise updated successfully', 'success');
       } else {
         if (isDefault && user.isAdmin) {
-          savedExercise = await addDefaultExercise(exercise);
+          savedExercise = await addDefaultExercise(exerciseData);
         } else {
-          savedExercise = await addExercise(exercise);
+          savedExercise = await addExercise(exerciseData);
         }
         addNotification('Exercise added successfully', 'success');
       }
+      console.log('Saved exercise:', savedExercise);
       resetForm();
       setIsExpanded(false);
       onSave(savedExercise);
     } catch (error) {
+      console.error('Error saving exercise:', error);
       addNotification('Failed to save exercise. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
@@ -119,6 +156,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   };
 
   const handleRecommendationChange = (level, field, value) => {
+    console.log(`Updating ${field} for ${level} to ${value}`);
     setRecommendations(prev => ({
       ...prev,
       [level]: {
@@ -152,7 +190,6 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   };
 
   return (
-    
     <div className="mb-8">
       <button
         onClick={toggleForm}
@@ -255,16 +292,18 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             />
           </div>
 
-          {/* Recommendations for Strength exercises */}
-          {category === 'Strength' && (
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Recommendations</h3>
-              {experienceLevels.map(level => (
-                <div key={level} className="mb-4">
-                  <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </h4>
-                  <div className="grid grid-cols-3 gap-2">
+          {/* Recommendations for exercises */}
+      {(category === 'Strength' || category === 'Cardio') && (
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Recommendations</h3>
+          {(actingAsAdmin ? experienceLevels : [user.experienceLevel]).map(level => (
+            <div key={level} className="mb-4">
+              <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {level ? level.charAt(0).toUpperCase() + level.slice(1) : 'Unknown Level'}
+              </h4>
+              <div className="grid grid-cols-3 gap-2">
+                {category === 'Strength' && (
+                  <>
                     <div>
                       <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-weight`}>
                         Weight (kg)
@@ -272,7 +311,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                       <input
                         id={`${level}-weight`}
                         type="number"
-                        value={recommendations[level].weight}
+                        value={recommendations[level]?.weight || 0}
                         onChange={(e) => handleRecommendationChange(level, 'weight', e.target.value)}
                         className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
                       />
@@ -284,7 +323,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                       <input
                         id={`${level}-reps`}
                         type="number"
-                        value={recommendations[level].reps}
+                        value={recommendations[level]?.reps || 0}
                         onChange={(e) => handleRecommendationChange(level, 'reps', e.target.value)}
                         className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
                       />
@@ -296,29 +335,88 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                       <input
                         id={`${level}-sets`}
                         type="number"
-                        value={recommendations[level].sets}
+                        value={recommendations[level]?.sets || 0}
                         onChange={(e) => handleRecommendationChange(level, 'sets', e.target.value)}
                         className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
                       />
                     </div>
-                  </div>
-                </div>
-              ))}
+                  </>
+                )}
+                {category === 'Cardio' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-duration`}>
+                        Duration (min)
+                      </label>
+                      <input
+                        id={`${level}-duration`}
+                        type="number"
+                        value={recommendations[level]?.duration || 0}
+                        onChange={(e) => handleRecommendationChange(level, 'duration', e.target.value)}
+                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-distance`}>
+                        Distance (km)
+                      </label>
+                      <input
+                        id={`${level}-distance`}
+                        type="number"
+                        value={recommendations[level]?.distance || 0}
+                        onChange={(e) => handleRecommendationChange(level, 'distance', e.target.value)}
+                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-intensity`}>
+                        Intensity (1-10)
+                      </label>
+                      <input
+                        id={`${level}-intensity`}
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={recommendations[level]?.intensity || 1}
+                        onChange={(e) => handleRecommendationChange(level, 'intensity', e.target.value)}
+                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-incline`}>
+                        Incline (%)
+                      </label>
+                      <input
+                        id={`${level}-incline`}
+                        type="number"
+                        value={recommendations[level]?.incline || 0}
+                        onChange={(e) => handleRecommendationChange(level, 'incline', e.target.value)}
+                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-          )}
-          {user.isAdmin && (
-            <div className="mb-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={isDefault}
-                  onChange={(e) => setIsDefault(e.target.checked)}
-                  className="form-checkbox h-5 w-5 text-emerald-500"
-                />
-                <span className="ml-2 text-gray-700 dark:text-gray-300">Set as Default Exercise (Admin Only)</span>
-              </label>
-            </div>
-          )}
+          ))}
+        </div>
+      )}
+      {user.isAdmin && (
+        <div className="mb-4">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={isDefault}
+              onChange={(e) => {
+                setIsDefault(e.target.checked);
+                setActingAsAdmin(e.target.checked);
+              }}
+              className="form-checkbox h-5 w-5 text-emerald-500"
+            />
+            <span className="ml-2 text-gray-700 dark:text-gray-300">Set as Default Exercise (Admin Only)</span>
+          </label>
+        </div>
+      )}
           {/* Submit and Cancel buttons */}
           <div className="flex items-center justify-between">
             <button

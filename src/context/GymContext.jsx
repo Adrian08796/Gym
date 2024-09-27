@@ -364,18 +364,34 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         ...updatedExercise,
         name: toTitleCase(updatedExercise.name),
         description: toTitleCase(updatedExercise.description),
-        target: toTitleCase(updatedExercise.target),
+        target: Array.isArray(updatedExercise.target)
+          ? updatedExercise.target.map(toTitleCase)
+          : toTitleCase(updatedExercise.target),
       };
+  
       const response = await axiosInstance.put(
         `${API_URL}/exercises/${id}`,
         exerciseWithTitleCase,
         getAuthConfig()
       );
+  
       setExercises(prevExercises =>
-        prevExercises.map(exercise =>
-          exercise._id === id ? response.data : exercise
-        )
+        prevExercises.map(exercise => {
+          if (exercise._id === id) {
+            return {
+              ...exercise,
+              ...response.data,
+              recommendations: {
+                ...exercise.recommendations,
+                [user.experienceLevel]: response.data.recommendations?.[user.experienceLevel]
+              }
+            };
+          }
+          return exercise;
+        })
       );
+  
+      addNotification("Exercise updated successfully", "success");
       return response.data;
     } catch (error) {
       console.error("Error updating exercise:", error);
