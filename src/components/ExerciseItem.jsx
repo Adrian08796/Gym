@@ -1,5 +1,6 @@
 // src/components/ExerciseItem.jsx
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser, FiEye } from 'react-icons/fi';
 import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
 import { useAuth } from '../context/AuthContext';
@@ -66,15 +67,24 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
   );
 
   const isImported = exercise.importedFrom && exercise.importedFrom.username;
-  const experienceLevel = user?.experienceLevel || 'beginner';
+  const experienceLevel = useMemo(() => {
+    return user?.experienceLevel || 'beginner';
+  }, [user]);
 
-  const getUserExerciseData = () => {
-    const userExercise = exercise.userExercises?.find(ue => ue.user === user.id);
-    return userExercise || {};
-  };
+  const userExerciseData = useMemo(() => {
+    return exercise.userExercises?.find(ue => ue.user === user.id) || {};
+  }, [exercise.userExercises, user.id]);
 
-  const userExerciseData = getUserExerciseData();
-  const recommendation = userExerciseData.recommendation || exercise.recommendations?.[experienceLevel] || {};
+  const recommendation = useMemo(() => {
+    if (userExerciseData.recommendation) {
+      return userExerciseData.recommendation;
+    }
+    if (exercise.recommendations && exercise.recommendations[experienceLevel]) {
+      return exercise.recommendations[experienceLevel];
+    }
+    // Provide a default recommendation if none is found
+    return { weight: 0, reps: 0, sets: 0, duration: 0, distance: 0, intensity: 0, incline: 0 };
+  }, [userExerciseData, exercise.recommendations, experienceLevel]);
 
   const displayName = userExerciseData.name || exercise.name;
   const displayDescription = userExerciseData.description || exercise.description;

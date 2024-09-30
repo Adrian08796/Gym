@@ -9,7 +9,7 @@ import ExerciseModal from '../components/ExerciseModal';
 import { useGymContext } from '../context/GymContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext'; // Add this import
+import { useAuth } from '../context/AuthContext';
 import { FiFilter, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import './ExerciseLibrary.css';
 
@@ -48,10 +48,10 @@ function ExerciseLibrary() {
   const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   
-
   useEffect(() => {
+    console.log('Fetching exercises for user:', user);
     fetchExercises();
-  }, [fetchExercises]);
+  }, [fetchExercises, user]);
 
   const filteredExercises = useMemo(() => {
     return exercises.filter(exercise => 

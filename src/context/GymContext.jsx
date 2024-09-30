@@ -192,10 +192,19 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
   const fetchWorkoutPlans = useCallback(async () => {
     if (user) {
       try {
+        console.log('Fetching workout plans...');
         const response = await axiosInstance.get(
           `${API_URL}/workoutplans`,
           getAuthConfig()
         );
+  
+        console.log('Workout plans response:', response);
+  
+        if (response.headers['content-type']?.includes('text/html')) {
+          console.error('Received HTML response instead of JSON');
+          throw new Error('Server returned an HTML response instead of JSON');
+        }
+  
         const plansWithFullExerciseDetails = await Promise.all(
           response.data.map(async plan => {
             const fullExercises = await Promise.all(
@@ -214,7 +223,6 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
           })
         );
         
-        // Remove duplicates based on plan ID
         const uniquePlans = plansWithFullExerciseDetails.reduce((acc, current) => {
           const x = acc.find(item => item._id === current._id);
           if (!x) {
@@ -228,7 +236,16 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         return uniquePlans;
       } catch (error) {
         console.error("Error fetching workout plans:", error);
-        addNotification("Failed to fetch workout plans", "error");
+        if (error.response) {
+          console.error('Error status:', error.response.status);
+          console.error('Error headers:', error.response.headers);
+          if (error.response.headers['content-type']?.includes('text/html')) {
+            console.error('HTML Error Response:', error.response.data);
+          } else {
+            console.error('Error Data:', error.response.data);
+          }
+        }
+        addNotification("Failed to fetch workout plans. Please check console for details.", "error");
         return [];
       }
     }
