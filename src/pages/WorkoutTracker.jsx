@@ -635,6 +635,15 @@ function WorkoutTracker() {
     if (currentExercise.category !== "Cardio") {
       startRestTimer();
     }
+  
+    // Check if exercise is complete and move to the next one if it is
+    if (isExerciseComplete(currentExercise._id, sets[currentExerciseIndex] || [])) {
+      if (currentExerciseIndex < currentPlan.exercises.length - 1) {
+        handleExerciseChange(currentExerciseIndex + 1);
+      } else {
+        addNotification("Workout complete! You can finish your workout now.", "success");
+      }
+    }
   };
 
   const isExerciseComplete = useCallback(

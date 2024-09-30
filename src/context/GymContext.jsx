@@ -955,11 +955,35 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
 
   const updateUserRecommendation = async (exerciseId, recommendation) => {
     try {
-      await axiosInstance.put(`${API_URL}/exercises/${exerciseId}/user-recommendation`, recommendation, getAuthConfig());
+      const response = await axiosInstance.put(
+        `${API_URL}/exercises/${exerciseId}/user-recommendation`,
+        recommendation,
+        getAuthConfig()
+      );
+      console.log('User recommendation updated:', response.data);
+      
+      // Update the local state
+      setExercises(prevExercises => 
+        prevExercises.map(exercise => 
+          exercise._id === exerciseId 
+            ? { 
+                ...exercise, 
+                userRecommendation: response.data.userRecommendation
+              }
+            : exercise
+        )
+      );
+  
       addNotification('Exercise recommendation updated', 'success');
+      return response.data;
     } catch (error) {
       console.error('Error updating user recommendation:', error);
-      addNotification('Failed to update exercise recommendation', 'error');
+      if (error.response && error.response.status === 404) {
+        addNotification('Exercise not found', 'error');
+      } else {
+        addNotification('Failed to update exercise recommendation', 'error');
+      }
+      throw error;
     }
   };
 
