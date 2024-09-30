@@ -1,6 +1,6 @@
 // src/pages/ExerciseLibrary.jsx
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
@@ -34,6 +34,7 @@ function ExerciseLibrary() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { user } = useAuth();
 
   const { 
@@ -51,7 +52,11 @@ function ExerciseLibrary() {
   useEffect(() => {
     console.log('Fetching exercises for user:', user);
     fetchExercises();
-  }, [fetchExercises, user]);
+  }, [fetchExercises, user, refreshTrigger]);
+
+  const triggerRefresh = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
 
   const filteredExercises = useMemo(() => {
     return exercises.filter(exercise => 
@@ -73,20 +78,21 @@ function ExerciseLibrary() {
     setSelectedExercise(null);
   };
 
-  const handleDelete = (exercise) => {
-    deleteExercise(exercise._id);
-    setSelectedExercise(null);
+  const handleDelete = async (exercise) => {
+    try {
+      await deleteExercise(exercise._id);
+      setSelectedExercise(null);
+      addNotification('Exercise deleted successfully', 'success');
+      triggerRefresh();
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      addNotification('Failed to delete exercise', 'error');
+    }
   };
 
   const handleAddToPlan = async (exercise) => {
     if (!selectedPlan) {
       addNotification('Please select a workout plan first', 'warning');
-      return;
-    }
-  
-    // Check if the exercise is already in the plan
-    if (selectedPlan.exercises.some(ex => ex._id === exercise._id)) {
-      addNotification('This exercise is already in the plan', 'warning');
       return;
     }
   
@@ -96,7 +102,7 @@ function ExerciseLibrary() {
         addNotification(`Exercise added to plan`, 'success');
         setSelectedPlan(updatedPlan);
       } else if (error === 'Duplicate exercise') {
-        // This case is handled by the addExerciseToPlan function
+        addNotification('This exercise is already in the plan', 'warning');
       } else {
         addNotification('Failed to add exercise to plan', 'error');
       }
@@ -133,9 +139,10 @@ function ExerciseLibrary() {
     }
   };
 
-  const handleSave = (savedExercise) => {
+  const handleSave = async (savedExercise) => {
     setEditingExercise(null);
-    fetchExercises();  // Refresh the exercise list
+    triggerRefresh();
+    addNotification('Exercise saved successfully', 'success');
   };
 
   const handleSelectWorkoutPlan = async (plan) => {
@@ -271,7 +278,8 @@ function ExerciseLibrary() {
         <AddExerciseForm 
           onSave={handleSave} 
           initialExercise={editingExercise}
-          onCancel={handleCancelEdit}
+          onCancel={() => setEditingExercise(null)}
+          triggerRefresh={triggerRefresh}
         />
 
         <Droppable droppableId="workoutPlanDropZone">
@@ -316,6 +324,7 @@ function ExerciseLibrary() {
                           onDelete={handleDelete}
                           onAddToPlan={() => handleAddToPlan(exercise)}
                           isDragging={snapshot.isDragging}
+                          triggerRefresh={triggerRefresh}
                         />
                       </div>
                     )}
@@ -334,6 +343,7 @@ function ExerciseLibrary() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onAddToPlan={handleAddToPlan}
+            triggerRefresh={triggerRefresh}
           />
         )}
 

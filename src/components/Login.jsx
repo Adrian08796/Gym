@@ -37,7 +37,7 @@ function Login() {
           addNotification('Logged in successfully', 'success');
           navigate('/');
         } else {
-          addNotification('Login failed: Invalid response from server', 'error');
+          
         }
       } catch (err) {
         console.error('Login error:', err);
