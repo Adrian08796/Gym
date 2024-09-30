@@ -3,12 +3,14 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useGymContext } from '../context/GymContext';
-import { FiPlay, FiEdit, FiTrash2, FiShare2, FiUser } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
+import { FiPlay, FiEdit, FiTrash2, FiShare2, FiUser, FiEyeOff } from 'react-icons/fi';
 import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
 
 function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const { darkMode } = useTheme();
-  const { shareWorkoutPlan } = useGymContext();
+  const { shareWorkoutPlan, deleteWorkoutPlan } = useGymContext();
+  const { user } = useAuth();
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [shareLink, setShareLink] = useState('');
 
@@ -23,10 +25,14 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     }
   };
 
-  const confirmDelete = (e) => {
+  const confirmDelete = async (e) => {
     e.stopPropagation();
-    onDelete(plan._id);
-    setIsDeleteConfirmOpen(false);
+    try {
+      await deleteWorkoutPlan(plan._id);
+      setIsDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error('Error deleting workout plan:', error);
+    }
   };
 
   const cancelDelete = (e) => {
@@ -69,11 +75,15 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const DeleteConfirmation = () => (
     <div className="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center rounded-lg z-10">
       <div className="bg-white dark:bg-gray-700 p-4 rounded-lg text-center">
-        <p className="mb-4 text-sm">Are you sure you want to delete this workout plan?</p>
+        <p className="mb-4 text-sm">
+          {plan.isDefault && !user.isAdmin
+            ? "Are you sure you want to remove this workout plan from your view?"
+            : "Are you sure you want to delete this workout plan?"}
+        </p>
         <div className="flex justify-center space-x-2">
           <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>
-            <FiTrash2 className="mr-1" />
-            Yes, Delete
+            {plan.isDefault && !user.isAdmin ? <FiEyeOff className="mr-1" /> : <FiTrash2 className="mr-1" />}
+            {plan.isDefault && !user.isAdmin ? "Yes, Remove" : "Yes, Delete"}
           </button>
           <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>
             Cancel
@@ -124,8 +134,15 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
       </div>
       <div className="flex flex-wrap justify-between mt-4 gap-2">
         <ActionButton action={onStart} style={buttonStyles.start} icon={<FiPlay className="w-3 h-3 sm:w-4 sm:h-4" />} text="Start" />
-        <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit className="w-3 h-3 sm:w-4 sm:h-4" />} text="Edit" />
-        <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 className="w-3 h-3 sm:w-4 sm:h-4" />} text="Delete" />
+        {(!plan.isDefault || user.isAdmin) && (
+          <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit className="w-3 h-3 sm:w-4 sm:h-4" />} text="Edit" />
+        )}
+        <ActionButton 
+          action={onDelete} 
+          style={buttonStyles.delete} 
+          icon={plan.isDefault && !user.isAdmin ? <FiEyeOff className="w-3 h-3 sm:w-4 sm:h-4" /> : <FiTrash2 className="w-3 h-3 sm:w-4 sm:h-4" />} 
+          text={plan.isDefault && !user.isAdmin ? "Remove" : "Delete"} 
+        />
         <ActionButton action={handleShare} style={buttonStyles.share} icon={<FiShare2 className="w-3 h-3 sm:w-4 sm:h-4" />} text="Share" />
       </div>
       {shareLink && (

@@ -206,7 +206,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         }
   
         const plansWithFullExerciseDetails = await Promise.all(
-          response.data.map(async plan => {
+          response.data.plans.map(async plan => {
             const fullExercises = await Promise.all(
               plan.exercises.map(async exercise => {
                 if (!exercise.description || !exercise.imageUrl) {
@@ -535,7 +535,11 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       return fullPlan;
     } catch (error) {
       console.error("Error adding workout plan:", error);
-      addNotification("Failed to add workout plan", "error");
+      if (error.response && error.response.data && error.response.data.message) {
+        addNotification(error.response.data.message, "warning");
+      } else {
+        addNotification("Failed to add workout plan", "error");
+      }
       throw error;
     }
   };
@@ -577,25 +581,22 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
     }
   };
 
-  const deleteWorkoutPlan = async id => {
+  const deleteWorkoutPlan = async (id) => {
     try {
-      await axiosInstance.delete(
+      const response = await axiosInstance.delete(
         `${API_URL}/workoutplans/${id}`,
         getAuthConfig()
       );
-      setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
-      setWorkoutHistory(prevHistory =>
-        prevHistory.map(workout =>
-          workout.plan && workout.plan._id === id
-            ? {
-                ...workout,
-                planDeleted: true,
-                planName: workout.planName || "Deleted Plan",
-              }
-            : workout
-        )
-      );
-      addNotification("Workout plan deleted successfully", "success");
+      
+      if (response.data.message === 'Workout plan removed from your view') {
+        // For normal users, just remove the plan from the local state
+        setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
+        addNotification("Workout plan removed from your view", "success");
+      } else {
+        // For admins or user's own custom plans, remove from state as before
+        setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
+        addNotification("Workout plan deleted successfully", "success");
+      }
     } catch (error) {
       console.error("Error deleting workout plan:", error);
       if (error.response && error.response.status === 404) {
@@ -613,9 +614,20 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
     try {
       console.log('Adding exercise to plan:', planId, exerciseId);
       
-      // Check if the exercise is already in the plan
+      // Check if the plan exists and if the user has permission to modify it
       const currentPlan = workoutPlans.find(plan => plan._id === planId);
-      if (currentPlan && currentPlan.exercises.some(ex => ex._id === exerciseId)) {
+      if (!currentPlan) {
+        addNotification("Workout plan not found", "error");
+        return { success: false, error: 'Plan not found' };
+      }
+  
+      if (currentPlan.isDefault && !user.isAdmin) {
+        addNotification("You don't have permission to modify this plan", "error");
+        return { success: false, error: 'Unauthorized' };
+      }
+  
+      // Check if the exercise is already in the plan
+      if (currentPlan.exercises.some(ex => ex._id === exerciseId)) {
         addNotification("This exercise is already in the plan", "warning");
         return { success: false, error: 'Duplicate exercise' };
       }
@@ -633,14 +645,28 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       return { success: true, updatedPlan: response.data };
     } catch (error) {
       console.error("Error adding exercise to plan:", error);
-      if (error.response && error.response.status === 400 && error.response.data.message === 'Exercise already in the workout plan') {
-        addNotification("This exercise is already in the plan", "warning");
-      } else if (error.response && error.response.status === 404) {
-        addNotification("Workout plan not found", "error");
-      } else if (error.response && error.response.data && error.response.data.message) {
-        addNotification(error.response.data.message, "error");
+      if (error.response) {
+        switch (error.response.status) {
+          case 400:
+            if (error.response.data.message === 'Exercise already in the workout plan') {
+              addNotification("This exercise is already in the plan", "warning");
+            } else {
+              addNotification(error.response.data.message || "Bad request", "error");
+            }
+            break;
+          case 403:
+            addNotification("You don't have permission to modify this plan", "error");
+            break;
+          case 404:
+            addNotification("Workout plan or exercise not found", "error");
+            break;
+          default:
+            addNotification("Failed to add exercise to plan", "error");
+        }
+      } else if (error.request) {
+        addNotification("No response received from server", "error");
       } else {
-        addNotification("Failed to add exercise to plan", "error");
+        addNotification("Error setting up request", "error");
       }
       return { success: false, error };
     }

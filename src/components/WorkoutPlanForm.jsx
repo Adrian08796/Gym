@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
@@ -13,10 +14,11 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   const [scheduledDate, setScheduledDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isDefault, setIsDefault] = useState(false);
+  const [isEditable, setIsEditable] = useState(true);
   const { exercises, addWorkoutPlan, updateWorkoutPlan, addDefaultWorkoutPlan } = useGymContext();
   const { darkMode } = useTheme();
   const { user } = useAuth();
-
+  const { addNotification } = useNotification();
 
   useEffect(() => {
     if (initialPlan) {
@@ -27,17 +29,23 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       setWorkoutType(initialPlan.type || '');
       setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
       setIsDefault(initialPlan.isDefault || false);
+      setIsEditable(user.isAdmin || !initialPlan.isDefault);
     } else {
       setPlanName('');
       setSelectedExercises([]);
       setWorkoutType('');
       setScheduledDate('');
       setIsDefault(false);
+      setIsEditable(true);
     }
-  }, [initialPlan, exercises]);
+  }, [initialPlan, exercises, user.isAdmin]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isEditable) {
+      addNotification("You don't have permission to edit this plan.", "error");
+      return;
+    }
     const workoutPlan = {
       name: planName,
       exercises: selectedExercises.map(exercise => exercise._id),
@@ -55,8 +63,10 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
         savedPlan = await addWorkoutPlan(workoutPlan);
       }
       onSubmit(savedPlan);
+      onCancel();
     } catch (error) {
       console.error('Error saving workout plan:', error);
+      addNotification(error.response?.data?.message || "Failed to save workout plan", "error");
     }
   };
 
@@ -66,6 +76,10 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   };
 
   const handleExerciseToggle = (exercise) => {
+    if (!isEditable) {
+      addNotification("You don't have permission to modify this plan.", "error");
+      return;
+    }
     setSelectedExercises(prev => 
       prev.some(e => e._id === exercise._id)
         ? prev.filter(e => e._id !== exercise._id)
@@ -74,6 +88,10 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   };
 
   const onDragEnd = (result) => {
+    if (!isEditable) {
+      addNotification("You don't have permission to modify this plan.", "error");
+      return;
+    }
     if (!result.destination) {
       return;
     }
@@ -112,8 +130,9 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           id="planName"
           value={planName}
           onChange={(e) => setPlanName(e.target.value)}
-          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline`}
+          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
           required
+          disabled={!isEditable}
         />
       </div>
       <div className="mb-4">
@@ -124,8 +143,9 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           id="workoutType"
           value={workoutType}
           onChange={(e) => setWorkoutType(e.target.value)}
-          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline`}
+          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
           required
+          disabled={!isEditable}
         >
           <option value="">Select a type</option>
           <option value="strength">Strength</option>
@@ -142,7 +162,8 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           id="scheduledDate"
           value={scheduledDate}
           onChange={(e) => setScheduledDate(e.target.value)}
-          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline`}
+          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={!isEditable}
         />
       </div>
       <div className="mb-4">
@@ -154,7 +175,8 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           placeholder="Search exercises..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline mb-4`}
+          className={`shadow appearance-none border rounded w-full py-2 px-3 ${darkMode ? 'bg-gray-700 text-white' : 'text-gray-700'} leading-tight focus:outline-none focus:shadow-outline mb-4 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={!isEditable}
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className={`border rounded p-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} overflow-y-auto h-96`}>
@@ -168,7 +190,8 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
                       id={`exercise-${exercise._id}`}
                       checked={selectedExercises.some(e => e._id === exercise._id)}
                       onChange={() => handleExerciseToggle(exercise)}
-                      className="mr-2"
+                      className={`mr-2 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={!isEditable}
                     />
                     <label htmlFor={`exercise-${exercise._id}`} className="text-sm">
                       {exercise.name}
@@ -186,11 +209,11 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           <div className={`border rounded p-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} overflow-y-auto h-96`}>
             <h3 className="font-bold mb-2">Selected Exercises</h3>
             <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="selected-exercises">
+              <Droppable droppableId="selected-exercises" isDropDisabled={!isEditable}>
                 {(provided) => (
                   <ul {...provided.droppableProps} ref={provided.innerRef}>
                     {selectedExercises.map((exercise, index) => (
-                      <Draggable key={exercise._id} draggableId={exercise._id} index={index}>
+                      <Draggable key={exercise._id} draggableId={exercise._id} index={index} isDragDisabled={!isEditable}>
                         {(provided) => (
                           <li
                             ref={provided.innerRef}
@@ -209,7 +232,8 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
                             <button
                               type="button"
                               onClick={() => handleExerciseToggle(exercise)}
-                              className="text-red-500 hover:text-red-700"
+                              className={`text-red-500 hover:text-red-700 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={!isEditable}
                             >
                               Remove
                             </button>
@@ -241,7 +265,8 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       <div className="flex items-center justify-between mt-6">
         <button
           type="submit"
-          className="bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
+          className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={!isEditable}
         >
           {initialPlan ? 'Update Workout Plan' : 'Create Workout Plan'}
         </button>
@@ -253,6 +278,11 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           Cancel
         </button>
       </div>
+      {!isEditable && (
+        <p className="mt-4 text-red-500 text-sm">
+          This is a default plan created by an admin. You don't have permission to edit it.
+        </p>
+      )}
     </form>
   );
 }
