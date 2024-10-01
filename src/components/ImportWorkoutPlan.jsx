@@ -3,12 +3,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
-import { Toast } from 'primereact/toast';
 
 function ImportWorkoutPlan() {
   const { shareId } = useParams();
   const [isImporting, setIsImporting] = useState(false);
-  const { importWorkoutPlan, fetchExercises } = useGymContext();
+  const { importWorkoutPlan, fetchExercises, showToast } = useGymContext();
   const navigate = useNavigate();
 
   const handleImport = async () => {

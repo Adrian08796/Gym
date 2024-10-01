@@ -22,7 +22,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDefault, setIsDefault] = useState(false);
   const [actingAsAdmin, setActingAsAdmin] = useState(false);
-  const { addExercise, updateExercise, addDefaultExercise } = useGymContext();
+  const { addExercise, updateExercise, addDefaultExercise, showToast } = useGymContext();
   const { user } = useAuth();
 
   useEffect(() => {
