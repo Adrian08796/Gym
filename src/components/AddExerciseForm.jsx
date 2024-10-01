@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
-import { useNotification } from '../context/NotificationContext';
+import { Toast } from 'primereact/toast';
 import { useAuth } from '../context/AuthContext';
 
 const muscleGroups = [
@@ -23,7 +23,6 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [isDefault, setIsDefault] = useState(false);
   const [actingAsAdmin, setActingAsAdmin] = useState(false);
   const { addExercise, updateExercise, addDefaultExercise } = useGymContext();
-  const { addNotification } = useNotification();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -85,13 +84,13 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     setIsSubmitting(true);
   
     if (target.length === 0) {
-      addNotification('Please select at least one target muscle group', 'error');
+      showToast('error', 'Error', 'Please select at least one target muscle group');
       setIsSubmitting(false);
       return;
     }
   
     if (!category) {
-      addNotification('Please select a category', 'error');
+      showToast('error', 'Error', 'Please select a category');
       setIsSubmitting(false);
       return;
     }
@@ -138,14 +137,14 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             }
           });
         }
-        addNotification('Exercise updated successfully', 'success');
+        showToast('success', 'Success', 'Exercise updated successfully');
       } else {
         if (isDefault && user.isAdmin) {
           savedExercise = await addDefaultExercise(exerciseData);
         } else {
           savedExercise = await addExercise(exerciseData);
         }
-        addNotification('Exercise added successfully', 'success');
+        showToast('success', 'Success', 'Exercise added successfully');
       }
       console.log('Saved exercise:', savedExercise);
       resetForm();
@@ -153,7 +152,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       onSave(savedExercise);
     } catch (error) {
       console.error('Error saving exercise:', error);
-      addNotification('Failed to save exercise. Please try again.', 'error');
+      showToast('error', 'Error', 'Failed to save exercise. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

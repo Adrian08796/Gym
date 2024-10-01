@@ -2,14 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useGymContext } from '../context/GymContext';
-import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { FiEdit2, FiSave, FiX, FiLock } from 'react-icons/fi';
 
 function UserProfile() {
   const { user, updateUser, changePassword, updateExperienceLevel } = useAuth();
-  const { workoutHistory } = useGymContext();
-  const { addNotification } = useNotification();
+  const { workoutHistory, showToast } = useGymContext();
   const { darkMode } = useTheme();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -34,16 +32,16 @@ function UserProfile() {
     try {
       await updateUser({ username, email, experienceLevel });
       setIsEditing(false);
-      addNotification('Profile updated successfully', 'success');
+      showToast('success', 'Success', 'Profile updated successfully');
     } catch (error) {
-      addNotification('Failed to update profile', 'error');
+      showToast('error', 'Error', 'Failed to update profile');
     }
   };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmNewPassword) {
-      addNotification('New passwords do not match', 'error');
+      showToast('error', 'Error', 'New passwords do not match');
       return;
     }
     try {
@@ -52,9 +50,9 @@ function UserProfile() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
-      addNotification('Password changed successfully', 'success');
+      showToast('success', 'Success', 'Password changed successfully');
     } catch (error) {
-      addNotification('Failed to change password', 'error');
+      showToast('error', 'Error', 'Failed to change password');
     }
   };
 
@@ -63,10 +61,10 @@ function UserProfile() {
     try {
       await updateExperienceLevel(newLevel);
       setExperienceLevel(newLevel);
-      addNotification('Experience level updated successfully', 'success');
+      showToast('success', 'Success', 'Experience level updated successfully');
     } catch (error) {
       console.error('Failed to update experience level:', error);
-      addNotification(`Failed to update experience level: ${error.message}`, 'error');
+      showToast('error', 'Error', `Failed to update experience level: ${error.message}`);
     }
   };
 

@@ -1,15 +1,14 @@
 // src/pages/WorkoutTracker.jsx
 
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
+import React, { 
+  useState, 
+  useEffect, 
+  useRef, 
+  useCallback, 
+  useMemo 
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGymContext } from "../context/GymContext";
-import { useNotification } from "../context/NotificationContext";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import { CSSTransition, SwitchTransition } from "react-transition-group";
@@ -26,7 +25,6 @@ import PreviousWorkoutDisplay from "../components/PreviousWorkoutDisplay";
 import { formatTime } from "../utils/timeUtils";
 import { canVibrate, vibrateDevice } from "../utils/deviceUtils";
 import "./WorkoutTracker.css";
-import { set } from "date-fns";
 
 function WorkoutTracker() {
   const [currentPlan, setCurrentPlan] = useState(null);
@@ -73,8 +71,9 @@ function WorkoutTracker() {
     getExerciseById,
     updateExerciseRecommendations,
     updateUserRecommendation,
+    showToast,
+    confirm,
   } = useGymContext();
-  const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -85,7 +84,7 @@ function WorkoutTracker() {
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(
     currentPlan?._id,
     API_URL,
-    addNotification
+    showToast
   );
 
   // Fetch full exercise details from the API
@@ -208,21 +207,18 @@ function WorkoutTracker() {
               }
             } catch (error) {
               console.error("Error loading workout plan from localStorage:", error);
-              addNotification(
-                "Error loading workout plan. Please select a new plan.",
-                "error"
-              );
               navigate("/plans");
+              showToast("error", "Error", "Error loading workout plan. Please select a new plan.");
             }
           } else {
             console.log("No workout plan found in progress or localStorage");
-            addNotification("No workout plan selected. Please choose a plan.", "info");
+            showToast("info", "Info", "No workout plan selected. Please choose a plan.");
             navigate("/plans");
           }
         }
       } catch (error) {
         console.error("Error loading workout:", error);
-        addNotification("Error loading workout. Please try again.", "error");
+        showToast("error", "Error", "Failed to load workout. Please try again.");
         navigate("/plans");
       } finally {
         setIsLoading(false);
@@ -230,7 +226,7 @@ function WorkoutTracker() {
     };
   
     loadWorkout();
-  }, [navigate, addNotification, loadProgress, user.id]);
+  }, [navigate, showToast, loadProgress, user.id]);
 
   const loadFullPlanDetails = async (plan) => {
     if (!plan || !plan.exercises) {
@@ -307,7 +303,7 @@ function WorkoutTracker() {
       }, 1000);
     } else if (remainingRestTime === 0 && isResting) {
       setIsResting(false);
-      addNotification("Rest time is over. Ready for the next set!", "info");
+      showToast("info", "Info", "Rest time is over. Ready for the next set!");
       try {
         if (canVibrate()) {
           vibrateDevice();
@@ -317,7 +313,7 @@ function WorkoutTracker() {
       }
     }
     return () => clearInterval(restTimer);
-  }, [isResting, remainingRestTime, addNotification]);
+  }, [isResting, remainingRestTime, showToast]);
 
   useEffect(() => {
     saveDataToLocalStorage();
@@ -525,7 +521,7 @@ function WorkoutTracker() {
   
     if (currentExercise.category === "Strength") {
       if (!weight || !reps) {
-        addNotification('Please enter both weight and reps', 'error');
+        showToast("error", "Error", "Please enter both weight and reps");
         return;
       }
       newSet = {
@@ -544,12 +540,11 @@ function WorkoutTracker() {
         });
       } catch (error) {
         console.error('Failed to update user-specific recommendation:', error);
-        // Optionally, you can show a notification to the user
-        // addNotification('Failed to update exercise recommendation', 'error');
+        showToast('error', 'Error', 'Failed to update exercise recommendation');
       }
     } else if (currentExercise.category === "Cardio") {
       if (!duration) {
-        addNotification("Please enter at least the duration", "error");
+        showToast("error", "Error", "Please enter at least the duration");
         return;
       }
       newSet = {
@@ -622,13 +617,10 @@ function WorkoutTracker() {
         skippedPauses,
       });
   
-      addNotification(
-        `${currentExercise.category === "Cardio" ? "Exercise" : "Set"} completed and progress saved!`,
-        "success"
-      );
+      showToast("success", "Success", `${currentExercise.category === "Cardio" ? "Exercise" : "Set"} completed and progress saved!`);
     } catch (error) {
       console.error("Error saving progress:", error);
-      addNotification("Failed to save progress", "error");
+      showToast("error", "Error", "Failed to save progress");
     }
   
     // For cardio exercises, we don't start the rest timer
@@ -641,7 +633,7 @@ function WorkoutTracker() {
       if (currentExerciseIndex < currentPlan.exercises.length - 1) {
         handleExerciseChange(currentExerciseIndex + 1);
       } else {
-        addNotification("Workout complete! You can finish your workout now.", "success");
+        showToast("success", "Success", "Workout complete! You can finish your workout now.");
       }
     }
   };
@@ -666,7 +658,7 @@ function WorkoutTracker() {
     setIsResting(false);
     setRemainingRestTime(0);
     setSkippedPauses(prevSkipped => prevSkipped + 1);
-    addNotification("Rest timer skipped", "info");
+    showToast("info", "Info", "Rest timer skipped");
   };
 
   const updateProgression = () => {
@@ -716,51 +708,48 @@ function WorkoutTracker() {
     try {
       await addWorkout(completedWorkout);
       await clearWorkout();
-      addNotification("Workout completed and saved!", "success");
+      showToast("success", "Success", "Workout completed and saved!");
       navigate("/");
     } catch (error) {
       console.error("Error saving workout:", error);
-      addNotification("Failed to save workout. Please try again.", "error");
+      showToast("error", "Error", "Failed to save workout. Please try again.");
     }
   };
 
   const handleCancelWorkout = () => {
     if (isConfirmingCancel) return;
-
     setIsConfirmingCancel(true);
-    addNotification(
-      "Are you sure you want to cancel this workout? All progress will be lost.",
-      "warning",
-      [
-        {
-          label: "Yes, Cancel",
-          onClick: async () => {
-            try {
-              await clearWorkout();
-              localStorage.removeItem("workoutStartTime");
-              resetWorkoutState();
-              clearLocalStorage();
-              addNotification("Workout cancelled", "info");
-              setIsConfirmingCancel(false);
-              navigate("/plans");
-            } catch (error) {
-              console.error("Error cancelling workout:", error);
-              addNotification(
-                "Failed to cancel workout. Please try again.",
-                "error"
-              );
-            }
-          },
-        },
-        {
-          label: "No, Continue",
-          onClick: () => {
-            setIsConfirmingCancel(false);
-          },
-        },
-      ],
-      0
-    );
+    
+    confirm({
+      message: 'Are you sure you want to cancel this workout? All progress will be lost.',
+      header: 'Cancel Workout',
+      icon: 'pi pi-exclamation-triangle',
+      acceptClassName: 'custom-nav-btn custom-nav-btn-danger',
+      rejectClassName: 'custom-nav-btn',
+      acceptLabel: 'Yes, Cancel',
+      rejectLabel: 'No, Continue',
+      className: 'custom-confirm-dialog',
+      style: { width: '350px' },
+      contentClassName: 'confirm-content',
+      headerClassName: 'confirm-header',
+      accept: async () => {
+        try {
+          await clearWorkout();
+          localStorage.removeItem("workoutStartTime");
+          resetWorkoutState();
+          clearLocalStorage();
+          showToast('info', 'Info', 'Workout cancelled');
+          setIsConfirmingCancel(false);
+          navigate("/plans");
+        } catch (error) {
+          console.error("Error cancelling workout:", error);
+          showToast('error', 'Error', 'Failed to cancel workout. Please try again.');
+        }
+      },
+      reject: () => {
+        setIsConfirmingCancel(false);
+      }
+    });
   };
 
   const resetWorkoutState = () => {
@@ -876,7 +865,7 @@ function WorkoutTracker() {
       }
     } catch (error) {
       console.error("Error saving progress before switching exercise:", error);
-      addNotification("Failed to save progress", "error");
+      showToast("error", "Error", "Failed to save progress.");
     }
   };
 
@@ -1310,7 +1299,7 @@ function WorkoutTracker() {
           </div>
         )}
       </div>
-    </div>
+      </div>
     </>
   );
 }

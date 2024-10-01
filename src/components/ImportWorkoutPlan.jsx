@@ -3,13 +3,12 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
-import { useNotification } from '../context/NotificationContext';
+import { Toast } from 'primereact/toast';
 
 function ImportWorkoutPlan() {
   const { shareId } = useParams();
   const [isImporting, setIsImporting] = useState(false);
   const { importWorkoutPlan, fetchExercises } = useGymContext();
-  const { addNotification } = useNotification();
   const navigate = useNavigate();
 
   const handleImport = async () => {
@@ -17,10 +16,10 @@ function ImportWorkoutPlan() {
     try {
       await importWorkoutPlan(shareId);
       await fetchExercises(); // Fetch exercises after successful import
-      addNotification('Workout plan imported successfully', 'success');
+      showToast('success', 'Success', 'Workout plan imported successfully');
       navigate('/plans');
     } catch (error) {
-      addNotification('Failed to import workout plan', 'error');
+      showToast('error', 'Error', 'Failed to import workout plan');
     } finally {
       setIsImporting(false);
     }

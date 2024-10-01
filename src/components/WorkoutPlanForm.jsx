@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { useNotification } from '../context/NotificationContext';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
@@ -15,10 +14,9 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [isEditable, setIsEditable] = useState(true);
-  const { exercises, addWorkoutPlan, updateWorkoutPlan, addDefaultWorkoutPlan } = useGymContext();
+  const { exercises, addWorkoutPlan, updateWorkoutPlan, addDefaultWorkoutPlan, showToast } = useGymContext();
   const { darkMode } = useTheme();
   const { user } = useAuth();
-  const { addNotification } = useNotification();
 
   useEffect(() => {
     if (initialPlan) {
@@ -43,7 +41,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isEditable) {
-      addNotification("You don't have permission to edit this plan.", "error");
+      showToast('error', 'Error', "You don't have permission to edit this plan.");
       return;
     }
     const workoutPlan = {
@@ -66,7 +64,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       onCancel();
     } catch (error) {
       console.error('Error saving workout plan:', error);
-      addNotification(error.response?.data?.message || "Failed to save workout plan", "error");
+      showToast('error', 'Error', error.response?.data?.message || 'Failed to save workout plan');
     }
   };
 
@@ -77,7 +75,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
 
   const handleExerciseToggle = (exercise) => {
     if (!isEditable) {
-      addNotification("You don't have permission to modify this plan.", "error");
+      showToast('error', 'Error', "You don't have permission to modify this plan.");
       return;
     }
     setSelectedExercises(prev => 
@@ -89,7 +87,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
 
   const onDragEnd = (result) => {
     if (!isEditable) {
-      addNotification("You don't have permission to modify this plan.", "error");
+      showToast('error', 'Error', "You don't have permission to modify this plan.");
       return;
     }
     if (!result.destination) {

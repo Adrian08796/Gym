@@ -6,8 +6,7 @@ import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
 import WorkoutPlanSelector from '../components/WorkoutPlanSelector';
 import ExerciseModal from '../components/ExerciseModal';
-import { useGymContext } from '../context/GymContext';
-import { useNotification } from '../context/NotificationContext';
+import { useGymContext } from "../context/GymContext";
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { FiFilter, FiChevronDown, FiChevronUp } from 'react-icons/fi';
@@ -44,9 +43,9 @@ function ExerciseLibrary() {
     addExerciseToPlan, 
     removeExerciseFromPlan, 
     fetchWorkoutPlans, 
-    fetchExercises 
+    fetchExercises,
+    showToast, 
   } = useGymContext();
-  const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   
   useEffect(() => {
@@ -82,45 +81,45 @@ function ExerciseLibrary() {
     try {
       await deleteExercise(exercise._id);
       setSelectedExercise(null);
-      addNotification('Exercise deleted successfully', 'success');
+      showToast('success', 'Success', 'Exercise deleted successfully');
       triggerRefresh();
     } catch (error) {
       console.error('Error deleting exercise:', error);
-      addNotification('Failed to delete exercise', 'error');
+      showToast('error', 'Error', 'Failed to delete exercise');
     }
   };
 
   const handleAddToPlan = async (exercise) => {
     if (!selectedPlan) {
-      addNotification('Please select a workout plan first', 'warning');
+      showToast('warn', 'Warning', 'Please select a workout plan first');
       return;
     }
   
     try {
       const { success, updatedPlan, error } = await addExerciseToPlan(selectedPlan._id, exercise._id);
       if (success) {
-        addNotification(`Exercise added to plan`, 'success');
+        showToast('success', 'Success', 'Exercise added to plan');
         setSelectedPlan(updatedPlan);
       } else if (error === 'Duplicate exercise') {
-        addNotification('This exercise is already in the plan', 'warning');
+        showToast('warn', 'Warning', 'This exercise is already in the plan');
       } else {
-        addNotification('Failed to add exercise to plan', 'error');
+        showToast('error', 'Error', 'Failed to add exercise to plan');
       }
     } catch (error) {
       console.error('Error adding exercise to plan:', error);
-      addNotification('Failed to add exercise to plan', 'error');
+      showToast('error', 'Error', 'Failed to add exercise to plan');
     }
   };
 
   const handleRemoveFromPlan = async (planId, exerciseId) => {
     try {
       await removeExerciseFromPlan(planId, exerciseId);
-      addNotification('Exercise removed from plan', 'success');
+      showToast('success', 'Success', 'Exercise removed from plan');
       // Refresh the selected plan to update the exercise list
       handleSelectPlan(selectedPlan);
     } catch (error) {
       console.error('Error removing exercise from plan:', error);
-      addNotification('Failed to remove exercise from plan', 'error');
+      showToast('error', 'Error', 'Failed to remove exercise from plan');
     }
   };
 
@@ -134,7 +133,7 @@ function ExerciseLibrary() {
         setSelectedPlan(fullPlan);
       } catch (error) {
         console.error('Error fetching full plan details:', error);
-        addNotification('Failed to load full plan details', 'error');
+        showToast('error', 'Error', 'Failed to load full plan details');
       }
     }
   };
@@ -142,19 +141,19 @@ function ExerciseLibrary() {
   const handleSave = async (savedExercise) => {
     setEditingExercise(null);
     triggerRefresh();
-    addNotification('Exercise saved successfully', 'success');
+    showToast('success', 'Success', 'Exercise saved successfully');
   };
 
   const handleSelectWorkoutPlan = async (plan) => {
     if (!exerciseToAddToPlan || !exerciseToAddToPlan._id) {
-      addNotification('No exercise selected', 'error');
+      showToast('error', 'Error', 'No exercise selected');
       return;
     }
 
     const result = await addExerciseToPlan(plan._id, exerciseToAddToPlan._id);
 
     if (result.success) {
-      addNotification(`Exercise added to ${plan.name}`, 'success');
+      showToast('success', 'Success', `Exercise added to ${plan.name}`);
     } else if (result.alreadyInPlan) {
       // The notification is already handled in the GymContext
     } else {

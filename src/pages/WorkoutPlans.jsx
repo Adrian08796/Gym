@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
-import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
@@ -18,7 +17,8 @@ function WorkoutPlans() {
     updateWorkoutPlan, 
     fetchWorkoutPlans,
     importWorkoutPlan,
-    getExerciseById
+    getExerciseById,
+    showToast,
   } = useGymContext();
   const [showForm, setShowForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
@@ -29,7 +29,6 @@ function WorkoutPlans() {
   const [importLink, setImportLink] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const navigate = useNavigate();
-  const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const { user } = useAuth();
 
@@ -77,17 +76,17 @@ function WorkoutPlans() {
       const validExercises = fullExercises.filter(Boolean);
       
       if (validExercises.length !== plan.exercises.length) {
-        addNotification('Some exercises could not be found. The plan will be created with available exercises.', 'warning');
+        showToast('warn', 'Warning', 'Some exercises could not be found. The plan will be created with available exercises.');
       }
 
       const newPlan = { ...plan, exercises: validExercises };
       await addWorkoutPlan(newPlan);
       handleCancelForm();
       await fetchWorkoutPlans();
-      addNotification('Workout plan added successfully', 'success');
+      showToast('success', 'Success', 'Workout plan added successfully');
     } catch (error) {
       console.error('Error adding workout plan:', error);
-      addNotification('Failed to add workout plan', 'error');
+      showToast('error', 'Error', 'Failed to add workout plan');
     }
   };
 
@@ -103,17 +102,17 @@ function WorkoutPlans() {
       const validExercises = fullExercises.filter(Boolean);
       
       if (validExercises.length !== plan.exercises.length) {
-        addNotification('Some exercises could not be found. The plan will be updated with available exercises.', 'warning');
+        showToast('warn', 'Warning', 'Some exercises could not be found. The plan will be updated with available exercises.');
       }
 
       const updatedPlan = { ...plan, exercises: validExercises };
       await updateWorkoutPlan(plan._id, updatedPlan);
       handleCancelForm();
       await fetchWorkoutPlans();
-      addNotification('Workout plan updated successfully', 'success');
+      showToast('success', 'Success', 'Workout plan updated successfully');
     } catch (error) {
       console.error('Error updating workout plan:', error);
-      addNotification('Failed to update workout plan', 'error');
+      showToast('error', 'Error', 'Failed to update workout plan');
     }
   };
 
@@ -130,11 +129,11 @@ function WorkoutPlans() {
   const handleDelete = async (planId) => {
     try {
       await deleteWorkoutPlan(planId);
-      addNotification('Workout plan deleted successfully', 'success');
+      showToast('success', 'Success', 'Workout plan deleted successfully');
       fetchWorkoutPlans();
     } catch (error) {
       console.error('Error deleting workout plan:', error);
-      addNotification('Failed to delete workout plan', 'error');
+      showToast('error', 'Error', 'Failed to delete workout plan');
     }
   };
 
@@ -145,19 +144,19 @@ function WorkoutPlans() {
 
   const handleImportPlan = async () => {
     if (!importLink) {
-      addNotification('Please enter a valid import link', 'error');
+      showToast('error', 'Error', 'Please enter a valid import link');
       return;
     }
     setIsImporting(true);
     try {
       const shareId = importLink.split('/').pop();
       const importedPlan = await importWorkoutPlan(shareId);
-      addNotification('Workout plan imported successfully', 'success');
+      showToast('success', 'Success', 'Workout plan imported successfully');
       setImportLink('');
       await fetchWorkoutPlans();
     } catch (error) {
       console.error('Error importing workout plan:', error);
-      addNotification(`Failed to import workout plan: ${error.message}`, 'error');
+      showToast('error', 'Error', `Failed to import workout plan: ${error.message}`);
     } finally {
       setIsImporting(false);
     }

@@ -1,4 +1,5 @@
 // src/App.jsx
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AOS from 'aos';
@@ -18,11 +19,13 @@ import Dashboard from './components/Dashboard';
 import ImportWorkoutPlan from './components/ImportWorkoutPlan';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
-import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import NotificationToast from './components/NotificationToast';
 import UserProfile from './components/UserProfile';
-import axiosInstance from './utils/axiosConfig';
+import { ConfirmDialog } from 'primereact/confirmdialog';
+import "primereact/resources/themes/lara-light-indigo/theme.css";
+import "primereact/resources/primereact.min.css";
+import "primeicons/primeicons.css";
+import '../src/components/ConfirmDialog.css';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -38,7 +41,6 @@ function AppContent() {
   const authContext = useAuth();
   
   useEffect(() => {
-    // Initialize AOS
     AOS.init({
       duration: 1000,
       once: true,
@@ -52,7 +54,6 @@ function AppContent() {
       }
     };
 
-    // Add event listeners for user activity
     window.addEventListener('mousemove', handleActivity);
     window.addEventListener('keydown', handleActivity);
     window.addEventListener('click', handleActivity);
@@ -60,7 +61,6 @@ function AppContent() {
 
     return () => {
       delete window.authContext;
-      // Remove event listeners
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keydown', handleActivity);
       window.removeEventListener('click', handleActivity);
@@ -69,7 +69,6 @@ function AppContent() {
   }, [authContext, updateActivity]);
 
   useEffect(() => {
-    // Refresh AOS when content changes
     AOS.refresh();
   });
 
@@ -99,7 +98,6 @@ function AppContent() {
         </div>
       </main>
       <Footer />
-      <NotificationToast />
     </div>
   );
 }
@@ -108,13 +106,12 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <NotificationProvider>
-          <GymProvider>
-            <ThemeProvider>
-              <AppContent />
-            </ThemeProvider>
-          </GymProvider>
-        </NotificationProvider>
+        <GymProvider>
+          <ThemeProvider>
+            <AppContent />
+            <ConfirmDialog className="custom-confirm-dialog" />
+          </ThemeProvider>       
+        </GymProvider>
       </AuthProvider>
     </Router>
   );

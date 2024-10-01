@@ -1,16 +1,10 @@
 // src/context/GymContext.jsx
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import axiosInstance from "../utils/axiosConfig";
 import { useAuth } from "./AuthContext";
-import { useNotification } from "./NotificationContext";
+import { Toast } from 'primereact/toast';
+import { confirmDialog } from 'primereact/confirmdialog';
 
 export const hostName = import.meta.env.VITE_BACKEND_HOST;
 
@@ -26,7 +20,15 @@ export function GymProvider({ children }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [workoutHistory, setWorkoutHistory] = useState([]);
   const { user, logout } = useAuth();
-  const { addNotification } = useNotification();
+  const toast = useRef(null);
+
+  const showToast = useCallback((severity, summary, detail) => {
+    toast.current.show({ severity, summary, detail, life: 3000 });
+  }, []);
+
+  const confirm = useCallback((options) => {
+    confirmDialog(options);
+  }, []);
 
   const API_URL = `${hostName}/api`;
 
@@ -53,11 +55,11 @@ export function GymProvider({ children }) {
         return response.data;
       } catch (error) {
         console.error("Error fetching last workout for plan:", error);
-        addNotification("Failed to fetch last workout for plan", "error");
+        showToast("error", "Error", "Failed to fetch last workout for plan");
         return null;
       }
     },
-    [API_URL, getAuthConfig, addNotification]
+    [API_URL, getAuthConfig, showToast]
   );
 
   const exerciseCache = new Map();
@@ -104,16 +106,16 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
     if (error.response) {
       console.error('Error response:', error.response.data);
       if (error.response.status === 404) {
-        addNotification('Exercise not found', 'error');
+        showToast('error', 'Error', 'Exercise not found');
       } else {
-        addNotification('Error fetching exercise details', 'error');
+        showToast('error', 'Error', 'Failed to fetch exercise details');
       }
     } else {
-      addNotification('Network error while fetching exercise details', 'error');
+      showToast('error', 'Error', 'Network error while fetching exercise details');
     }
     return null;
   }
-}, [API_URL, getAuthConfig, addNotification]);
+}, [API_URL, getAuthConfig, showToast]);
 
   const getExerciseHistory = useCallback(async (exerciseId) => {
     if (!exerciseId || exerciseId === 'undefined') {
@@ -154,10 +156,10 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         setWorkoutHistory(response.data);
       } catch (error) {
         console.error("Error fetching workout history:", error);
-        addNotification("Failed to fetch workout history", "error");
+        showToast("error", "Error", "Failed to fetch workout history");
       }
     }
-  }, [user, addNotification, API_URL, getAuthConfig]);
+  }, [user, showToast, API_URL, getAuthConfig]);
 
   const fetchExercises = useCallback(async () => {
     if (user) {
@@ -184,10 +186,10 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         if (error.response) {
           console.error("Error response:", error.response.data);
         }
-        addNotification("Failed to fetch exercises", "error");
+        showToast("error", "Error", "Failed to fetch exercises");
       }
     }
-  }, [user, API_URL, getAuthConfig, addNotification]);
+  }, [user, API_URL, getAuthConfig, showToast]);
 
   const fetchWorkoutPlans = useCallback(async () => {
     if (user) {
@@ -245,12 +247,12 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
             console.error('Error Data:', error.response.data);
           }
         }
-        addNotification("Failed to fetch workout plans. Please check console for details.", "error");
+        showToast("error", "Error", "Failed to fetch workout plans. Please check console for details.");
         return [];
       }
     }
     return [];
-  }, [user, API_URL, getAuthConfig, addNotification]);
+  }, [user, API_URL, getAuthConfig, showToast]);
 
   useEffect(() => {
     if (user) {
@@ -271,7 +273,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       console.log("Server response:", response.data);
       setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
       setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
-      addNotification("Workout added successfully", "success");
+      showToast("success", "Success", "Workout added successfully");
     } catch (error) {
       console.error("Error adding workout:", error);
       if (error.response) {
@@ -283,7 +285,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       } else {
         console.error("Error setting up request:", error.message);
       }
-      addNotification("Failed to add workout", "error");
+      showToast("error", "Error", "Failed to add workout");
       throw error;
     }
   };
@@ -305,11 +307,11 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
           workout._id === id ? response.data : workout
         )
       );
-      addNotification("Workout updated successfully", "success");
+      showToast("success", "Success", "Workout updated successfully");
       return response.data;
     } catch (error) {
       console.error("Error updating workout:", error);
-      addNotification("Failed to update workout", "error");
+      showToast("error", "Error", "Failed to update workout");
       throw error;
     }
   };
@@ -323,10 +325,10 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       setWorkoutHistory(prevHistory =>
         prevHistory.filter(workout => workout._id !== id)
       );
-      addNotification("Workout deleted successfully", "success");
+      showToast("success", "Success", "Workout deleted successfully");
     } catch (error) {
       console.error("Error deleting workout:", error);
-      addNotification("Failed to delete workout", "error");
+      showToast("error", "Error", "Failed to delete workout");
       throw error;
     }
   };
@@ -344,11 +346,11 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         isDefault: true
       };
       setExercises(prevExercises => [...prevExercises, newExercise]);
-      addNotification('Default exercise added successfully', 'success');
+      showToast('success', 'Success', 'Default exercise added successfully');
       return newExercise;
     } catch (error) {
       console.error('Error adding default exercise:', error);
-      addNotification('Failed to add default exercise', 'error');
+      showToast('error', 'Error', 'Failed to add default exercise');
       throw error;
     }
   };
@@ -370,7 +372,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       return response.data;
     } catch (error) {
       console.error("Error adding exercise:", error);
-      addNotification("Failed to add exercise", "error");
+      showToast("error", "Error", "Failed to add exercise");
       throw error;
     }
   };
@@ -408,11 +410,11 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         })
       );
   
-      addNotification("Exercise updated successfully", "success");
+      showToast("success", "Success", "Exercise updated successfully");
       return response.data;
     } catch (error) {
       console.error("Error updating exercise:", error);
-      addNotification("Failed to update exercise", "error");
+      showToast("error", "Error", "Failed to update exercise");
       throw error;
     }
   };
@@ -457,10 +459,10 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         // For admins or user's own custom exercises, remove from state as before
         setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
       }
-      addNotification(response.data.message, 'success');
+      showToast("success", "Success", response.data.message);
     } catch (error) {
       console.error("Error deleting exercise:", error);
-      addNotification("Failed to delete exercise", "error");
+      showToast("error", "Error", "Failed to delete exercise");
       throw error;
     }
   };
@@ -487,11 +489,11 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         return prevPlans;
       });
       
-      addNotification('Default workout plan added successfully', 'success');
+      showToast('success', 'Success', 'Default workout plan added successfully');
       return newPlan;
     } catch (error) {
       console.error('Error adding default workout plan:', error);
-      addNotification('Failed to add default workout plan', 'error');
+      showToast('error', 'Error', 'Failed to add default workout plan');
       throw error;
     }
   };
@@ -531,14 +533,14 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         }
       });
   
-      addNotification("Workout plan added successfully", "success");
+      showToast("success", "Success", "Workout plan added successfully");
       return fullPlan;
     } catch (error) {
       console.error("Error adding workout plan:", error);
       if (error.response && error.response.data && error.response.data.message) {
-        addNotification(error.response.data.message, "warning");
+        showToast('warn', 'Warning', error.response.data.message);
       } else {
-        addNotification("Failed to add workout plan", "error");
+        showToast("error", "Error", "Failed to add workout plan");
       }
       throw error;
     }
@@ -572,11 +574,11 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       setWorkoutPlans(prevPlans =>
         prevPlans.map(plan => (plan._id === id ? fullPlan : plan))
       );
-      addNotification("Workout plan updated successfully", "success");
+      showToast("success", "Success", "Workout plan updated successfully");
       return fullPlan;
     } catch (error) {
       console.error("Error updating workout plan:", error);
-      addNotification("Failed to update workout plan", "error");
+      showToast("error", "Error", "Failed to update workout plan");
       throw error;
     }
   };
@@ -591,20 +593,20 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       if (response.data.message === 'Workout plan removed from your view') {
         // For normal users, just remove the plan from the local state
         setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
-        addNotification("Workout plan removed from your view", "success");
+        showToast("success", "Success", "Workout plan removed from your view");
       } else {
         // For admins or user's own custom plans, remove from state as before
         setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
-        addNotification("Workout plan deleted successfully", "success");
+        showToast("success", "Success", "Workout plan deleted successfully");
       }
     } catch (error) {
       console.error("Error deleting workout plan:", error);
       if (error.response && error.response.status === 404) {
         // If the plan is not found, remove it from the local state anyway
         setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
-        addNotification("Workout plan not found, but removed from local state", "warning");
+        showToast("warn", "Warning", "Workout plan not found, but removed from local state");
       } else {
-        addNotification("Failed to delete workout plan", "error");
+        showToast("error", "Error", "Failed to delete workout plan");
       }
       throw error;
     }
@@ -617,18 +619,18 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       // Check if the plan exists and if the user has permission to modify it
       const currentPlan = workoutPlans.find(plan => plan._id === planId);
       if (!currentPlan) {
-        addNotification("Workout plan not found", "error");
+        showToast("error", "Error", "Workout plan not found");
         return { success: false, error: 'Plan not found' };
       }
   
       if (currentPlan.isDefault && !user.isAdmin) {
-        addNotification("You don't have permission to modify this plan", "error");
+        showToast("error", "Error", "Unauthorized");
         return { success: false, error: 'Unauthorized' };
       }
   
       // Check if the exercise is already in the plan
       if (currentPlan.exercises.some(ex => ex._id === exerciseId)) {
-        addNotification("This exercise is already in the plan", "warning");
+        showToast("warn", "Warning", "Exercise already in the plan");
         return { success: false, error: 'Duplicate exercise' };
       }
   
@@ -641,7 +643,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       setWorkoutPlans(prevPlans =>
         prevPlans.map(p => p._id === planId ? response.data : p)
       );
-      addNotification("Exercise added to plan successfully", "success");
+      showToast("success", "Success", "Exercise added to plan successfully");
       return { success: true, updatedPlan: response.data };
     } catch (error) {
       console.error("Error adding exercise to plan:", error);
@@ -649,24 +651,24 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         switch (error.response.status) {
           case 400:
             if (error.response.data.message === 'Exercise already in the workout plan') {
-              addNotification("This exercise is already in the plan", "warning");
+              showToast("warn", "Warning", "Exercise already in the plan");
             } else {
-              addNotification(error.response.data.message || "Bad request", "error");
+              showToast("error", "Error", error.response.data.message || "Bad request");
             }
             break;
           case 403:
-            addNotification("You don't have permission to modify this plan", "error");
+            showToast("error", "Error", "You don't have permission to modify this plan");
             break;
           case 404:
-            addNotification("Workout plan or exercise not found", "error");
+            showToast("error", "Error", "Workout plan or exercise not found");
             break;
           default:
-            addNotification("Failed to add exercise to plan", "error");
+            showToast("error", "Error", "Failed to add exercise to plan");
         }
       } else if (error.request) {
-        addNotification("No response received from server", "error");
+        showToast("error", "Error", "No response received from server");
       } else {
-        addNotification("Error setting up request", "error");
+        showToast("error", "Error", "Error setting up request");
       }
       return { success: false, error };
     }
@@ -682,14 +684,14 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       setWorkoutPlans(prevPlans =>
         prevPlans.map(p => p._id === planId ? response.data : p)
       );
-      addNotification("Exercise removed from plan successfully", "success");
+      showToast("success", "Success", "Exercise removed from plan successfully");
       return { success: true, updatedPlan: response.data };
     } catch (error) {
       console.error("Error removing exercise from plan:", error);
       if (error.response && error.response.status === 404) {
-        addNotification("Exercise or workout plan not found", "error");
+        showToast("error", "Error", "Exercise or workout plan not found");
       } else {
-        addNotification("Failed to remove exercise from plan", "error");
+        showToast("error", "Error", "Failed to remove exercise from plan");
       }
       throw error;
     }
@@ -707,16 +709,13 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       setWorkoutPlans(prevPlans =>
         prevPlans.map(p => (p._id === planId ? response.data : p))
       );
-      addNotification("Exercises reordered successfully", "success");
+      showToast("success", "Success", "Exercises reordered successfully");
       return { success: true, data: response.data };
     } catch (error) {
       console.error("Error reordering exercises in plan:", error);
-      addNotification(
-        `Failed to reorder exercises: ${
+      showToast("error", "Error", `Failed to reorder exercises: ${
           error.response ? error.response.data.message : error.message
-        }`,
-        "error"
-      );
+        }`);
       return { success: false, error };
     }
   };
@@ -766,21 +765,21 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
           console.log('New progress created successfully', newProgressResponse.data);
         } catch (newError) {
           console.error('Error creating new progress:', newError);
-          addNotification('Failed to create new progress: ' + (newError.response?.data?.message || newError.message), 'error');
+          showToast('error', 'Error', 'Failed to create new progress: ' + (newError.response?.data?.message || newError.message));
           throw newError;
         }
       } else if (error.response && error.response.status === 409) {
         // Handle version conflict
-        addNotification('Progress data is out of sync. Please refresh and try again.', 'warning');
+        showToast('warn', 'Warning', 'Progress data is out of sync. Please refresh and try again.');
       } else if (error.response && error.response.status === 401) {
-        addNotification('Session expired. Please log in again.', 'error');
+        showToast('error', 'Error', 'Session expired. Please log in again.');
         logout();
       } else {
-        addNotification('Failed to save progress: ' + (error.response?.data?.message || error.message), 'error');
+        showToast('error', 'Error', 'Failed to save progress: ' + (error.response?.data?.message || error.message));
       }
       throw error;
     }
-  }, [user, addNotification, logout, hostName, axiosInstance]);
+  }, [user, showToast, logout, hostName, axiosInstance]);
 
   const loadProgress = useCallback(async () => {
     if (!user) return null;
@@ -849,7 +848,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       return null;
     } catch (error) {
       console.error('Error loading progress from server:', error);
-      addNotification('Failed to load workout progress from server', 'error');
+      showToast('error', 'Error', 'Failed to load workout progress from server');
       // If there's an error fetching from the server, try to load from localStorage
       const localProgress = localStorage.getItem(`workoutProgress_${user.id}`);
       if (localProgress) {
@@ -865,7 +864,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       }
       return null;
     }
-  }, [user, API_URL, getAuthConfig, getExerciseById, addNotification]);
+  }, [user, API_URL, getAuthConfig, getExerciseById, showToast]);
 
   const clearWorkout = useCallback(async () => {
     if (!user) return;
@@ -886,17 +885,14 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       );
   
       console.log("Workout cleared successfully");
-      addNotification("Workout cleared", "success");
+      showToast("success", "Success", "Workout cleared");
     } catch (error) {
       console.error("Error clearing workout:", error);
-      addNotification(
-        "Failed to clear workout: " +
-          (error.response?.data?.message || error.message),
-        "error"
-      );
+      showToast("error", "Error", "Failed to clear workout: " +
+          (error.response?.data?.message || error.message));
       throw error;
     }
-  }, [user, API_URL, getAuthConfig, addNotification]);
+  }, [user, API_URL, getAuthConfig, showToast]);
 
   const shareWorkoutPlan = async (planId) => {
     try {
@@ -916,11 +912,11 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
   
       const shareResponse = await axiosInstance.post(`${API_URL}/workoutplans/${planId}/share`, planToShare, getAuthConfig());
       
-      addNotification('Workout plan shared successfully', 'success');
+      showToast('success', 'Success', 'Workout plan shared successfully');
       return shareResponse.data.shareLink;
     } catch (error) {
       console.error('Error sharing workout plan:', error);
-      addNotification(`Failed to share workout plan: ${error.message}`, 'error');
+      showToast('error', 'Error', `Failed to share workout plan: ${error.message}`);
       throw error;
     }
   };
@@ -944,11 +940,11 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         setExercises(prevExercises => [...prevExercises, ...newExercises]);
       }
   
-      addNotification('Workout plan imported successfully', 'success');
+      showToast('success', 'Success', 'Workout plan imported successfully');
       return importedPlan;
     } catch (error) {
       console.error('Error importing workout plan:', error);
-      addNotification(`Failed to import workout plan: ${error.message}`, 'error');
+      showToast('error', 'Error', `Failed to import workout plan: ${error.message}`);
       throw error;
     }
   };
@@ -974,14 +970,14 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         )
       );
   
-      addNotification('Exercise recommendation updated', 'success');
+      showToast('success', 'Success', 'Exercise recommendation updated');
       return response.data;
     } catch (error) {
       console.error('Error updating user recommendation:', error);
       if (error.response && error.response.status === 404) {
-        addNotification('Exercise not found', 'error');
+        showToast('error', 'Error', 'Exercise not found');
       } else {
-        addNotification('Failed to update exercise recommendation', 'error');
+        showToast('error', 'Error', 'Failed to update exercise recommendation');
       }
       throw error;
     }
@@ -1020,6 +1016,8 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       addDefaultExercise,
       addDefaultWorkoutPlan,
       updateUserRecommendation,
+      showToast,
+      confirm,
     }),
     [
       workouts,
@@ -1053,11 +1051,16 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       addDefaultExercise,
       addDefaultWorkoutPlan,
       updateUserRecommendation,
+      showToast,
+      confirm,
     ]
   );
 
   return (
-    <GymContext.Provider value={contextValue}>{children}</GymContext.Provider>
+    <GymContext.Provider value={contextValue}>
+      {children}
+      <Toast ref={toast} />
+    </GymContext.Provider>
   );
 }
 

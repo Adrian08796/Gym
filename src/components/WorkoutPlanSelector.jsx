@@ -3,14 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { useGymContext } from '../context/GymContext';
-import { useNotification } from '../context/NotificationContext';
 
 function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExercise }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
-  const { fetchWorkoutPlans, removeExerciseFromPlan } = useGymContext();
-  const { addNotification } = useNotification();
+  const { fetchWorkoutPlans, removeExerciseFromPlan, showToast } = useGymContext();
 
   useEffect(() => {
     const getWorkoutPlans = async () => {
@@ -20,13 +18,13 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
         setWorkoutPlans(plans || []);
       } catch (error) {
         console.error('Error fetching workout plans:', error);
-        addNotification('Failed to fetch workout plans', 'error');
+        showToast('error', 'Error', 'Failed to fetch workout plans');
       } finally {
         setIsLoading(false);
       }
     };
     getWorkoutPlans();
-  }, [fetchWorkoutPlans, addNotification]);
+  }, [fetchWorkoutPlans, showToast]);
 
   useEffect(() => {
     if (selectedPlan) {
@@ -54,11 +52,11 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
         if (selectedPlan && selectedPlan._id === planId) {
           onSelect(updatedPlan);
         }
-        addNotification("Exercise removed from plan successfully", "success");
+        showToast('success', 'Success', 'Exercise removed from plan successfully');
       }
     } catch (error) {
       console.error('Error removing exercise from plan:', error);
-      addNotification("Failed to remove exercise from plan", "error");
+      showToast('error', 'Error', 'Failed to remove exercise from plan');
     }
   };
 

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { useNotification } from '../context/NotificationContext';
+import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import '../components/Header.css';
@@ -18,8 +18,8 @@ function Register() {
   const [errors, setErrors] = useState({});
   const { register } = useAuth();
   const navigate = useNavigate();
-  const { addNotification } = useNotification();
   const { darkMode } = useTheme();
+  const { showToast } = useGymContext();
 
   const validateForm = () => {
     const newErrors = {};
@@ -40,7 +40,7 @@ function Register() {
         console.log('Attempting to register user:', username);
         const result = await register(username, email, password);
         console.log('Registration result:', result);
-        addNotification('Registration successful! Please log in.', 'success');
+        showToast('success', 'Success', 'Registration successful! Please log in.');
         navigate('/login');
       } catch (err) {
         console.error('Registration error:', err);
@@ -55,7 +55,7 @@ function Register() {
           console.error('Error details:', err.message);
           errorMessage += err.message;
         }
-        addNotification(errorMessage, 'error');
+        showToast('error', 'Error', errorMessage);
       }
     }
   };

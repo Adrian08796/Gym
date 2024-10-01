@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { useNotification } from '../context/NotificationContext';
+import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
 import { FiEye, FiEyeOff, FiUser, FiLock } from 'react-icons/fi';
 import '../components/Header.css';
@@ -15,8 +15,8 @@ function Login() {
   const [errors, setErrors] = useState({});
   const { login } = useAuth();
   const navigate = useNavigate();
-  const { addNotification } = useNotification();
   const { darkMode } = useTheme();
+  const {  showToast } = useGymContext();
 
   const validateForm = () => {
     const newErrors = {};
@@ -34,14 +34,14 @@ function Login() {
         const result = await login(username, password);
         console.log('Login result:', result);
         if (result && result.user) {
-          addNotification('Logged in successfully', 'success');
+          showToast('success', 'Success', 'Logged in successfully');
           navigate('/');
         } else {
-          
+
         }
       } catch (err) {
         console.error('Login error:', err);
-        addNotification('Failed to log in: ' + (err.response?.data?.message || err.message || 'Unknown error'), 'error');
+        showToast('error', 'Error', 'Failed to log in: ' + (err.response?.data?.message || err.message || 'Unknown error'));
       }
     }
   };
