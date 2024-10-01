@@ -97,17 +97,20 @@ function Register() {
               {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
             </div>
             <div className="mt-4 relative">
-              <label className="block text-gray-700 dark:text-gray-300" htmlFor="password">Password</label>
-              <div className="flex items-center">
-                <FiLock className="absolute left-3 text-gray-400" />
+              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="password">
+                Password
+              </label>
+              <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter Password"
                   id="password"
-                  className={`w-full px-4 py-2 pl-10 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.password ? 'border-red-500' : ''}`}
+                  className="shadow appearance-none border rounded w-full py-2 pl-10 pr-10 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
+                <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
@@ -116,20 +119,23 @@ function Register() {
                   {showPassword ? <FiEyeOff className="text-gray-400" /> : <FiEye className="text-gray-400" />}
                 </button>
               </div>
-              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
             </div>
+
             <div className="mt-4 relative">
-              <label className="block text-gray-700 dark:text-gray-300" htmlFor="confirmPassword">Confirm Password</label>
-              <div className="flex items-center">
-                <FiLock className="absolute left-3 text-gray-400" />
+              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="confirmPassword">
+                Confirm Password
+              </label>
+              <div className="relative">
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm Password"
                   id="confirmPassword"
-                  className={`w-full px-4 py-2 pl-10 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                  className="shadow appearance-none border rounded w-full py-2 pl-10 pr-10 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
                 />
+                <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
@@ -138,7 +144,6 @@ function Register() {
                   {showConfirmPassword ? <FiEyeOff className="text-gray-400" /> : <FiEye className="text-gray-400" />}
                 </button>
               </div>
-              {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
             </div>
             <div className="flex items-center justify-between mt-6">
             <button
