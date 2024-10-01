@@ -47,59 +47,56 @@ function Login() {
   };
 
   return (
-    <div className={`flex items-center justify-center min-h-screen bg-gray-100 ${darkMode ? 'dark' : ''}`}>
-      <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg dark:bg-gray-800 rounded-lg">
+    <div className={`flex items-center justify-center min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+      <div className="px-4 py-6 mx-4 mt-4 text-left bg-white dark:bg-gray-800 shadow-lg rounded-lg sm:w-full sm:max-w-md">
         <h3 className="text-2xl font-bold text-center text-gray-800 dark:text-white">Login to your account</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="mt-4">
+        <form onSubmit={handleSubmit} className="mt-4">
+          <div>
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="username">Username</label>
             <div className="relative">
-              <label className="block text-gray-700 dark:text-gray-300" htmlFor="username">Username</label>
-              <div className="flex items-center">
-                <FiUser className="absolute left-3 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Enter Username"
-                  id="username"
-                  className={`w-full px-4 py-2 pl-10 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.username ? 'border-red-500' : ''}`}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </div>
-              {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+              <input
+                type="text"
+                placeholder="Enter Username"
+                id="username"
+                className="shadow appearance-none border rounded w-full py-2 px-3 pl-10 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+              <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             </div>
-            <div className="mt-4 relative">
-              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="password">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter Password"
-                  id="password"
-                  className="shadow appearance-none border rounded w-full py-2 pl-10 pr-10 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <FiEyeOff className="text-gray-400" /> : <FiEye className="text-gray-400" />}
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-4">
+            {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+          </div>
+          <div className="mt-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="password">Password</label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter Password"
+                id="password"
+                className="shadow appearance-none border rounded w-full py-2 px-3 pl-10 pr-10 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <button
-                type="submit"
-                className="nav-btn"
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                onClick={() => setShowPassword(!showPassword)}
               >
-                Login
+                {showPassword ? <FiEyeOff className="text-gray-400" /> : <FiEye className="text-gray-400" />}
               </button>
-              <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline dark:text-blue-400">Forgot password?</Link>
             </div>
+            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+          </div>
+          <div className="flex items-center justify-between mt-6">
+            <button
+              type="submit"
+              className="nav-btn w-full"
+            >
+              Login
+            </button>
           </div>
         </form>
         <div className="mt-6 text-center">
