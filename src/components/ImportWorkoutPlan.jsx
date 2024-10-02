@@ -1,5 +1,3 @@
-// src/components/ImportWorkoutPlan.jsx
-
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
@@ -13,12 +11,22 @@ function ImportWorkoutPlan() {
   const handleImport = async () => {
     setIsImporting(true);
     try {
-      await importWorkoutPlan(shareId);
+      const result = await importWorkoutPlan(shareId);
       await fetchExercises(); // Fetch exercises after successful import
-      showToast('success', 'Success', 'Workout plan imported successfully');
+      
+      if (result.alreadyImported) {
+        showToast('warn', 'Already Imported', 'This workout plan has already been imported.');
+      } else {
+        showToast('success', 'Success', 'Workout plan imported successfully');
+      }
+      
       navigate('/plans');
     } catch (error) {
-      showToast('error', 'Error', 'Failed to import workout plan');
+      if (error.message === 'Shared workout plan not found') {
+        showToast('error', 'Import Failed', 'The shared workout plan is no longer available. It may have been deleted by the owner.');
+      } else {
+        showToast('error', 'Import Failed', 'An error occurred while importing the workout plan. Please try again.');
+      }
     } finally {
       setIsImporting(false);
     }

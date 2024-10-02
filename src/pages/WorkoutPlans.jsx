@@ -151,12 +151,12 @@ function WorkoutPlans() {
     try {
       const shareId = importLink.split('/').pop();
       const importedPlan = await importWorkoutPlan(shareId);
-      showToast('success', 'Success', 'Workout plan imported successfully');
+      // showToast('success', 'Success', 'Workout plan imported successfully');
       setImportLink('');
       await fetchWorkoutPlans();
     } catch (error) {
       console.error('Error importing workout plan:', error);
-      showToast('error', 'Error', `Failed to import workout plan: ${error.message}`);
+      showToast('error', 'Error', `Failed to import workout plan.Plan already imported or was deleted by the owner.`);
     } finally {
       setIsImporting(false);
     }

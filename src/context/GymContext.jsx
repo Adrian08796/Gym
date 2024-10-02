@@ -279,7 +279,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       console.log("Server response:", response.data);
       setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
       setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
-      showToast("success", "Success", "Workout added successfully");
+      // showToast("success", "Success", "Workout added successfully");
     } catch (error) {
       console.error("Error adding workout:", error);
       if (error.response) {
@@ -905,7 +905,8 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       const fullPlan = planResponse.data;
   
       if (!fullPlan.exercises || fullPlan.exercises.length === 0) {
-        throw new Error('The workout plan has no exercises');
+        // throw new Error('The workout plan has no exercises');
+        showToast('info', 'Info', 'You must add at least one exercise to the plan to share it');
       }
   
       const planToShare = {
@@ -932,6 +933,13 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
   
       const importedPlan = response.data;
   
+      // Check if the plan already exists
+      const existingPlan = workoutPlans.find(plan => plan._id === importedPlan._id);
+      if (existingPlan) {
+        console.log('Plan already imported:', importedPlan.name);
+        return { alreadyImported: true };
+      }
+  
       setWorkoutPlans(prevPlans => [...prevPlans, importedPlan]);
   
       const newExercises = importedPlan.exercises.filter(exercise => 
@@ -940,12 +948,13 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       if (newExercises.length > 0) {
         setExercises(prevExercises => [...prevExercises, ...newExercises]);
       }
-  
       showToast('success', 'Success', 'Workout plan imported successfully');
-      return importedPlan;
+      return { success: true, plan: importedPlan };
     } catch (error) {
       console.error('Error importing workout plan:', error);
-      showToast('error', 'Error', `Failed to import workout plan: ${error.message}`);
+      if (error.response && error.response.status === 404) {
+        throw new Error('Shared workout plan not found');
+      }
       throw error;
     }
   };
@@ -971,7 +980,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         )
       );
   
-      showToast('success', 'Success', 'Exercise recommendation updated');
+      // showToast('success', 'Success', 'Exercise recommendation updated');
       return response.data;
     } catch (error) {
       console.error('Error updating user recommendation:', error);
