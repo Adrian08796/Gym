@@ -98,7 +98,7 @@ function ExerciseLibrary() {
     try {
       const { success, updatedPlan, error } = await addExerciseToPlan(selectedPlan._id, exercise._id);
       if (success) {
-        showToast('success', 'Success', 'Exercise added to plan');
+        // showToast('success', 'Success', 'Exercise added to plan');
         setSelectedPlan(updatedPlan);
       } else if (error === 'Duplicate exercise') {
         showToast('warn', 'Warning', 'This exercise is already in the plan');
@@ -114,7 +114,7 @@ function ExerciseLibrary() {
   const handleRemoveFromPlan = async (planId, exerciseId) => {
     try {
       await removeExerciseFromPlan(planId, exerciseId);
-      showToast('success', 'Success', 'Exercise removed from plan');
+      // showToast('success', 'Success', 'Exercise removed from plan');
       // Refresh the selected plan to update the exercise list
       handleSelectPlan(selectedPlan);
     } catch (error) {
@@ -153,7 +153,7 @@ function ExerciseLibrary() {
     const result = await addExerciseToPlan(plan._id, exerciseToAddToPlan._id);
 
     if (result.success) {
-      showToast('success', 'Success', `Exercise added to ${plan.name}`);
+      // showToast('success', 'Success', `Exercise added to ${plan.name}`);
     } else if (result.alreadyInPlan) {
       // The notification is already handled in the GymContext
     } else {

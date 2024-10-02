@@ -52,7 +52,7 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
         if (selectedPlan && selectedPlan._id === planId) {
           onSelect(updatedPlan);
         }
-        showToast('success', 'Success', 'Exercise removed from plan successfully');
+        // showToast('success', 'Success', 'Exercise removed from plan successfully');
       }
     } catch (error) {
       console.error('Error removing exercise from plan:', error);
