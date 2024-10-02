@@ -169,6 +169,17 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const deleteAccount = async () => {
+    try {
+      await axiosInstance.delete('/api/auth/user');
+      logout();
+      return { success: true, message: 'Account deleted successfully' };
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error.response?.data?.message || error.message || 'Failed to delete account';
+    }
+  };
+
   useEffect(() => {
     const checkLoggedIn = async () => {
       const token = localStorage.getItem('token');
@@ -257,6 +268,7 @@ export function AuthProvider({ children }) {
     changePassword,
     updateActivity,
     updateExperienceLevel,
+    deleteAccount,
   };
 
   return (

@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
-import { FiEdit2, FiSave, FiX, FiLock } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { FiEdit2, FiSave, FiX, FiLock, FiTrash2 } from 'react-icons/fi';
 
 function UserProfile() {
-  const { user, updateUser, changePassword, updateExperienceLevel } = useAuth();
-  const { workoutHistory, showToast } = useGymContext();
+  const { user, updateUser, changePassword, updateExperienceLevel, deleteAccount } = useAuth();
+  const { workoutHistory, showToast, confirm } = useGymContext();
   const { darkMode } = useTheme();
+  const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState('');
@@ -18,6 +20,7 @@ function UserProfile() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -66,6 +69,38 @@ function UserProfile() {
       console.error('Failed to update experience level:', error);
       showToast('error', 'Error', `Failed to update experience level: ${error.message}`);
     }
+  };
+
+  const handleDeleteAccount = () => {
+    if (isConfirmingCancel) return;
+    setIsConfirmingCancel(true);
+    confirm({
+      message: 'Are you sure you want to delete your account? This action cannot be undone.',
+      header: 'Delete Account',
+      icon: 'pi pi-exclamation-triangle',
+      acceptClassName: 'custom-nav-btn custom-nav-btn-danger',
+      rejectClassName: 'custom-nav-btn',
+      acceptLabel: 'Yes, Delete',
+      rejectLabel: 'No, Continue',
+      className: 'custom-confirm-dialog',
+      style: { width: '350px' },
+      contentClassName: 'confirm-content',
+      headerClassName: 'confirm-header',
+      defaultFocus: 'reject',
+      closable: false,
+      accept: async () => {
+        try {
+          await deleteAccount();
+          showToast('success', 'Success', 'Your account has been deleted successfully');
+          navigate('/');
+        } catch (error) {
+          showToast('error', 'Error', `Failed to delete account: ${error.message}`);
+        }
+      },
+      reject: () => {
+        setIsConfirmingCancel(false);
+      }
+    });
   };
 
   const totalWorkouts = workoutHistory.length;
@@ -196,7 +231,19 @@ function UserProfile() {
           <p><strong>Total Workouts:</strong> {totalWorkouts}</p>
           <p><strong>Average Workout Duration:</strong> {averageDuration.toFixed(1)} minutes</p>
         </div>
+        <div className="mt-8">
+        <h2 className="text-2xl font-semibold mb-4">Danger Zone</h2>
+        <button
+          onClick={handleDeleteAccount}
+          className="flex items-center bg-red-500 text-white hover:bg-red-600 font-bold py-2 px-4 rounded"
+        >
+          <FiTrash2 className="mr-2" /> Delete Account
+        </button>
+        <p className="mt-2 text-sm text-gray-500">
+          Deleting your account will permanently remove all your data, including workouts, plans, and exercises.
+        </p>
       </div>
+     </div>
     </>
   );
 }
