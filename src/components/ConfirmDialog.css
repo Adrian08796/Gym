@@ -142,3 +142,7 @@
   .light .custom-confirm-dialog .p-confirm-dialog-icon {
     color: #1F2937;
   }
+
+  .p-dialog-mask {
+    background-color: rgba(0, 0, 0, 0.7) !important;
+  }

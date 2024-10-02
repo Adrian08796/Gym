@@ -35,9 +35,7 @@ function Login() {
         console.log('Login result:', result);
         if (result && result.user) {
           showToast('success', 'Success', 'Logged in successfully');
-          navigate('/');
-        } else {
-
+          setTimeout(() => navigate('/'), 500);
         }
       } catch (err) {
         console.error('Login error:', err);

@@ -20,6 +20,8 @@ import ImportWorkoutPlan from './components/ImportWorkoutPlan';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { Toast } from 'primereact/toast';
+import { useRef } from 'react';
 import UserProfile from './components/UserProfile';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import "primereact/resources/themes/lara-light-indigo/theme.css";
@@ -39,6 +41,7 @@ function AppContent() {
   const { user, loading, updateActivity } = useAuth();
   const { darkMode } = useTheme();
   const authContext = useAuth();
+  const toast = useRef(null);
   
   useEffect(() => {
     AOS.init({
@@ -98,6 +101,7 @@ function AppContent() {
         </div>
       </main>
       <Footer />
+      <Toast ref={toast} />
     </div>
   );
 }

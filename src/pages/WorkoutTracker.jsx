@@ -732,6 +732,8 @@ function WorkoutTracker() {
       style: { width: '350px' },
       contentClassName: 'confirm-content',
       headerClassName: 'confirm-header',
+      defaultFocus: 'reject',
+      closable: false,
       accept: async () => {
         try {
           await clearWorkout();
