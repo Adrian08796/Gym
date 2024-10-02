@@ -903,16 +903,14 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         throw new Error('The workout plan has no exercises');
       }
   
-      // No need to fetch individual exercises here, we'll send the IDs
-  
       const planToShare = {
         ...fullPlan,
-        exercises: fullPlan.exercises // This should be an array of exercise IDs
+        exercises: fullPlan.exercises.map(exercise => exercise._id)
       };
   
       const shareResponse = await axiosInstance.post(`${API_URL}/workoutplans/${planId}/share`, planToShare, getAuthConfig());
       
-      showToast('success', 'Success', 'Workout plan shared successfully');
+      // showToast('success', 'Success', 'Workout plan shared successfully');
       return shareResponse.data.shareLink;
     } catch (error) {
       console.error('Error sharing workout plan:', error);
@@ -924,15 +922,13 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
   const importWorkoutPlan = async (shareId) => {
     try {
       console.log('Attempting to import workout plan with shareId:', shareId);
-      const response = await axiosInstance.post(`${hostName}/api/workoutplans/import/${shareId}`, {}, getAuthConfig());
+      const response = await axiosInstance.post(`${API_URL}/workoutplans/import/${shareId}`, {}, getAuthConfig());
       console.log('Import response:', response.data);
   
       const importedPlan = response.data;
   
-      // Add the imported plan to the local state
       setWorkoutPlans(prevPlans => [...prevPlans, importedPlan]);
   
-      // Add any new exercises to the local exercises state
       const newExercises = importedPlan.exercises.filter(exercise => 
         !exercises.some(existingExercise => existingExercise._id === exercise._id)
       );

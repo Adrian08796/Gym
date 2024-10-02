@@ -9,10 +9,11 @@ import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
 
 function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const { darkMode } = useTheme();
-  const { shareWorkoutPlan, deleteWorkoutPlan } = useGymContext();
+  const { shareWorkoutPlan, deleteWorkoutPlan, showToast } = useGymContext();
   const { user } = useAuth();
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [shareLink, setShareLink] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
 
   const handleAction = (action, e) => {
     if (e && e.stopPropagation) {
@@ -48,10 +49,11 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     share: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'
   };
 
-  const ActionButton = ({ action, style, icon, text }) => (
+  const ActionButton = ({ action, style, icon, text, disabled = false }) => (
     <button 
       onClick={(e) => handleAction(action, e)}
-      className={`${buttonStyles.base} ${style} text-[10px] sm:text-xs`}
+      className={`${buttonStyles.base} ${style} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} text-[10px] sm:text-xs`}
+      disabled={disabled}
     >
       {icon}
       <span className="ml-1 hidden sm:inline">{text}</span>
@@ -99,11 +101,48 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     if (e && e.stopPropagation) {
       e.stopPropagation();
     }
+    
+    if (plan.isDefault) {
+      showToast('warn', 'Warning', 'Only user-created plans can be shared at the moment');
+      return;
+    }
+
+    setIsSharing(true);
     try {
+      console.log('Sharing plan with ID:', plan._id);
       const link = await shareWorkoutPlan(plan._id);
       setShareLink(link);
+      // showToast('success', 'Success', 'Workout plan shared successfully');
     } catch (error) {
       console.error('Error sharing workout plan:', error);
+      showToast('error', 'Error', `Failed to share workout plan: ${error.message}`);
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      // Use the Clipboard API when available
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('success', 'Success', 'Link copied to clipboard');
+      }, () => {
+        showToast('error', 'Error', 'Failed to copy link');
+      });
+    } else {
+      // Fallback to a manual method
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('success', 'Success', 'Link copied to clipboard');
+      } catch (err) {
+        showToast('error', 'Error', 'Failed to copy link');
+      }
+      document.body.removeChild(textArea);
     }
   };
 
@@ -143,18 +182,32 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
           icon={plan.isDefault && !user.isAdmin ? <FiEyeOff className="w-3 h-3 sm:w-4 sm:h-4" /> : <FiTrash2 className="w-3 h-3 sm:w-4 sm:h-4" />} 
           text={plan.isDefault && !user.isAdmin ? "Remove" : "Delete"} 
         />
-        <ActionButton action={handleShare} style={buttonStyles.share} icon={<FiShare2 className="w-3 h-3 sm:w-4 sm:h-4" />} text="Share" />
+        <ActionButton 
+          action={handleShare} 
+          style={buttonStyles.share} 
+          icon={<FiShare2 className="w-3 h-3 sm:w-4 sm:h-4" />} 
+          text={isSharing ? "Sharing..." : "Share"} 
+          disabled={isSharing}
+        />
       </div>
       {shareLink && (
         <div className="mt-4">
           <p className="text-xs sm:text-sm">Share this link:</p>
-          <input
-            type="text"
-            value={shareLink}
-            readOnly
-            className="w-full p-2 mt-2 border rounded text-xs sm:text-sm"
-            onClick={(e) => e.target.select()}
-          />
+          <div className="flex">
+            <input
+              type="text"
+              value={shareLink}
+              readOnly
+              className="w-full p-2 mt-2 border rounded-l text-xs sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              onClick={(e) => e.target.select()}
+            />
+            <button
+              onClick={() => copyToClipboard(shareLink)}
+              className="bg-emerald-500 text-white px-2 mt-2 rounded-r hover:bg-emerald-600"
+            >
+              Copy
+            </button>
+          </div>
         </div>
       )}
       {isDeleteConfirmOpen && <DeleteConfirmation />}
