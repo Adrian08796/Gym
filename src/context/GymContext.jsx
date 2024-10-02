@@ -207,6 +207,11 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
           throw new Error('Server returned an HTML response instead of JSON');
         }
   
+        if (!response.data || !response.data.plans) {
+          console.error('Invalid response structure:', response.data);
+          throw new Error('Invalid response structure from server');
+        }
+  
         const plansWithFullExerciseDetails = await Promise.all(
           response.data.plans.map(async plan => {
             const fullExercises = await Promise.all(
@@ -234,6 +239,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
           }
         }, []);
         
+        console.log('Unique plans after processing:', uniquePlans);
         setWorkoutPlans(uniquePlans);
         return uniquePlans;
       } catch (error) {
