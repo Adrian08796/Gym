@@ -352,7 +352,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         isDefault: true
       };
       setExercises(prevExercises => [...prevExercises, newExercise]);
-      showToast('success', 'Success', 'Default exercise added successfully');
+      // showToast('success', 'Success', 'Default exercise added successfully');
       return newExercise;
     } catch (error) {
       console.error('Error adding default exercise:', error);
@@ -495,7 +495,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         return prevPlans;
       });
       
-      showToast('success', 'Success', 'Default workout plan added successfully');
+      // showToast('success', 'Success', 'Default workout plan added successfully');
       return newPlan;
     } catch (error) {
       console.error('Error adding default workout plan:', error);
@@ -539,7 +539,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         }
       });
   
-      showToast("success", "Success", "Workout plan added successfully");
+      // showToast("success", "Success", "Workout plan added successfully");
       return fullPlan;
     } catch (error) {
       console.error("Error adding workout plan:", error);
@@ -580,7 +580,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       setWorkoutPlans(prevPlans =>
         prevPlans.map(plan => (plan._id === id ? fullPlan : plan))
       );
-      showToast("success", "Success", "Workout plan updated successfully");
+      // showToast("success", "Success", "Workout plan updated successfully");
       return fullPlan;
     } catch (error) {
       console.error("Error updating workout plan:", error);
@@ -636,7 +636,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
   
       // Check if the exercise is already in the plan
       if (currentPlan.exercises.some(ex => ex._id === exerciseId)) {
-        showToast("warn", "Warning", "Exercise already in the plan");
+        // showToast("warn", "Warning", "Exercise already in the plan");
         return { success: false, error: 'Duplicate exercise' };
       }
   
@@ -657,7 +657,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         switch (error.response.status) {
           case 400:
             if (error.response.data.message === 'Exercise already in the workout plan') {
-              showToast("warn", "Warning", "Exercise already in the plan");
+              showToast("warn", "Warning", "The exercise is already in the plan");
             } else {
               showToast("error", "Error", error.response.data.message || "Bad request");
             }
@@ -890,8 +890,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         getAuthConfig()
       );
   
-      console.log("Workout cleared successfully");
-      showToast("success", "Success", "Workout cleared");
+      // showToast("success", "Success", "Workout cleared");
     } catch (error) {
       console.error("Error clearing workout:", error);
       showToast("error", "Error", "Failed to clear workout: " +

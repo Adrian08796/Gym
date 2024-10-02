@@ -81,7 +81,7 @@ function ExerciseLibrary() {
     try {
       await deleteExercise(exercise._id);
       setSelectedExercise(null);
-      showToast('success', 'Success', 'Exercise deleted successfully');
+      // showToast('success', 'Success', 'Exercise deleted successfully');
       triggerRefresh();
     } catch (error) {
       console.error('Error deleting exercise:', error);
@@ -98,7 +98,7 @@ function ExerciseLibrary() {
     try {
       const { success, updatedPlan, error } = await addExerciseToPlan(selectedPlan._id, exercise._id);
       if (success) {
-        showToast('success', 'Success', 'Exercise added to plan');
+        // showToast('success', 'Success', 'Exercise added to plan');
         setSelectedPlan(updatedPlan);
       } else if (error === 'Duplicate exercise') {
         showToast('warn', 'Warning', 'This exercise is already in the plan');
