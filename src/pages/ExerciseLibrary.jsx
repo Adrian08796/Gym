@@ -81,7 +81,7 @@ function ExerciseLibrary() {
     try {
       await deleteExercise(exercise._id);
       setSelectedExercise(null);
-      showToast('success', 'Success', 'Exercise deleted successfully');
+      // showToast('success', 'Success', 'Exercise deleted successfully');
       triggerRefresh();
     } catch (error) {
       console.error('Error deleting exercise:', error);

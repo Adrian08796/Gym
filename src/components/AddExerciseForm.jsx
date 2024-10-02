@@ -24,6 +24,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [actingAsAdmin, setActingAsAdmin] = useState(false);
   const { addExercise, updateExercise, addDefaultExercise, showToast } = useGymContext();
   const { user } = useAuth();
+  
 
   useEffect(() => {
     console.log('DEBUGG:::: User:', user);
@@ -144,7 +145,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
         } else {
           savedExercise = await addExercise(exerciseData);
         }
-        showToast('success', 'Success', 'Exercise added successfully');
+        // showToast('success', 'Success', 'Exercise added successfully');
       }
       console.log('Saved exercise:', savedExercise);
       resetForm();
