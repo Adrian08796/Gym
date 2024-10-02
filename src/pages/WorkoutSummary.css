@@ -1,0 +1,25 @@
+@media (max-width: 640px) {
+    .workout-summary-controls {
+      display: flex;
+      flex-direction: column;
+    }
+  
+    .workout-summary-controls button,
+    .workout-summary-controls input {
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+  }
+  
+  @media (min-width: 641px) {
+    .workout-summary-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  
+    .workout-summary-controls button,
+    .workout-summary-controls input {
+      width: auto;
+    }
+  }

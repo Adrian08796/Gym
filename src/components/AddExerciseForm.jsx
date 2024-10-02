@@ -144,7 +144,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
         } else {
           savedExercise = await addExercise(exerciseData);
         }
-        // showToast('success', 'Success', 'Exercise added successfully');
+        showToast('success', 'Success', 'Exercise added successfully');
       }
       console.log('Saved exercise:', savedExercise);
       resetForm();

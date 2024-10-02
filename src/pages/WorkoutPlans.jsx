@@ -137,11 +137,6 @@ function WorkoutPlans() {
     }
   };
 
-  const filteredPlans = workoutPlans.filter(plan => 
-    plan.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (filterType === 'all' || plan.type === filterType)
-  );
-
   const handleImportPlan = async () => {
     if (!importLink) {
       showToast('error', 'Error', 'Please enter a valid import link');
@@ -151,16 +146,20 @@ function WorkoutPlans() {
     try {
       const shareId = importLink.split('/').pop();
       const importedPlan = await importWorkoutPlan(shareId);
-      // showToast('success', 'Success', 'Workout plan imported successfully');
       setImportLink('');
       await fetchWorkoutPlans();
     } catch (error) {
       console.error('Error importing workout plan:', error);
-      showToast('error', 'Error', `Failed to import workout plan.Plan already imported or was deleted by the owner.`);
+      showToast('error', 'Error', `Failed to import workout plan: ${error.message}`);
     } finally {
       setIsImporting(false);
     }
   };
+
+  const filteredPlans = workoutPlans.filter(plan => 
+    plan.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (filterType === 'all' || plan.type === filterType)
+  );
 
   return (
     <>
@@ -181,56 +180,56 @@ function WorkoutPlans() {
           </div>
         )}
 
-<div className="mb-4 flex flex-wrap items-center justify-between">
+        <div className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
           <button
             onClick={() => {
               setShowForm(!showForm);
               setEditingPlan(null);
             }}
-            className="mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
+            className="mb-2 sm:mb-0 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
           >
             {showForm ? 'Hide Form' : 'Create New Plan'}
           </button>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
             <input
               type="text"
               placeholder="Search plans..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="border rounded py-1 px-2 text-gray-700"
+              className="border rounded py-1 px-2 text-gray-700 w-full sm:w-auto"
             />
-            <select
+            {/* <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="border rounded py-1 px-2 text-gray-700"
+              className="border rounded py-1 px-2 text-gray-700 w-full sm:w-auto"
             >
               <option value="all">All Types</option>
               <option value="strength">Strength</option>
               <option value="cardio">Cardio</option>
               <option value="flexibility">Flexibility</option>
               <option value="other">Other</option>
-            </select>
+            </select> */}
           </div>
         </div>
         
-        <div className="mb-4 flex items-center space-x-2">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
           <input
             type="text"
             placeholder="Paste import link here..."
             value={importLink}
             onChange={(e) => setImportLink(e.target.value)}
-            className="border rounded py-1 px-2 text-gray-700 flex-grow"
+            className="border rounded py-1 px-2 text-gray-700 w-full sm:flex-grow"
             disabled={isImporting}
           />
           <button
             onClick={handleImportPlan}
-            className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-2 rounded text-xs sm:text-sm sm:px-3 ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-2 rounded text-xs sm:text-sm sm:px-3 w-full sm:w-auto ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={isImporting}
           >
             {isImporting ? 'Importing...' : 'Import Plan'}
           </button>
-        </div> 
+        </div>
 
         {showForm && (
           <WorkoutPlanForm
@@ -240,7 +239,7 @@ function WorkoutPlans() {
           />
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredPlans.map((plan) => (
             <WorkoutPlanCard
               key={plan._id}
