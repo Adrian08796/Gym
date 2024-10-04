@@ -17,7 +17,9 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleAction = (action, e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
     if (action === onDelete) {
       setIsDeleteConfirmOpen(true);
     } else {
@@ -80,12 +82,14 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   );
 
   const handleShare = async (e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
     if (plan.isDefault) {
       showToast('warn', 'Warning', 'Only user-created plans can be shared at the moment');
       return;
     }
-
+  
     setIsSharing(true);
     try {
       const link = await shareWorkoutPlan(plan._id);
@@ -99,11 +103,31 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   };
 
   const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      showToast('success', 'Success', 'Link copied to clipboard');
-    }, () => {
-      showToast('error', 'Error', 'Failed to copy link');
-    });
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('success', 'Success', 'Link copied to clipboard');
+      }, () => {
+        showToast('error', 'Error', 'Failed to copy link');
+      });
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showToast('success', 'Success', 'Link copied to clipboard');
+        } else {
+          showToast('error', 'Error', 'Failed to copy link');
+        }
+      } catch (err) {
+        console.error('Error copying text: ', err);
+        showToast('error', 'Error', 'Failed to copy link');
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   const typeIcons = {
