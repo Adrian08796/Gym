@@ -11,9 +11,9 @@ const PreviousWorkoutDisplay = ({ previousWorkout, exerciseHistory, isLoading, f
     if (!exerciseHistory || exerciseHistory.length === 0) {
       return <p className="p-4">No previous data available for this exercise.</p>;
     }
-
+  
     const lastWorkout = exerciseHistory[0]; // Most recent workout
-
+  
     return (
       <div className="mb-4">
         <h3 className="text-xl font-bold mb-2">Last Exercise Performance</h3>
@@ -26,12 +26,12 @@ const PreviousWorkoutDisplay = ({ previousWorkout, exerciseHistory, isLoading, f
             <li className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
               Exercise completed: 1 / 1
               <br />
-              {renderSetDetails(lastWorkout.sets[0])}
+              {lastWorkout.sets && lastWorkout.sets.length > 0 && renderSetDetails(lastWorkout.sets[0], currentExercise.category)}
             </li>
           ) : (
-            lastWorkout.sets.map((set, index) => (
+            lastWorkout.sets && lastWorkout.sets.map((set, index) => (
               <li key={index} className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                Set {index + 1}: {renderSetDetails(set)}
+                Set {index + 1}: {renderSetDetails(set, currentExercise.category)}
               </li>
             ))
           )}
@@ -43,11 +43,13 @@ const PreviousWorkoutDisplay = ({ previousWorkout, exerciseHistory, isLoading, f
     );
   };
 
-  const renderSetDetails = (set) => {
-    if (set.weight !== undefined && set.reps !== undefined) {
-      return `${set.weight} kg x ${set.reps} reps`;
-    } else if (set.duration !== undefined) {
-      let details = `${set.duration} minutes`;
+  const renderSetDetails = (set, exerciseCategory) => {
+    if (!set) return 'No data available';
+  
+    if (exerciseCategory === 'Strength') {
+      return `${set.weight || 0} kg x ${set.reps || 0} reps`;
+    } else if (exerciseCategory === 'Cardio') {
+      let details = `${set.duration || 0} minutes`;
       if (set.distance) details += `, ${set.distance} km`;
       if (set.intensity) details += `, Intensity: ${set.intensity}`;
       if (set.incline) details += `, Incline: ${set.incline}%`;
