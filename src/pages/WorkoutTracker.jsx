@@ -60,7 +60,7 @@ function WorkoutTracker() {
   const [intensity, setIntensity] = useState("");
   const [incline, setIncline] = useState("");
   const [exerciseHistoryError, setExerciseHistoryError] = useState(null);
-  const [userExperienceLevel, setUserExperienceLevel] = useState('beginner');  
+  const [userExperienceLevel, setUserExperienceLevel] = useState('beginner');
 
   const {
     addWorkout,
@@ -80,6 +80,26 @@ function WorkoutTracker() {
   const nodeRef = useRef(null);
 
   const API_URL = import.meta.env.VITE_BACKEND_HOST;
+
+  const loadExerciseRecommendations = useCallback(async (exerciseId) => {
+    const exercise = await getExerciseById(exerciseId);
+    if (exercise && exercise.recommendations && exercise.recommendations[userExperienceLevel]) {
+      const rec = exercise.recommendations[userExperienceLevel];
+      if (exercise.category === 'Strength') {
+        setWeight(rec.weight?.toString() || "");
+        setReps(rec.reps?.toString() || "");
+      } else if (exercise.category === 'Cardio') {
+        setDuration(rec.duration?.toString() || "");
+        setDistance(rec.distance?.toString() || "");
+        setIntensity(rec.intensity?.toString() || "");
+        setIncline(rec.incline?.toString() || "");
+      }
+      setRequiredSets(prevSets => ({
+        ...prevSets,
+        [exerciseId]: rec.sets || 3
+      }));
+    }
+  }, [getExerciseById, userExperienceLevel, setWeight, setReps, setDuration, setDistance, setIntensity, setIncline, setRequiredSets]);
 
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(
     currentPlan?._id,
@@ -136,6 +156,12 @@ function WorkoutTracker() {
     },
     [getExerciseHistory, fetchFullExerciseDetails]
   );
+
+  useEffect(() => {
+    if (user && user.experienceLevel) {
+      setUserExperienceLevel(user.experienceLevel);
+    }
+  }, [user]);
 
   // Fetch exercise history for all exercises in the current plan
   useEffect(() => {
@@ -422,25 +448,6 @@ function WorkoutTracker() {
     localStorage.setItem(`completedSets_${user.id}`, completedSets.toString());
     localStorage.setItem(`totalSets_${user.id}`, totalSets.toString());
   };
-
-  useEffect(() => {
-    if (user && user.experienceLevel) {
-      setUserExperienceLevel(user.experienceLevel);
-    }
-  }, [user]);
-
-  const loadExerciseRecommendations = useCallback(async (exerciseId) => {
-    const exercise = await getExerciseById(exerciseId);
-    if (exercise && exercise.recommendations && exercise.recommendations[userExperienceLevel]) {
-      const rec = exercise.recommendations[userExperienceLevel];
-      setWeight(rec.weight.toString());
-      setReps(rec.reps.toString());
-      setRequiredSets(prevSets => ({
-        ...prevSets,
-        [exerciseId]: rec.sets
-      }));
-    }
-  }, [getExerciseById, userExperienceLevel]);
 
   useEffect(() => {
     if (currentPlan && currentPlan.exercises && currentPlan.exercises[currentExerciseIndex]) {
@@ -830,7 +837,7 @@ function WorkoutTracker() {
           notes: notes[index] || "",
         })
       );
-
+  
       await saveProgress({
         plan: currentPlan._id,
         exercises: exercisesProgress,
@@ -842,11 +849,12 @@ function WorkoutTracker() {
         totalPauseTime,
         skippedPauses,
       });
-
+  
       setCurrentExerciseIndex(newIndex);
-
+  
       const newExercise = currentPlan.exercises[newIndex];
       const lastValues = lastSetValues[newExercise._id];
+      
       if (lastValues) {
         if (newExercise.category === "Strength") {
           setWeight(lastValues.weight?.toString() || "");
@@ -858,13 +866,8 @@ function WorkoutTracker() {
           setIncline(lastValues.incline?.toString() || "");
         }
       } else {
-        // Reset all input fields if there are no last values
-        setWeight("");
-        setReps("");
-        setDuration("");
-        setDistance("");
-        setIntensity("");
-        setIncline("");
+        // If there are no last values, load from recommendations
+        await loadExerciseRecommendations(newExercise._id);
       }
     } catch (error) {
       console.error("Error saving progress before switching exercise:", error);

@@ -138,7 +138,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             }
           });
         }
-        showToast('success', 'Success', 'Exercise updated successfully');
+        // showToast('success', 'Success', 'Exercise updated successfully');
       } else {
         if (isDefault && user.isAdmin) {
           savedExercise = await addDefaultExercise(exerciseData);
