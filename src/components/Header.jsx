@@ -76,7 +76,7 @@ function Header() {
               <MenuItem key={item.to} to={item.to} text={item.text} />
             ))}
             {user ? (
-              <button onClick={handleLogout} className="nav-btn">Logout</button>
+              <button onClick={handleLogout} className="nav-btn nav-btn-danger">Logout</button>
             ) : (
               <>
                 <AuthButton to="/login" text="Login" />
@@ -123,7 +123,7 @@ function Header() {
                   {menuItems.map((item) => (
                     <MenuItem key={item.to} to={item.to} text={item.text} />
                   ))}
-                  <button onClick={handleLogout} className="nav-btn block w-full text-left hover:bg-gray-600">
+                  <button onClick={handleLogout} className="nav-btn nav-btn-danger block w-full text-left hover:bg-gray-600">
                     Logout
                   </button>
                 </>

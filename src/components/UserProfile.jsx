@@ -111,7 +111,7 @@ function UserProfile() {
 
   return (
     <>
-      <h1 data-aos="fade-up" className="header text-3xl font-bold mb-6 text-center">
+      <h1 data-aos="fade-up" className="header text-3xl text-gray-800 dark:text-white font-bold mb-6 text-center">
         User <span className='headerSpan'>Profile</span>
       </h1>
       <div className={`container mx-auto mt-8 p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>

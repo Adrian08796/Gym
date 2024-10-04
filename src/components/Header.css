@@ -69,6 +69,17 @@
     box-shadow: 0 0 10px #45FFCA;
 }
 
+/* .nav-btn-danger {
+    border-color: #EF4444;
+    color: #EF4444 !important;
+  }
+  
+.nav-btn-danger:hover {
+    background-color: #EF4444 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px #EF4444;
+} */
+
 .logoSpan {
     color: #45FFCA;
 }

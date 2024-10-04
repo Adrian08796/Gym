@@ -163,7 +163,7 @@ function WorkoutPlans() {
 
   return (
     <>
-      <h1 data-aos="fade-up" className="header text-3xl font-bold mb-4 text-center">
+      <h1 data-aos="fade-up" className="header text-3xl text-gray-800 dark:text-white font-bold mb-4 text-center">
         Workout <span className='headerSpan'>Plans</span>
       </h1>
       <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'}`}>
