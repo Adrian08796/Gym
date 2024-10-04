@@ -531,7 +531,7 @@ function WorkoutTracker() {
         skippedRest: isResting,
       };
   
-      // Update the user-specific recommendation
+      // Update the user-specific recommendation for strength exercises
       try {
         await updateUserRecommendation(currentExercise._id, {
           weight: Number(weight),
@@ -566,6 +566,7 @@ function WorkoutTracker() {
         });
       } catch (error) {
         console.error('Failed to update user-specific recommendation for cardio:', error);
+        showToast('error', 'Error', 'Failed to update exercise recommendation');
       }
     }
   
@@ -681,10 +682,10 @@ function WorkoutTracker() {
       lastSetValues,
       startTime: startTime.toISOString(),
     });
-
+  
     // Recalculate the final progression
     const finalProgression = calculateProgress();
-
+  
     const endTime = new Date();
     const completedWorkout = {
       plan: currentPlan._id,
@@ -702,9 +703,9 @@ function WorkoutTracker() {
       endTime: endTime.toISOString(),
       totalPauseTime,
       skippedPauses,
-      progression: finalProgression, // Use the recalculated progression
+      progression: finalProgression,
     };
-
+  
     try {
       await addWorkout(completedWorkout);
       await clearWorkout();
