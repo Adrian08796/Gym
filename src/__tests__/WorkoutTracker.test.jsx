@@ -10,7 +10,7 @@ jest.mock('../pages/WorkoutTracker', () => () => <div>Mocked WorkoutTracker</div
 // Mock the AuthContext
 jest.mock('../context/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: '66ffc231b17b8c71e16b46d1', username: 'Adrianser' },
+    user: { id: '66ffc231b17b8c71e16b46d1', username: 'Adrian' },
   }),
 }));
 
