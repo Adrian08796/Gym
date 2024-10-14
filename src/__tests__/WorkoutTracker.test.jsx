@@ -11,7 +11,7 @@ vi.mock('../pages/WorkoutTracker', () => ({
 // Mock the AuthContext
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: '66ffc231b17b8c71e16b46d1', username: 'Adrianser' },
+    user: { id: '66ffc231b17b8c71e16b46d1', username: 'Adrian' },
   }),
 }));
 
