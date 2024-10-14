@@ -1,4 +1,4 @@
-// src/__tests__/App.test.jsx
+import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from '../App';
@@ -7,17 +7,19 @@ import { AuthProvider } from '../context/AuthContext';
 import { GymProvider } from '../context/GymContext';
 import { ThemeProvider } from '../context/ThemeContext';
 
-test('renders App component without crashing', () => {
-  render(
-    <BrowserRouter>
-      <AuthProvider>
-        <GymProvider>
-          <ThemeProvider>
-            <App />
-          </ThemeProvider>
-        </GymProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  );
-  // This test passes if the component renders without throwing an error
+describe('App component', () => {
+  it('renders without crashing', () => {
+    render(
+      <BrowserRouter>
+        <AuthProvider>
+          <GymProvider>
+            <ThemeProvider>
+              <App />
+            </ThemeProvider>
+          </GymProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    );
+    // This test passes if the component renders without throwing an error
+  });
 });

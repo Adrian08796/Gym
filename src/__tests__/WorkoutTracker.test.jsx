@@ -1,22 +1,23 @@
-// src/_tests_/WorkoutTracker.test.jsx
-
+import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-// Mock the entire WorkoutTracker component
-jest.mock('../pages/WorkoutTracker', () => () => <div>Mocked WorkoutTracker</div>);
+// Mock the WorkoutTracker component
+vi.mock('../pages/WorkoutTracker', () => ({
+  default: () => <div>Mocked WorkoutTracker</div>
+}));
 
 // Mock the AuthContext
-jest.mock('../context/AuthContext', () => ({
+vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: '66ffc231b17b8c71e16b46d1', username: 'Adrian' },
+    user: { id: '66ffc231b17b8c71e16b46d1', username: 'Adrianser' },
   }),
 }));
 
 // Mock react-router-dom
-jest.mock('react-router-dom', () => ({
-  useNavigate: () => jest.fn(),
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
 }));
 
 // Import the mocked WorkoutTracker
