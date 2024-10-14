@@ -86,7 +86,7 @@ function Header() {
           </nav>
 
           {/* ThemeToggle - Moved outside of the nav for desktop */}
-          <div className="hidden lg:block">
+          <div aria-label='themeToggle' className="hidden lg:block">
             <ThemeToggle />
           </div>
 

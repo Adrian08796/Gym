@@ -32,3 +32,5 @@ test('renders WorkoutPlanCard with plan name', () => {
   const planNameElement = screen.getByText('Test Plan');
   expect(planNameElement).toBeInTheDocument();
 });
+
+// This test checks if the WorkoutPlanCard component renders with the provided plan name.

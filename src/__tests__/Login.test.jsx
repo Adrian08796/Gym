@@ -30,3 +30,5 @@ describe('Login component', () => {
     expect(loginButton).toBeInTheDocument();
   });
 });
+
+// This test verifies that the Login component renders with username and password inputs, as well as a login button.

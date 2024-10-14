@@ -29,3 +29,5 @@ describe('WorkoutTracker', () => {
     expect(screen.getByText('Mocked WorkoutTracker')).toBeInTheDocument();
   });
 });
+
+// This test verifies that the WorkoutTracker component renders without crashing and displays the mocked text.
