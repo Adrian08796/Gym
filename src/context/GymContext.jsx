@@ -630,7 +630,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       }
   
       if (currentPlan.isDefault && !user.isAdmin) {
-        showToast("error", "Error", "Unauthorized");
+        showToast("warn", "Warning", "You cannot modify admin-created plans");
         return { success: false, error: 'Unauthorized' };
       }
   
@@ -669,7 +669,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
             showToast("error", "Error", "Workout plan or exercise not found");
             break;
           default:
-            showToast("error", "Error", "Failed to add exercise to plan");
+            // showToast("error", "Error", "Failed to add exercise to plan");
         }
       } else if (error.request) {
         showToast("error", "Error", "No response received from server");

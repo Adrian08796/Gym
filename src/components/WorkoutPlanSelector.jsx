@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { useGymContext } from '../context/GymContext';
+import { useAuth } from '../context/AuthContext';
 
 function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExercise }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const { fetchWorkoutPlans, removeExerciseFromPlan, showToast } = useGymContext();
+  const { user } = useAuth();
 
   useEffect(() => {
     const getWorkoutPlans = async () => {
@@ -44,6 +46,12 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
 
   const handleRemoveExercise = async (planId, exerciseId) => {
     try {
+      // Check if the plan is admin-created and the user is not an admin
+      if (selectedPlan.isDefault && !user.isAdmin) {
+        showToast('error', 'Error', 'You cannot remove exercises from admin-created plans');
+        return;
+      }
+
       const { success, updatedPlan } = await removeExerciseFromPlan(planId, exerciseId);
       if (success) {
         setWorkoutPlans(prevPlans =>
@@ -93,18 +101,20 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
             </button>
           </div>
           <div className={`overflow-hidden transition-all duration-300 ${isPreviewExpanded ? 'max-h-96' : 'max-h-24'}`}>
-            <div className="flex overflow-x-auto pb-2 hide-scrollbar">
+            <div className="flex overflow-x-auto pb-2 px-4 carousel-container">
               <div className="flex space-x-2">
                 {selectedPlan.exercises?.map((exercise) => (
                   <div key={exercise._id} className="min-w-[max-content] bg-gray-200 dark:bg-gray-700 rounded-lg p-2 flex items-center text-xs whitespace-nowrap">
                     <img src={exercise.imageUrl} alt={exercise.name} className="w-6 h-6 object-cover rounded-full mr-2" />
                     <span className="mr-2">{exercise.name}</span>
-                    <button 
-                      onClick={() => handleRemoveExercise(selectedPlan._id, exercise._id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <FiX size={12} />
-                    </button>
+                    {(!selectedPlan.isDefault || user.isAdmin) && (
+                      <button 
+                        onClick={() => handleRemoveExercise(selectedPlan._id, exercise._id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <FiX size={12} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

@@ -103,11 +103,11 @@ function ExerciseLibrary() {
       } else if (error === 'Duplicate exercise') {
         showToast('warn', 'Warning', 'This exercise is already in the plan');
       } else {
-        showToast('error', 'Error', 'Failed to add exercise to plan');
+        // showToast('error', 'Error', 'Failed to add exercise to plan');
       }
     } catch (error) {
       console.error('Error adding exercise to plan:', error);
-      showToast('error', 'Error', 'Failed to add exercise to plan');
+      // showToast('error', 'Error', 'Failed to add exercise to plan');
     }
   };
 
