@@ -438,7 +438,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               type="button"
               onClick={handleCancel}
             >
-              {t("Cancel")}
+              {t("Cancel")} 
             </button>
           </div>
         </form>
