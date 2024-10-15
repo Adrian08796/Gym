@@ -125,9 +125,9 @@ function WorkoutSummary() {
                                     (at {formatTime(set.completedAt)})
                                   </span>
                                 )}
-                                {set.skippedRest && (
+                                {/* {set.skippedRest && (
                                   <span className="text-yellow-500 ml-2">(Rest Skipped)</span>
-                                )}
+                                )} */}
                               </li>
                             ))
                           )}
