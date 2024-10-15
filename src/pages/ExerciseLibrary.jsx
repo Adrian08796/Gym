@@ -11,6 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { FiFilter, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import './ExerciseLibrary.css';
+import { useTranslation } from 'react-i18next';
 
 const categories = ['Strength', 'Cardio', 'Flexibility', 'Imported'];
 const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'];
@@ -23,6 +24,7 @@ const categoryColors = {
 };
 
 function ExerciseLibrary() {
+  const { t } = useTranslation();
   const [editingExercise, setEditingExercise] = useState(null);
   const [showWorkoutPlanSelector, setShowWorkoutPlanSelector] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
@@ -212,13 +214,13 @@ function ExerciseLibrary() {
         className="flex items-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
       >
         <FiFilter className="mr-2 md:mr-0" />
-        <span className="hidden md:inline">Filters</span>
+        <span className="hidden md:inline">{t("Filters")}</span>
         {showFilters ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
       </button>
       {showFilters && (
         <div className="absolute z-10 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg">
           <div className="p-4">
-            <h3 className="text-lg font-semibold mb-2">Categories</h3>
+            <h3 className="text-lg font-semibold mb-2">{t("Categories")}</h3>
             <div className="flex flex-wrap gap-2 mb-4">
               {categories.map(category => (
                 <button
@@ -230,11 +232,11 @@ function ExerciseLibrary() {
                       : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
                   }`}
                 >
-                  {category}
+                  {t(category)}
                 </button>
               ))}
             </div>
-            <h3 className="text-lg font-semibold mb-2">Muscle Groups</h3>
+            <h3 className="text-lg font-semibold mb-2">{t("Muscle Groups")}</h3>
             <div className="flex flex-wrap gap-2">
               {muscleGroups.map(group => (
                 <button
@@ -246,7 +248,7 @@ function ExerciseLibrary() {
                       : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
                   }`}
                 >
-                  {group}
+                  {t(group)}
                 </button>
               ))}
             </div>
@@ -259,13 +261,13 @@ function ExerciseLibrary() {
   return (
     <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
-        <h1 data-aos="fade-up" className="header text-center text-3xl text-gray-800 dark:text-white font-bold mb-6 lg:mb-8">Exercise <span className='headerSpan'>Library</span></h1>
+        <h1 data-aos="fade-up" className="header text-center text-3xl text-gray-800 dark:text-white font-bold mb-6 lg:mb-8">{t("Exercise")} <span className='headerSpan'>{t("Library")}</span></h1>
 
         <div className="mb-6 lg:mb-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex-grow">
             <input
               type="text"
-              placeholder="Search exercises..."
+              placeholder={t("Search exercises...")}
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               className="w-full px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"

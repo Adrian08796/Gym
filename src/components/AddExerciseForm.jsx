@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { Toast } from 'primereact/toast';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const muscleGroups = [
   'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'
@@ -24,6 +25,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [actingAsAdmin, setActingAsAdmin] = useState(false);
   const { addExercise, updateExercise, addDefaultExercise, showToast } = useGymContext();
   const { user } = useAuth();
+  const { t } = useTranslation();
   
 
   useEffect(() => {
@@ -199,18 +201,18 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
         onClick={toggleForm}
         className="mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-2 px-4 rounded"
       >
-        {isExpanded ? 'Hide Form' : 'Add New Exercise'}
+        {t(isExpanded ? ('Hide Form') : 'Add New Exercise')}
       </button>
       {isExpanded && (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
           <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
-            {initialExercise ? 'Edit Exercise' : 'Add New Exercise'}
+          {t(initialExercise ? "Edit Exercise" : "Add New Exercise")}
           </h2>
 
           {/* Name input */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="name">
-              Exercise Name
+              {t("Exercise Name")}
             </label>
             <input
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
@@ -226,7 +228,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           {/* Description input */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="description">
-              Description
+              {t("Description")}
             </label>
             <textarea
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
@@ -241,7 +243,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           {/* Target muscle groups */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
-              Target Muscle Groups
+              {t("Target Muscle Groups")}
             </label>
             <div className="flex flex-wrap -mx-1">
               {muscleGroups.map(group => (
@@ -265,7 +267,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           {/* Category selection */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="category">
-              Category
+              {t("Category")}
             </label>
             <select
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
@@ -274,7 +276,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               onChange={(e) => setCategory(e.target.value)}
               required
             >
-              <option value="">Select a category</option>
+              <option value="">{t("Select a category")}</option>
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
@@ -284,7 +286,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           {/* Image URL input */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="imageUrl">
-              Image URL
+              {t("Image URL")}
             </label>
             <input
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
@@ -299,7 +301,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
           {/* Recommendations for exercises */}
       {(category === 'Strength' || category === 'Cardio') && (
         <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Recommendations</h3>
+          <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">{t("Recommendations")}</h3>
           {(actingAsAdmin ? experienceLevels : [user.experienceLevel]).map(level => (
             <div key={level} className="mb-4">
               <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -311,7 +313,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-weight`}>
-                        Weight (kg)
+                        {t("Weight (kg)")}
                       </label>
                       <input
                         id={`${level}-weight`}
@@ -323,7 +325,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-reps`}>
-                        Reps
+                        {t("Reps")}
                       </label>
                       <input
                         id={`${level}-reps`}
@@ -335,7 +337,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-sets`}>
-                        Sets
+                        {t("Sets")}
                       </label>
                       <input
                         id={`${level}-sets`}
@@ -351,7 +353,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-duration`}>
-                        Duration (min)
+                        {t("Duration (min)")}
                       </label>
                       <input
                         id={`${level}-duration`}
@@ -363,7 +365,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-distance`}>
-                        Distance (km)
+                        {t("Distance (km)")}
                       </label>
                       <input
                         id={`${level}-distance`}
@@ -375,7 +377,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-intensity`}>
-                        Intensity (1-10)
+                        {t("Intensity (1-10)")}
                       </label>
                       <input
                         id={`${level}-intensity`}
@@ -389,7 +391,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-incline`}>
-                        Incline (%)
+                        {t("Incline (%)")}
                       </label>
                       <input
                         id={`${level}-incline`}
@@ -418,7 +420,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               }}
               className="form-checkbox h-5 w-5 text-emerald-500"
             />
-            <span className="ml-2 text-gray-700 dark:text-gray-300">Set as Default Exercise (Admin Only)</span>
+            <span className="ml-2 text-gray-700 dark:text-gray-300">{t("Set as Default Exercise (Admin Only)")}</span>
           </label>
         </div>
       )}
@@ -429,14 +431,14 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Saving...' : (initialExercise ? 'Update Exercise' : 'Add Exercise')}
+              {t(isSubmitting ? 'Saving...' : (initialExercise ? 'Update Exercise' : 'Add Exercise'))}
             </button>
             <button
               className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
               type="button"
               onClick={handleCancel}
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </form>

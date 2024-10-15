@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { useGymContext } from '../context/GymContext';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExercise }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
@@ -11,6 +12,7 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const { fetchWorkoutPlans, removeExerciseFromPlan, showToast } = useGymContext();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const getWorkoutPlans = async () => {
@@ -69,7 +71,7 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
   };
 
   if (isLoading) {
-    return <div>Loading workout plans...</div>;
+    return <div>{t("Loading workout plans...")}</div>;
   }
 
   return (
@@ -82,17 +84,17 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
         }}
         className={`w-full p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800`}
       >
-        <option value="">Select a workout plan for drag and drop</option>
+        <option value="">{t("Select a workout plan for drag and drop")}</option>
         {workoutPlans.map((plan) => (
           <option key={plan._id} value={plan._id}>
-            {plan.name} ({plan.exercises?.length || 0} exercises)
+            {plan.name} ({plan.exercises?.length || 0} {t("exercises")})
           </option>
         ))}
       </select>
       {selectedPlan && (
         <div className="mt-4">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="text-lg font-semibold">Exercises in {selectedPlan.name}:</h3>
+            <h3 className="text-lg font-semibold">{t("Exercises in")} {selectedPlan.name}:</h3>
             <button 
               onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
               className="text-blue-500 hover:text-blue-700"

@@ -5,11 +5,14 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from './ThemeToggle';
+import LanguageSwitcher from './LanguageSwitcher';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import '../components/Header.css';
+import { useTranslation } from 'react-i18next';
 
 function Header() {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { darkMode } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -24,12 +27,12 @@ function Header() {
   }, [isMenuOpen]);
 
   const menuItems = [
-    { to: "/dashboard", text: "Dashboard" },
-    { to: "/tracker", text: "Tracker" },
-    { to: "/exercises", text: "Exercises" },
-    { to: "/plans", text: "Plans" },
-    { to: "/workout-summary", text: "History" },
-    { to: "/profile", text: "Profile" },
+    { to: "/dashboard", text: t("Dashboard") },
+    { to: "/tracker", text: t("Tracker") },
+    { to: "/exercises", text: t("Exercises") },
+    { to: "/plans", text: t("Plans") },
+    { to: "/workout-summary", text: t("History") },
+    { to: "/profile", text: t("Profile") },
   ];
 
   const MenuItem = ({ to, text, onClick }) => (
@@ -61,7 +64,7 @@ function Header() {
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             <Link to="/" className="logo font-heading font-bold flex items-center">
-              Level <span className='logoSpan'>Up</span>
+              {t("Level")} <span className='logoSpan'>{t("Up")}</span>
               <div className="pyramid-container">
                 <div className="pyramid-level level-1"></div>
                 <div className="pyramid-level level-2"></div>
@@ -76,23 +79,25 @@ function Header() {
               <MenuItem key={item.to} to={item.to} text={item.text} />
             ))}
             {user ? (
-              <button onClick={handleLogout} className="nav-btn nav-btn-danger">Logout</button>
+              <button onClick={handleLogout} className="nav-btn nav-btn-danger">{t("Logout")}</button>
             ) : (
               <>
-                <AuthButton to="/login" text="Login" />
-                <AuthButton to="/register" text="Register" />
+                <AuthButton to="/login" text={t("Login")} />
+                <AuthButton to="/register" text={t("Register")} />
               </>
             )}
           </nav>
 
-          {/* ThemeToggle - Moved outside of the nav for desktop */}
-          <div aria-label='themeToggle' className="hidden lg:block">
+          {/* ThemeToggle and LanguageSwitcher - Moved outside of the nav for desktop */}
+          <div className="hidden lg:flex items-center space-x-2">
             <ThemeToggle />
+            <LanguageSwitcher />
           </div>
 
-          {/* Mobile Menu Button and ThemeToggle */}
+          {/* Mobile Menu Button, ThemeToggle, and LanguageSwitcher */}
           <div className="lg:hidden flex items-center space-x-4">
             <ThemeToggle />
+            <LanguageSwitcher />
             <button 
               className="text-white focus:outline-none"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -124,13 +129,13 @@ function Header() {
                     <MenuItem key={item.to} to={item.to} text={item.text} />
                   ))}
                   <button onClick={handleLogout} className="nav-btn nav-btn-danger block w-full text-left hover:bg-gray-600">
-                    Logout
+                    {t("Logout")}
                   </button>
                 </>
               ) : (
                 <>
-                  <AuthButton to="/login" text="Login" />
-                  <AuthButton to="/register" text="Register" />
+                  <AuthButton to="/login" text={t("Login")} />
+                  <AuthButton to="/register" text={t("Register")} />
                 </>
               )}
             </div>

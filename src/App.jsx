@@ -28,6 +28,7 @@ import "primereact/resources/themes/lara-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 import '../src/components/ConfirmDialog.css';
+import './i18n';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
