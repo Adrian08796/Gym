@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
-import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser } from 'react-icons/fi';
+// src/components/ExerciseItem.jsx
 
-function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
+import React, { useState, useMemo } from 'react';
+import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser, FiEye } from 'react-icons/fi';
+import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
+import { useAuth } from '../context/AuthContext';
+import '../components/ExerciseItem.css';
+
+function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragging }) {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const { user } = useAuth();
 
   const handleAction = (action, e) => {
     e.stopPropagation();
@@ -24,26 +30,27 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
     setIsDeleteConfirmOpen(false);
   };
 
-  const categoryColors = {
-    Strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    Cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    Flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+  const categoryIcons = {
+    Strength: <PiBarbellBold size={20} />,
+    Cardio: <PiHeartbeatBold size={20} />,
+    Flexibility: null // You can add an icon for Flexibility if desired
   };
 
   const buttonStyles = {
-    base: 'text-xs font-semibold py-2 px-3 rounded-full transition-all duration-300 flex items-center justify-center',
+    base: 'text-xs font-semibold p-2 rounded transition-all duration-300 flex items-center justify-center',
     edit: 'bg-emerald-500 hover:bg-emerald-600 text-white',
     delete: 'bg-emerald-500 hover:bg-emerald-600 text-white',
-    addToPlan: 'bg-emerald-500 hover:bg-emerald-600 text-white'
+    addToPlan: 'bg-emerald-500 hover:bg-emerald-600 text-white',
+    view: 'bg-emerald-500 hover:bg-emerald-600 text-white'
   };
 
-  const ActionButton = ({ action, style, icon, text }) => (
+  const ActionButton = ({ action, style, icon, label }) => (
     <button 
       onClick={(e) => handleAction(action, e)}
       className={`${buttonStyles.base} ${style} opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0`}
+      aria-label={label}
     >
       {icon}
-      <span className="ml-1">{text}</span>
     </button>
   );
 
@@ -60,42 +67,89 @@ function ExerciseItem({ exercise, onClick, onEdit, onDelete, onAddToPlan }) {
   );
 
   const isImported = exercise.importedFrom && exercise.importedFrom.username;
+  const experienceLevel = useMemo(() => {
+    return user?.experienceLevel || 'beginner';
+  }, [user]);
 
+  const userExerciseData = useMemo(() => {
+    return exercise.userExercises?.find(ue => ue.user === user.id) || {};
+  }, [exercise.userExercises, user.id]);
+
+  const recommendation = useMemo(() => {
+    if (userExerciseData.recommendation) {
+      return userExerciseData.recommendation;
+    }
+    if (exercise.recommendations && exercise.recommendations[experienceLevel]) {
+      return exercise.recommendations[experienceLevel];
+    }
+    // Provide a default recommendation if none is found
+    return { weight: 0, reps: 0, sets: 0, duration: 0, distance: 0, intensity: 0, incline: 0 };
+  }, [userExerciseData, exercise.recommendations, experienceLevel]);
+
+  const displayName = userExerciseData.name || exercise.name;
+  const displayDescription = userExerciseData.description || exercise.description;
+  const displayTarget = userExerciseData.target || exercise.target;
+  const displayImageUrl = userExerciseData.imageUrl || exercise.imageUrl;
+
+  const renderRecommendation = () => {
+    if (exercise.category === 'Strength') {
+      return (
+        <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p>Your Recommendation:</p>
+          <p>Weight: {recommendation?.weight || 0} kg</p>
+          <p>Reps: {recommendation?.reps || 0}</p>
+          <p>Sets: {recommendation?.sets || 0}</p>
+        </div>
+      );
+    } else if (exercise.category === 'Cardio') {
+      return (
+        <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p>Your Recommendation:</p>
+          <p>Duration: {recommendation?.duration || 0} minutes</p>
+          {recommendation?.distance && <p>Distance: {recommendation.distance} km</p>}
+          {recommendation?.intensity && <p>Intensity: {recommendation.intensity}</p>}
+          {recommendation?.incline && <p>Incline: {recommendation.incline}%</p>}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div 
-      className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-pointer h-full flex flex-col"
-      onClick={() => onClick(exercise)}
+      className={`row group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-move h-full flex flex-col ${isDragging ? 'opacity-50' : ''}`}
     >
       <div className="relative h-48 overflow-hidden">
         <img 
-          src={exercise.imageUrl} 
-          alt={exercise.name} 
+          src={displayImageUrl} 
+          alt={displayName} 
           className="w-full h-full object-cover transition-transform duration-300 transform group-hover:scale-110"
         />
-        <div className={`absolute top-2 right-2 ${categoryColors[exercise.category] || 'bg-gray-500 text-white'} rounded-full px-3 py-1 text-xs font-semibold shadow-md`}>
-          {exercise.category}
+        <div className="absolute top-2 right-2 w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center">
+          {categoryIcons[exercise.category]}
         </div>
       </div>
       <div className="p-4 flex-grow flex flex-col">
-        <h3 className="font-heading text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{exercise.name}</h3>
-        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 flex-grow line-clamp-3">{exercise.description}</p>
+        <h3 className="font-heading text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{displayName}</h3>
+        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 flex-grow line-clamp-3">{displayDescription}</p>
         <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
           <FiTarget className="mr-1" />
-          <span>{Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}</span>
+          <span>{Array.isArray(displayTarget) ? displayTarget.join(', ') : displayTarget}</span>
         </div>
-        {exercise.importedFrom && exercise.importedFrom.username && (
+        {renderRecommendation()}
+        {isImported && (
           <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
             <FiUser className="mr-1" />
             <span>Imported from {exercise.importedFrom.username}</span>
           </div>
         )}
       </div>
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
-        <div className="flex justify-between space-x-2">
-          <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} text="Edit" />
-          <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} text="Delete" />
-          <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} text="Add to Plan" />
+      <div className="absolute bottom-0 left-0 right-0 p-2 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+        <div className="flex justify-end space-x-2">
+          <ActionButton action={onView} style={buttonStyles.view} icon={<FiEye />} label="View exercise" />
+          <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} label="Edit exercise" />
+          <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} label="Delete exercise" />
+          <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} label="Add to plan" />
         </div>
       </div>
       {isDeleteConfirmOpen && <DeleteConfirmation />}

@@ -1,6 +1,9 @@
 // src/App.jsx
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 import Home from './pages/Home';
 import WorkoutTracker from './pages/WorkoutTracker';
 import ExerciseLibrary from './pages/ExerciseLibrary';
@@ -16,11 +19,15 @@ import Dashboard from './components/Dashboard';
 import ImportWorkoutPlan from './components/ImportWorkoutPlan';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
-import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import NotificationToast from './components/NotificationToast';
+import { Toast } from 'primereact/toast';
+import { useRef } from 'react';
 import UserProfile from './components/UserProfile';
-import axiosInstance from './utils/axiosConfig';
+import { ConfirmDialog } from 'primereact/confirmdialog';
+import "primereact/resources/themes/lara-light-indigo/theme.css";
+import "primereact/resources/primereact.min.css";
+import "primeicons/primeicons.css";
+import '../src/components/ConfirmDialog.css';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -34,8 +41,14 @@ function AppContent() {
   const { user, loading, updateActivity } = useAuth();
   const { darkMode } = useTheme();
   const authContext = useAuth();
+  const toast = useRef(null);
   
   useEffect(() => {
+    AOS.init({
+      duration: 1000,
+      once: true,
+    });
+
     window.authContext = authContext;
 
     const handleActivity = () => {
@@ -44,7 +57,6 @@ function AppContent() {
       }
     };
 
-    // Add event listeners for user activity
     window.addEventListener('mousemove', handleActivity);
     window.addEventListener('keydown', handleActivity);
     window.addEventListener('click', handleActivity);
@@ -52,13 +64,16 @@ function AppContent() {
 
     return () => {
       delete window.authContext;
-      // Remove event listeners
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keydown', handleActivity);
       window.removeEventListener('click', handleActivity);
       window.removeEventListener('scroll', handleActivity);
     };
   }, [authContext, updateActivity]);
+
+  useEffect(() => {
+    AOS.refresh();
+  });
 
   if (loading) {
     return <div>Loading...</div>;
@@ -86,7 +101,7 @@ function AppContent() {
         </div>
       </main>
       <Footer />
-      <NotificationToast />
+      <Toast ref={toast} />
     </div>
   );
 }
@@ -95,13 +110,12 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <NotificationProvider>
-          <GymProvider>
-            <ThemeProvider>
-              <AppContent />
-            </ThemeProvider>
-          </GymProvider>
-        </NotificationProvider>
+        <GymProvider>
+          <ThemeProvider>
+            <AppContent />
+            <ConfirmDialog className="custom-confirm-dialog" />
+          </ThemeProvider>       
+        </GymProvider>
       </AuthProvider>
     </Router>
   );

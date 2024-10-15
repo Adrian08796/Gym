@@ -1,12 +1,14 @@
 // src/components/WorkoutPlanSelector.jsx
 
 import React, { useState, useEffect } from 'react';
+import { FiX, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { useGymContext } from '../context/GymContext';
 
-function WorkoutPlanSelector({ onSelect, onClose }) {
+function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExercise }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { fetchWorkoutPlans } = useGymContext();
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const { fetchWorkoutPlans, removeExerciseFromPlan, showToast } = useGymContext();
 
   useEffect(() => {
     const getWorkoutPlans = async () => {
@@ -16,16 +18,46 @@ function WorkoutPlanSelector({ onSelect, onClose }) {
         setWorkoutPlans(plans || []);
       } catch (error) {
         console.error('Error fetching workout plans:', error);
+        showToast('error', 'Error', 'Failed to fetch workout plans');
       } finally {
         setIsLoading(false);
       }
     };
     getWorkoutPlans();
-  }, [fetchWorkoutPlans]);
+  }, [fetchWorkoutPlans, showToast]);
 
-  const handleSelect = async (plan) => {
-    await onSelect(plan);
-    onClose();
+  useEffect(() => {
+    if (selectedPlan) {
+      setWorkoutPlans(prevPlans => 
+        prevPlans.map(plan => 
+          plan._id === selectedPlan._id ? selectedPlan : plan
+        )
+      );
+    }
+  }, [selectedPlan]);
+
+  const handleSelect = (e) => {
+    const planId = e.target.value;
+    const selected = workoutPlans.find(plan => plan._id === planId);
+    onSelect(selected);
+  };
+
+  const handleRemoveExercise = async (planId, exerciseId) => {
+    try {
+      const { success, updatedPlan } = await removeExerciseFromPlan(planId, exerciseId);
+      if (success) {
+        setWorkoutPlans(prevPlans =>
+          prevPlans.map(plan => plan._id === planId ? updatedPlan : plan)
+        );
+        if (selectedPlan && selectedPlan._id === planId) {
+          onSelect(updatedPlan);
+        }
+        // showToast('success', 'Success', 'Exercise removed from plan successfully');
+      }
+    } catch (error) {
+      console.error('Error removing exercise from plan:', error);
+      showToast('error', 'Error', 'Failed to remove exercise from plan');
+    }
   };
 
   if (isLoading) {
@@ -33,30 +65,56 @@ function WorkoutPlanSelector({ onSelect, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-[60]">
-      <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-xl max-w-md w-full m-4">
-        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Select Workout Plan</h2>
-        {workoutPlans.length === 0 ? (
-          <p className="text-gray-700 dark:text-gray-300">No workout plans available. Create a plan first.</p>
-        ) : (
-          workoutPlans.map((plan) => (
-            <button
-              key={plan._id}
-              onClick={() => handleSelect(plan)}
-              className="block w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mb-2 text-gray-800 dark:text-gray-200"
+    <div className={`mb-4 ${isDragging ? 'pointer-events-auto' : ''}`}>
+      <select
+        value={selectedPlan?._id || ''}
+        onChange={(e) => {
+          const selected = workoutPlans.find(plan => plan._id === e.target.value);
+          onSelect(selected);
+        }}
+        className={`w-full p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800`}
+      >
+        <option value="">Select a workout plan for drag and drop</option>
+        {workoutPlans.map((plan) => (
+          <option key={plan._id} value={plan._id}>
+            {plan.name} ({plan.exercises?.length || 0} exercises)
+          </option>
+        ))}
+      </select>
+      {selectedPlan && (
+        <div className="mt-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-semibold">Exercises in {selectedPlan.name}:</h3>
+            <button 
+              onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
+              className="text-blue-500 hover:text-blue-700"
             >
-              <span>{plan.name}</span>
-              <span className="text-xs text-gray-500 ml-2">({plan.exercises.length} exercises)</span>
+              {isPreviewExpanded ? <FiChevronUp /> : <FiChevronDown />}
             </button>
-          ))
-        )}
-        <button
-          onClick={onClose}
-          className="mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Cancel
-        </button>
-      </div>
+          </div>
+          <div className={`overflow-hidden transition-all duration-300 ${isPreviewExpanded ? 'max-h-96' : 'max-h-24'}`}>
+            <div className="flex overflow-x-auto pb-2 hide-scrollbar">
+              <div className="flex space-x-2">
+                {selectedPlan.exercises?.map((exercise) => (
+                  <div key={exercise._id} className="min-w-[max-content] bg-gray-200 dark:bg-gray-700 rounded-lg p-2 flex items-center text-xs whitespace-nowrap">
+                    <img src={exercise.imageUrl} alt={exercise.name} className="w-6 h-6 object-cover rounded-full mr-2" />
+                    <span className="mr-2">{exercise.name}</span>
+                    <button 
+                      onClick={() => handleRemoveExercise(selectedPlan._id, exercise._id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <FiX size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        {selectedPlan ? "Drag exercises here or use the '+' button to add them to the selected plan." : "Select a plan to add exercises."}
+      </p>
     </div>
   );
 }

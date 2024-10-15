@@ -108,7 +108,7 @@ input[type="number"], textarea {
 
 /* Progress bar styles */
 .progress-bar {
-  height: 8px;
+  height: 2px;
   background-color: #e9ecef;
   border-radius: 4px;
   overflow: hidden;
@@ -116,7 +116,7 @@ input[type="number"], textarea {
 
 .progress-bar-fill {
   height: 100%;
-  background-color: #3490dc;
+  background-color: #45FFCA;
   transition: width 300ms ease-in-out;
 }
 
@@ -138,7 +138,7 @@ input[type="number"], textarea {
 
 .rest-timer-fill {
   height: 100%;
-  background-color: #28a745;
+  background-color: #45FFCA;
   transition: width 1s linear;
 }
 
@@ -219,22 +219,62 @@ input[type="number"], textarea {
 }
 
 .dark-mode .btn-primary {
-  background-color: #4299e1;
+  background-color: #1F2937;
 }
 
 .dark-mode .btn-primary:hover {
-  background-color: #3182ce;
+  background-color: #4a5568;
 }
 
 .dark-mode .btn-secondary {
-  background-color: #718096;
+  background-color: #1F2937;
+  border: 2px solid #45FFCA;
 }
 
 .dark-mode .btn-secondary:hover {
+  background-color: #4a5568;
+}
+.dark-mode .btn-primary-previous {
+  background-color: #1F2937;
+}
+
+.dark-mode .btn-primary-previous:hover {
   background-color: #4a5568;
 }
 
 .dark-mode .swipe-indicator {
   background-color: rgba(74, 85, 104, 0.8);
   color: #e2e8f0;
+}
+
+.input-with-placeholder {
+  position: relative;
+  padding-right: 80px !important; /* Adjust this value as needed */
+}
+
+.input-with-placeholder::-webkit-outer-spin-button,
+.input-with-placeholder::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input-with-placeholder[type=number] {
+  -moz-appearance: textfield;
+}
+
+.placeholder-text {
+  position: absolute;
+  top: 33%;
+  right: 8px; /* Adjust this value to move left/right */
+  transform: translateY(-50%);
+  color: #6b7280; /* Adjust color as needed */
+  pointer-events: none;
+  font-size: 0.875rem; /* Adjust font size as needed */
+  background-color: transparent;
+  padding: 0 4px;
+  transition: opacity 0.2s;
+}
+
+.input-with-placeholder:focus + .placeholder-text {
+  opacity: 0.5;
 }

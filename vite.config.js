@@ -2,7 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
-  //Change between 'production' for DigitalOcean deployment and 'development' for local development
   const isProduction = mode === 'production';
   const backendUrl = isProduction
     ? 'https://walrus-app-lqhsg.ondigitalocean.app/backend'
@@ -32,6 +31,19 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       'import.meta.env.VITE_BACKEND_HOST': JSON.stringify(backendUrl),
+    },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: ['./src/setupTests.js'],
+      css: true,
+      deps: {
+        inline: ['vitest-canvas-mock'],
+      },
+      coverage: {
+        reporter: ['text', 'json', 'html'],
+      },
+      mockReset: true,
     },
   };
 });

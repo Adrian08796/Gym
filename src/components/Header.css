@@ -1,0 +1,233 @@
+/* src/components/Header.css */
+
+.nav-btn {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background-color: transparent !important; /* Use !important to override Tailwind */
+    color: #45FFCA !important; /* Use !important to ensure this color is applied */
+    border: 2px solid #45FFCA;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.nav-btn-cycle {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    color: #45FFCA;
+    border: 2px solid #45FFCA;
+    border-radius: full;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.nav-btn-cycle {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+    .nav-btn-cycle {
+        font-size: 0.875rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .nav-btn-cycle {
+        font-size: 1rem;
+    }
+}
+
+@media (min-width: 640px) {
+    .nav-btn {
+        padding: 0.3rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .nav-btn {
+        padding: 0.3rem 1rem;
+        font-size: 1rem;
+    }
+}
+
+.nav-btn:hover {
+    background-color: #45FFCA !important; /* Override Tailwind on hover */
+    color: #1F2937 !important;
+    box-shadow: 0 0 10px #45FFCA;
+}
+
+/* .nav-btn-danger {
+    border-color: #EF4444;
+    color: #EF4444 !important;
+  }
+  
+.nav-btn-danger:hover {
+    background-color: #EF4444 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px #EF4444;
+} */
+
+.logoSpan {
+    color: #45FFCA;
+}
+
+
+/* text glow for Up */
+.logo:hover .logoSpan {
+    text-shadow: 0px 0px 10px rgb(69, 255, 202);
+    transition: all 0.3s ease;
+}
+
+.logo {
+    font-size: 1.25rem;
+    color: white;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding-left: 30px;
+}
+
+@media (min-width: 640px) {
+    .logo {
+        font-size: 1.5rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .logo {
+        font-size: 1.75rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .logo {
+        font-size: 2rem;
+    }
+}
+
+.logo:hover {
+    transform: scale(1.05);
+}
+
+.headerSpan {
+    color: #45FFCA;
+}
+
+.header {
+    color: white;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+}
+
+.pyramid-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: end;
+    height: 20px; /* Adjusted for 3 levels */
+    width: 24px; /* Width of the widest level */
+    margin-left: 8px;
+    position: absolute;
+    bottom: auto;
+    right: 85%; 
+  }
+  
+  .pyramid-level {
+    background-color: #45FFCA;
+    margin-bottom: 2px;
+    opacity: 0;
+    animation: lightUp 4s infinite;
+    
+  }
+
+  .level-1 {
+    width: 8px;
+    height: 4px;
+    animation-delay: 1s;
+  }
+  
+  .level-2 {
+    width: 16px;
+    height: 4px;
+    animation-delay: 0.5s;
+  }
+  
+  .level-3 {
+    width: 24px;
+    height: 4px;
+    animation-delay: 0s;
+  }
+
+/* @media (min-width: 640px) {
+    .level-1 {
+    width: 6px;
+    height: 4px;
+    animation-delay: 1s;
+    }
+    .level-2 {
+    width: 12px;
+    height: 4px;
+    animation-delay: 0.5s;
+    }
+    .level-3 {
+        width: 18px;
+        height: 4px;
+        animation-delay: 0s;
+    }
+}
+@media (min-width: 768px) {
+    .level-1 {
+    width: 6px;
+    height: 4px;
+    animation-delay: 1s;
+    }
+    .level-2 {
+    width: 12px;
+    height: 4px;
+    animation-delay: 0.5s;
+    }
+    .level-3 {
+        width: 18px;
+        height: 4px;
+        animation-delay: 0s;
+    }
+}
+@media (min-width: 1024px) {
+    .level-1 {
+    width: 6px;
+    height: 4px;
+    animation-delay: 1s;
+    }
+    .level-2 {
+    width: 12px;
+    height: 4px;
+    animation-delay: 0.5s;
+    }
+    .level-3 {
+        width: 18px;
+        height: 4px;
+        animation-delay: 0s;
+    }
+} */
+
+  
+  @keyframes lightUp {
+    0%, 80%, 100% { opacity: 0; }
+    20%, 60% { opacity: 1; }
+  }

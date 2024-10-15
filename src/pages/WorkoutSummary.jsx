@@ -70,11 +70,11 @@ function WorkoutSummary() {
 
   return (
     <div className={`container mx-auto mt-8 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-      <h2 className="text-2xl font-bold mb-4">Workout History</h2>
-      <div className="mb-4 flex justify-between items-center">
+      <h2 data-aos="fade-up" className="header text-center text-gray-800 dark:text-white text-3xl font-bold mb-4">Workout <span className='headerSpan'>History</span></h2>
+      <div className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
         <button
           onClick={toggleSortOrder}
-          className={`mb-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded`}
+          className={`mb-2 sm:mb-0 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded`}
         >
           Sort {sortOrder === 'desc' ? 'Oldest First' : 'Newest First'}
         </button>
@@ -125,9 +125,9 @@ function WorkoutSummary() {
                                     (at {formatTime(set.completedAt)})
                                   </span>
                                 )}
-                                {set.skippedRest && (
+                                {/* {set.skippedRest && (
                                   <span className="text-yellow-500 ml-2">(Rest Skipped)</span>
-                                )}
+                                )} */}
                               </li>
                             ))
                           )}
@@ -154,7 +154,7 @@ function WorkoutSummary() {
       ))}
       <button
         onClick={() => navigate('/')}
-        className={` bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded`}
+        className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded`}
       >
         Back to Home
       </button>

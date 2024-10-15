@@ -17,6 +17,10 @@ export default {
           light: '#f8fafc',
           dark: '#1a202c',
         },
+        'btn-close': '#1F2937',
+        'btn-hover': '#4a5568',
+        'color1': '#45FFCA',
+        'backgroundDark': '#1F2937',
         'text': {
           light: '#2d3748',
           dark: '#e2e8f0',

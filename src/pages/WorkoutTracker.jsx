@@ -1,15 +1,14 @@
 // src/pages/WorkoutTracker.jsx
 
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
+import React, { 
+  useState, 
+  useEffect, 
+  useRef, 
+  useCallback, 
+  useMemo 
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGymContext } from "../context/GymContext";
-import { useNotification } from "../context/NotificationContext";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import { CSSTransition, SwitchTransition } from "react-transition-group";
@@ -26,7 +25,6 @@ import PreviousWorkoutDisplay from "../components/PreviousWorkoutDisplay";
 import { formatTime } from "../utils/timeUtils";
 import { canVibrate, vibrateDevice } from "../utils/deviceUtils";
 import "./WorkoutTracker.css";
-import { set } from "date-fns";
 
 function WorkoutTracker() {
   const [currentPlan, setCurrentPlan] = useState(null);
@@ -62,6 +60,7 @@ function WorkoutTracker() {
   const [intensity, setIntensity] = useState("");
   const [incline, setIncline] = useState("");
   const [exerciseHistoryError, setExerciseHistoryError] = useState(null);
+  const [userExperienceLevel, setUserExperienceLevel] = useState('beginner');
 
   const {
     addWorkout,
@@ -70,8 +69,11 @@ function WorkoutTracker() {
     getExerciseHistory,
     loadProgress,
     getExerciseById,
+    updateExerciseRecommendations,
+    updateUserRecommendation,
+    showToast,
+    confirm,
   } = useGymContext();
-  const { addNotification } = useNotification();
   const { darkMode } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -79,10 +81,30 @@ function WorkoutTracker() {
 
   const API_URL = import.meta.env.VITE_BACKEND_HOST;
 
+  const loadExerciseRecommendations = useCallback(async (exerciseId) => {
+    const exercise = await getExerciseById(exerciseId);
+    if (exercise && exercise.recommendations && exercise.recommendations[userExperienceLevel]) {
+      const rec = exercise.recommendations[userExperienceLevel];
+      if (exercise.category === 'Strength') {
+        setWeight(rec.weight?.toString() || "");
+        setReps(rec.reps?.toString() || "");
+      } else if (exercise.category === 'Cardio') {
+        setDuration(rec.duration?.toString() || "");
+        setDistance(rec.distance?.toString() || "");
+        setIntensity(rec.intensity?.toString() || "");
+        setIncline(rec.incline?.toString() || "");
+      }
+      setRequiredSets(prevSets => ({
+        ...prevSets,
+        [exerciseId]: rec.sets || 3
+      }));
+    }
+  }, [getExerciseById, userExperienceLevel, setWeight, setReps, setDuration, setDistance, setIntensity, setIncline, setRequiredSets]);
+
   const { isPreviousWorkoutLoading, previousWorkout } = usePreviousWorkout(
     currentPlan?._id,
     API_URL,
-    addNotification
+    showToast
   );
 
   // Fetch full exercise details from the API
@@ -134,6 +156,12 @@ function WorkoutTracker() {
     },
     [getExerciseHistory, fetchFullExerciseDetails]
   );
+
+  useEffect(() => {
+    if (user && user.experienceLevel) {
+      setUserExperienceLevel(user.experienceLevel);
+    }
+  }, [user]);
 
   // Fetch exercise history for all exercises in the current plan
   useEffect(() => {
@@ -205,21 +233,18 @@ function WorkoutTracker() {
               }
             } catch (error) {
               console.error("Error loading workout plan from localStorage:", error);
-              addNotification(
-                "Error loading workout plan. Please select a new plan.",
-                "error"
-              );
               navigate("/plans");
+              showToast("error", "Error", "Error loading workout plan. Please select a new plan.");
             }
           } else {
             console.log("No workout plan found in progress or localStorage");
-            addNotification("No workout plan selected. Please choose a plan.", "info");
+            showToast("info", "Info", "No workout plan selected. Please choose a plan.");
             navigate("/plans");
           }
         }
       } catch (error) {
         console.error("Error loading workout:", error);
-        addNotification("Error loading workout. Please try again.", "error");
+        showToast("error", "Error", "Failed to load workout. Please try again.");
         navigate("/plans");
       } finally {
         setIsLoading(false);
@@ -227,7 +252,7 @@ function WorkoutTracker() {
     };
   
     loadWorkout();
-  }, [navigate, addNotification, loadProgress, user.id]);
+  }, [navigate, showToast, loadProgress, user.id]);
 
   const loadFullPlanDetails = async (plan) => {
     if (!plan || !plan.exercises) {
@@ -304,7 +329,7 @@ function WorkoutTracker() {
       }, 1000);
     } else if (remainingRestTime === 0 && isResting) {
       setIsResting(false);
-      addNotification("Rest time is over. Ready for the next set!", "info");
+      showToast("info", "Info", "Rest time is over. Ready for the next set!");
       try {
         if (canVibrate()) {
           vibrateDevice();
@@ -314,7 +339,7 @@ function WorkoutTracker() {
       }
     }
     return () => clearInterval(restTimer);
-  }, [isResting, remainingRestTime, addNotification]);
+  }, [isResting, remainingRestTime, showToast]);
 
   useEffect(() => {
     saveDataToLocalStorage();
@@ -398,7 +423,6 @@ function WorkoutTracker() {
   };
 
   const saveDataToLocalStorage = () => {
-    console.log("SAVED TO LOCAL STORAGE", user);
     if (currentPlan) {
       localStorage.setItem(
         `currentPlan_${user.id}`,
@@ -425,26 +449,40 @@ function WorkoutTracker() {
     localStorage.setItem(`totalSets_${user.id}`, totalSets.toString());
   };
 
+  useEffect(() => {
+    if (currentPlan && currentPlan.exercises && currentPlan.exercises[currentExerciseIndex]) {
+      const currentExercise = currentPlan.exercises[currentExerciseIndex];
+      loadExerciseRecommendations(currentExercise._id);
+    }
+  }, [currentPlan, currentExerciseIndex, loadExerciseRecommendations]);
+
   const renderExerciseInputs = () => {
     const currentExercise = currentPlan.exercises[currentExerciseIndex];
+    const recommendation = currentExercise.recommendations?.[userExperienceLevel];
 
     if (currentExercise.category === "Strength") {
       return (
-        <div className="mb-4 flex">
-          <input
-            type="number"
-            placeholder="Weight (kg)"
-            value={weight}
-            onChange={e => setWeight(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
-          />
-          <input
-            type="number"
-            placeholder="Reps"
-            value={reps}
-            onChange={e => setReps(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
+        <div className="mb-4 flex flex-col">
+          <div className="flex mb-2">
+            <div className="relative w-full mr-2">
+              <input
+                type="number"
+                value={weight}
+                onChange={e => setWeight(e.target.value)}
+                className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+              <span className="placeholder-text">Weight (kg)</span>
+            </div>
+            <div className="relative w-full">
+              <input
+                type="number"
+                value={reps}
+                onChange={e => setReps(e.target.value)}
+                className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+              <span className="placeholder-text">Reps</span>
+            </div>
+          </div>
         </div>
       );
     } else if (currentExercise.category === "Cardio") {
@@ -490,7 +528,7 @@ function WorkoutTracker() {
   
     if (currentExercise.category === "Strength") {
       if (!weight || !reps) {
-        addNotification("Please enter both weight and reps", "error");
+        showToast("error", "Error", "Please enter both weight and reps");
         return;
       }
       newSet = {
@@ -499,9 +537,21 @@ function WorkoutTracker() {
         completedAt: new Date().toISOString(),
         skippedRest: isResting,
       };
+  
+      // Update the user-specific recommendation for strength exercises
+      try {
+        await updateUserRecommendation(currentExercise._id, {
+          weight: Number(weight),
+          reps: Number(reps),
+          sets: requiredSets[currentExercise._id] || 3
+        });
+      } catch (error) {
+        console.error('Failed to update user-specific recommendation:', error);
+        showToast('error', 'Error', 'Failed to update exercise recommendation');
+      }
     } else if (currentExercise.category === "Cardio") {
       if (!duration) {
-        addNotification("Please enter at least the duration", "error");
+        showToast("error", "Error", "Please enter at least the duration");
         return;
       }
       newSet = {
@@ -512,6 +562,19 @@ function WorkoutTracker() {
         completedAt: new Date().toISOString(),
         skippedRest: isResting,
       };
+  
+      // Update the user-specific recommendation for cardio exercises
+      try {
+        await updateUserRecommendation(currentExercise._id, {
+          duration: Number(duration),
+          distance: distance ? Number(distance) : undefined,
+          intensity: intensity ? Number(intensity) : undefined,
+          incline: incline ? Number(incline) : undefined
+        });
+      } catch (error) {
+        console.error('Failed to update user-specific recommendation for cardio:', error);
+        showToast('error', 'Error', 'Failed to update exercise recommendation');
+      }
     }
   
     setSets(prevSets => {
@@ -527,10 +590,7 @@ function WorkoutTracker() {
       return newSets;
     });
   
-    setCompletedSets(prevCompletedSets => {
-      const newCompletedSets = prevCompletedSets + 1;
-      return newCompletedSets;
-    });
+    setCompletedSets(prevCompletedSets => prevCompletedSets + 1);
   
     setLastSetValues(prev => ({
       ...prev,
@@ -565,20 +625,24 @@ function WorkoutTracker() {
         skippedPauses,
       });
   
-      addNotification(
-        `${
-          currentExercise.category === "Cardio" ? "Exercise" : "Set"
-        } completed and progress saved!`,
-        "success"
-      );
+      showToast("success", "Success", `${currentExercise.category === "Cardio" ? "Exercise" : "Set"} completed and progress saved!`);
     } catch (error) {
       console.error("Error saving progress:", error);
-      addNotification("Failed to save progress", "error");
+      showToast("error", "Error", "Failed to save progress");
     }
   
     // For cardio exercises, we don't start the rest timer
     if (currentExercise.category !== "Cardio") {
       startRestTimer();
+    }
+  
+    // Check if exercise is complete and move to the next one if it is
+    if (isExerciseComplete(currentExercise._id, sets[currentExerciseIndex] || [])) {
+      if (currentExerciseIndex < currentPlan.exercises.length - 1) {
+        handleExerciseChange(currentExerciseIndex + 1);
+      } else {
+        showToast("success", "Success", "Workout complete! You can finish your workout now.");
+      }
     }
   };
 
@@ -602,7 +666,7 @@ function WorkoutTracker() {
     setIsResting(false);
     setRemainingRestTime(0);
     setSkippedPauses(prevSkipped => prevSkipped + 1);
-    addNotification("Rest timer skipped", "info");
+    showToast("info", "Info", "Rest timer skipped");
   };
 
   const updateProgression = () => {
@@ -625,10 +689,10 @@ function WorkoutTracker() {
       lastSetValues,
       startTime: startTime.toISOString(),
     });
-
+  
     // Recalculate the final progression
     const finalProgression = calculateProgress();
-
+  
     const endTime = new Date();
     const completedWorkout = {
       plan: currentPlan._id,
@@ -646,57 +710,56 @@ function WorkoutTracker() {
       endTime: endTime.toISOString(),
       totalPauseTime,
       skippedPauses,
-      progression: finalProgression, // Use the recalculated progression
+      progression: finalProgression,
     };
-
+  
     try {
       await addWorkout(completedWorkout);
       await clearWorkout();
-      addNotification("Workout completed and saved!", "success");
+      showToast("success", "Success", "Workout completed and saved!");
       navigate("/");
     } catch (error) {
       console.error("Error saving workout:", error);
-      addNotification("Failed to save workout. Please try again.", "error");
+      showToast("error", "Error", "Failed to save workout. Please try again.");
     }
   };
 
   const handleCancelWorkout = () => {
     if (isConfirmingCancel) return;
-
     setIsConfirmingCancel(true);
-    addNotification(
-      "Are you sure you want to cancel this workout? All progress will be lost.",
-      "warning",
-      [
-        {
-          label: "Yes, Cancel",
-          onClick: async () => {
-            try {
-              await clearWorkout();
-              localStorage.removeItem("workoutStartTime");
-              resetWorkoutState();
-              clearLocalStorage();
-              addNotification("Workout cancelled", "info");
-              setIsConfirmingCancel(false);
-              navigate("/plans");
-            } catch (error) {
-              console.error("Error cancelling workout:", error);
-              addNotification(
-                "Failed to cancel workout. Please try again.",
-                "error"
-              );
-            }
-          },
-        },
-        {
-          label: "No, Continue",
-          onClick: () => {
-            setIsConfirmingCancel(false);
-          },
-        },
-      ],
-      0
-    );
+    
+    confirm({
+      message: 'Are you sure you want to cancel this workout? All progress will be lost.',
+      header: 'Cancel Workout',
+      icon: 'pi pi-exclamation-triangle',
+      acceptClassName: 'custom-nav-btn custom-nav-btn-danger',
+      rejectClassName: 'custom-nav-btn',
+      acceptLabel: 'Yes, Cancel',
+      rejectLabel: 'No, Continue',
+      className: 'custom-confirm-dialog',
+      style: { width: '350px' },
+      contentClassName: 'confirm-content',
+      headerClassName: 'confirm-header',
+      defaultFocus: 'reject',
+      closable: false,
+      accept: async () => {
+        try {
+          await clearWorkout();
+          localStorage.removeItem("workoutStartTime");
+          resetWorkoutState();
+          clearLocalStorage();
+          showToast('info', 'Info', 'Workout cancelled');
+          setIsConfirmingCancel(false);
+          navigate("/plans");
+        } catch (error) {
+          console.error("Error cancelling workout:", error);
+          showToast('error', 'Error', 'Failed to cancel workout. Please try again.');
+        }
+      },
+      reject: () => {
+        setIsConfirmingCancel(false);
+      }
+    });
   };
 
   const resetWorkoutState = () => {
@@ -774,7 +837,7 @@ function WorkoutTracker() {
           notes: notes[index] || "",
         })
       );
-
+  
       await saveProgress({
         plan: currentPlan._id,
         exercises: exercisesProgress,
@@ -786,11 +849,12 @@ function WorkoutTracker() {
         totalPauseTime,
         skippedPauses,
       });
-
+  
       setCurrentExerciseIndex(newIndex);
-
+  
       const newExercise = currentPlan.exercises[newIndex];
       const lastValues = lastSetValues[newExercise._id];
+      
       if (lastValues) {
         if (newExercise.category === "Strength") {
           setWeight(lastValues.weight?.toString() || "");
@@ -802,17 +866,12 @@ function WorkoutTracker() {
           setIncline(lastValues.incline?.toString() || "");
         }
       } else {
-        // Reset all input fields if there are no last values
-        setWeight("");
-        setReps("");
-        setDuration("");
-        setDistance("");
-        setIntensity("");
-        setIncline("");
+        // If there are no last values, load from recommendations
+        await loadExerciseRecommendations(newExercise._id);
       }
     } catch (error) {
       console.error("Error saving progress before switching exercise:", error);
-      addNotification("Failed to save progress", "error");
+      showToast("error", "Error", "Failed to save progress.");
     }
   };
 
@@ -898,32 +957,33 @@ function WorkoutTracker() {
   };
 
   return (
-    <div
-      className={`workout-tracker container mx-auto mt-8 p-4 ${
-        darkMode ? "dark-mode bg-gray-800 text-white" : "bg-white text-gray-800"
-      }`}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}>
-      {exerciseHistoryError && (
-        <div
-          className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4"
-          role="alert">
-          <p className="font-bold">Error</p>
-          <p>{exerciseHistoryError}</p>
-        </div>
-      )}
+    <>
+      <h2 data-aos="fade-up" className="header text-3xl font-bold text-center mb-4">Workout <span className="headerSpan">Tracker</span></h2>
+      <div
+        className={`workout-tracker container mx-auto mt-8 p-4 ${
+          darkMode ? 'dark-mode bg-gray-800 text-white' : 'bg-white text-gray-800'
+        }`}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}>
+        {exerciseHistoryError && (
+          <div
+            className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4"
+            role="alert">
+            <p className="font-bold">Error</p>
+            <p>{exerciseHistoryError}</p>
+          </div>
+        )}
 
-      <div className="relative mb-6">
-        <button
-          onClick={handleCancelWorkout}
-          className="absolute top-0 right-0 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          disabled={isConfirmingCancel}>
-          <FiX />
-        </button>
-        <h2 className="text-3xl font-bold text-center">Workout Tracker</h2>
-        <h3 className="text-xl text-center mt-2">{currentPlan.name}</h3>
-      </div>
+        <div className="relative mb-6">
+          <button
+            onClick={handleCancelWorkout}
+            className="border-solid border-2 border-bg-white absolute top-0 right-0 bg-btn-close hover:bg-btn-hover text-white font-bold py-1 px-2 sm:py-2 sm:px-4 rounded focus:outline-none focus:shadow-outline text-xs sm:text-base"
+            disabled={isConfirmingCancel}>
+            <FiX strokeWidth="3" className="w-4 h-4 sm:w-6 sm:h-6" />
+          </button>
+          <h3 className="text-xl text-center mt-2 pr-12 sm:pr-0">{currentPlan.name}</h3>
+        </div>
 
       <div className="mb-4 text-lg text-center">
         Elapsed Time: {formatTime(elapsedTime)}
@@ -941,16 +1001,16 @@ function WorkoutTracker() {
       </div>
 
       <div className="mb-4 flex justify-center items-center">
-        <div className="flex space-x-2 overflow-x-auto py-2 px-4 carousel-container">
+        <div className="flex items-center space-x-2 overflow-x-auto py-2 px-4 carousel-container">
           {currentPlan.exercises.map((exercise, index) => (
             <button
               key={exercise._id}
               onClick={() => handleExerciseChange(index)}
-              className={`w-3 h-3 rounded-full focus:outline-none transition-all duration-200 ${
+              className={`w-4 h-4 rounded-full focus:outline-none transition-all duration-200 ${
                 index === currentExerciseIndex
-                  ? "bg-blue-500 w-4 h-4"
+                  ? "bg-color1 w-5 h-5"
                   : isExerciseComplete(exercise._id, sets[index] || [])
-                  ? "bg-green-500"
+                  ? "bg-white"
                   : "bg-gray-300 dark:bg-gray-600"
               }`}
               title={exercise.name}
@@ -981,7 +1041,7 @@ function WorkoutTracker() {
                     <div
                       className="flex justify-between items-center cursor-pointer"
                       onClick={toggleExerciseDetails}>
-                      <h4 className="text-lg font-semibold mb-2">
+                      <h4 className="headerSpan text-lg font-semibold mb-2">
                         {currentExercise.name}
                       </h4>
                       {isExerciseDetailsOpen ? (
@@ -1027,7 +1087,7 @@ function WorkoutTracker() {
                 <div className="mb-4 flex justify-between items-center">
                   <button
                     onClick={handleSetComplete}
-                    className="btn btn-primary">
+                    className="btn btn-secondary">
                     {currentExercise.category === "Cardio"
                       ? "Complete Exercise"
                       : "Complete Set"}
@@ -1091,11 +1151,11 @@ function WorkoutTracker() {
                           width: `${(remainingRestTime / restTime) * 100}%`,
                         }}></div>
                     </div>
-                    <button
+                    {/* <button
                       onClick={skipRestTimer}
                       className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline">
                       Skip Rest
-                    </button>
+                    </button> */}
                     {canVibrate() && (
                       <p className="text-sm mt-2">
                         Your device will vibrate when the rest time is over.
@@ -1116,7 +1176,7 @@ function WorkoutTracker() {
           onClick={() =>
             handleExerciseChange(Math.max(0, currentExerciseIndex - 1))
           }
-          className={`btn btn-secondary ${
+          className={`btn btn-primary-previous ${
             currentExerciseIndex === 0 ? "opacity-50 cursor-not-allowed" : ""
           }`}
           disabled={currentExerciseIndex === 0}>
@@ -1245,7 +1305,8 @@ function WorkoutTracker() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

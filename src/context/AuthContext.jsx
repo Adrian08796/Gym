@@ -5,9 +5,7 @@ import axiosInstance from '../utils/axiosConfig';
 
 const AuthContext = createContext();
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -15,7 +13,6 @@ export function AuthProvider({ children }) {
   const refreshTimeoutRef = useRef();
   const isRefreshing = useRef(false);
   const activityTimeoutRef = useRef();
-  // const INACTIVITY_TIMEOUT = 10 * 1000; // 10 seconds
   const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
   const logout = useCallback(() => {
@@ -29,21 +26,33 @@ export function AuthProvider({ children }) {
     if (activityTimeoutRef.current) {
       clearTimeout(activityTimeoutRef.current);
     }
-    // Add a redirect to login page here if needed
   }, []);
 
   const updateActivity = useCallback(() => {
-  // console.log('Activity detected, resetting timeout');
-  if (activityTimeoutRef.current) {
-    // console.log('Clearing existing timeout');
-    clearTimeout(activityTimeoutRef.current);
-  }
-  // console.log('Setting new timeout');
-  activityTimeoutRef.current = setTimeout(() => {
-    console.log('Inactivity timeout reached, logging out');
-    logout();
-  }, INACTIVITY_TIMEOUT);
-}, [logout]);
+    if (activityTimeoutRef.current) {
+      clearTimeout(activityTimeoutRef.current);
+    }
+    activityTimeoutRef.current = setTimeout(() => {
+      console.log('Inactivity timeout reached, logging out');
+      logout();
+    }, INACTIVITY_TIMEOUT);
+  }, [logout]);
+
+  const updateExperienceLevel = useCallback(async (level) => {
+    try {
+      console.log('Updating experience level to:', level);
+      const response = await axiosInstance.put('/api/users/experience-level', { experienceLevel: level });
+      setUser(prevUser => {
+        const updatedUser = { ...prevUser, experienceLevel: response.data.experienceLevel };
+        console.log('Updated user:', updatedUser);
+        return updatedUser;
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating experience level:', error);
+      throw error;
+    }
+  }, []);
 
   const register = async (username, email, password) => {
     try {
@@ -97,20 +106,40 @@ export function AuthProvider({ children }) {
   const login = async (username, password) => {
     try {
       const response = await axiosInstance.post('/api/auth/login', { username, password });
-
+  
+      // Check if the response is JSON
+      const contentType = response.headers['content-type'];
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Received non-JSON response:', response.data);
+        throw new Error('Server returned an invalid response');
+      }
+  
       if (response.data?.accessToken && response.data?.refreshToken && response.data?.user) {
+        const userData = {
+          ...response.data.user,
+          experienceLevel: response.data.user.experienceLevel || 'beginner',
+          isAdmin: response.data.user.isAdmin || false
+        };
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
-        setUser(response.data.user);
+        setUser(userData);
+        
+        console.log('Logged in user:', userData);
         
         setTimeout(() => refreshToken(true), 1000);
         
-        return response.data;
+        return userData;
       } else {
+        console.error('Invalid response structure:', response.data);
         throw new Error('Invalid response from server');
       }
     } catch (error) {
       console.error('Login error:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+        console.error('Error headers:', error.response.headers);
+      }
       throw error;
     }
   };
@@ -118,7 +147,11 @@ export function AuthProvider({ children }) {
   const updateUser = async (userData) => {
     try {
       const response = await axiosInstance.put('/api/auth/user', userData);
-      setUser(response.data);
+      setUser(prevUser => {
+        const updatedUser = { ...prevUser, ...response.data };
+        console.log('Updated user data:', updatedUser);
+        return updatedUser;
+      });
       return response.data;
     } catch (error) {
       console.error('Error updating user:', error);
@@ -136,6 +169,17 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const deleteAccount = async () => {
+    try {
+      await axiosInstance.delete('/api/auth/user');
+      logout();
+      return { success: true, message: 'Account deleted successfully' };
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error.response?.data?.message || error.message || 'Failed to delete account';
+    }
+  };
+
   useEffect(() => {
     const checkLoggedIn = async () => {
       const token = localStorage.getItem('token');
@@ -143,22 +187,17 @@ export function AuthProvider({ children }) {
       if (token && refreshTokenStored) {
         try {
           const response = await axiosInstance.get('/api/auth/user');
-          setUser(response.data);
+          const userData = {
+            ...response.data,
+            experienceLevel: response.data.experienceLevel || 'beginner'
+          };
+          setUser(userData);
+          console.log('Restored user session:', userData);
           refreshToken(true);
           updateActivity();
         } catch (error) {
-          if (error.response && error.response.status === 401) {
-            try {
-              await refreshToken();
-              const retryResponse = await axiosInstance.get('/api/auth/user');
-              setUser(retryResponse.data);
-              updateActivity();
-            } catch (refreshError) {
-              logout();
-            }
-          } else {
-            logout();
-          }
+          console.error('Error checking logged in status:', error);
+          logout();
         }
       } else {
         logout();
@@ -227,7 +266,9 @@ export function AuthProvider({ children }) {
     refreshToken,
     updateUser,
     changePassword,
-    updateActivity
+    updateActivity,
+    updateExperienceLevel,
+    deleteAccount,
   };
 
   return (

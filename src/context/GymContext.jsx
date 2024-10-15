@@ -1,16 +1,10 @@
 // src/context/GymContext.jsx
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import axiosInstance from "../utils/axiosConfig";
 import { useAuth } from "./AuthContext";
-import { useNotification } from "./NotificationContext";
+import { Toast } from 'primereact/toast';
+import { confirmDialog } from 'primereact/confirmdialog';
 
 export const hostName = import.meta.env.VITE_BACKEND_HOST;
 
@@ -26,7 +20,15 @@ export function GymProvider({ children }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [workoutHistory, setWorkoutHistory] = useState([]);
   const { user, logout } = useAuth();
-  const { addNotification } = useNotification();
+  const toast = useRef(null);
+
+  const showToast = useCallback((severity, summary, detail) => {
+    toast.current.show({ severity, summary, detail, life: 3000 });
+  }, []);
+
+  const confirm = useCallback((options) => {
+    confirmDialog(options);
+  }, []);
 
   const API_URL = `${hostName}/api`;
 
@@ -53,46 +55,67 @@ export function GymProvider({ children }) {
         return response.data;
       } catch (error) {
         console.error("Error fetching last workout for plan:", error);
-        addNotification("Failed to fetch last workout for plan", "error");
+        showToast("error", "Error", "Failed to fetch last workout for plan");
         return null;
       }
     },
-    [API_URL, getAuthConfig, addNotification]
+    [API_URL, getAuthConfig, showToast]
   );
 
-  const getExerciseById = useCallback(async (exerciseOrId) => {
-    if (typeof exerciseOrId === 'object' && exerciseOrId !== null) {
-      return exerciseOrId; // It's already a full exercise object
+  const exerciseCache = new Map();
+
+const getExerciseById = useCallback(async (exerciseOrId) => {
+  if (typeof exerciseOrId === 'object' && exerciseOrId !== null) {
+    return exerciseOrId; // It's already a full exercise object
+  }
+
+  if (!exerciseOrId || typeof exerciseOrId !== 'string') {
+    console.error('Invalid exerciseId provided to getExerciseById:', exerciseOrId);
+    return null;
+  }
+
+  // Check if the exercise is in the cache
+  if (exerciseCache.has(exerciseOrId)) {
+    return exerciseCache.get(exerciseOrId);
+  }
+
+  try {
+    console.log(`Fetching exercise details for exerciseId: ${exerciseOrId}`);
+    const response = await axiosInstance.get(
+      `${API_URL}/exercises/${exerciseOrId}`,
+      getAuthConfig()
+    );
+    console.log('Exercise details response:', response.data);
+
+    // Ensure the exercise object has a recommendations property
+    const exercise = response.data;
+    if (!exercise.recommendations) {
+      exercise.recommendations = {
+        beginner: { weight: 0, reps: 10, sets: 3 },
+        intermediate: { weight: 0, reps: 10, sets: 3 },
+        advanced: { weight: 0, reps: 10, sets: 3 }
+      };
     }
 
-    if (!exerciseOrId || typeof exerciseOrId !== 'string') {
-      console.error('Invalid exerciseId provided to getExerciseById:', exerciseOrId);
-      return null;
-    }
+    // Cache the exercise
+    exerciseCache.set(exerciseOrId, exercise);
 
-    try {
-      console.log(`Fetching exercise details for exerciseId: ${exerciseOrId}`);
-      const response = await axiosInstance.get(
-        `${API_URL}/exercises/${exerciseOrId}`,
-        getAuthConfig()
-      );
-      console.log('Exercise details response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching exercise details:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        if (error.response.status === 404) {
-          addNotification('Exercise not found', 'error');
-        } else {
-          addNotification('Error fetching exercise details', 'error');
-        }
+    return exercise;
+  } catch (error) {
+    console.error('Error fetching exercise details:', error);
+    if (error.response) {
+      console.error('Error response:', error.response.data);
+      if (error.response.status === 404) {
+        showToast('error', 'Error', 'Exercise not found');
       } else {
-        addNotification('Network error while fetching exercise details', 'error');
+        showToast('error', 'Error', 'Failed to fetch exercise details');
       }
-      return null;
+    } else {
+      showToast('error', 'Error', 'Network error while fetching exercise details');
     }
-  }, [API_URL, getAuthConfig, addNotification]);
+    return null;
+  }
+}, [API_URL, getAuthConfig, showToast]);
 
   const getExerciseHistory = useCallback(async (exerciseId) => {
     if (!exerciseId || exerciseId === 'undefined') {
@@ -133,18 +156,20 @@ export function GymProvider({ children }) {
         setWorkoutHistory(response.data);
       } catch (error) {
         console.error("Error fetching workout history:", error);
-        addNotification("Failed to fetch workout history", "error");
+        showToast("error", "Error", "Failed to fetch workout history");
       }
     }
-  }, [user, addNotification, API_URL, getAuthConfig]);
+  }, [user, showToast, API_URL, getAuthConfig]);
 
   const fetchExercises = useCallback(async () => {
     if (user) {
       try {
+        console.log('Fetching exercises...');
         const response = await axiosInstance.get(
           `${API_URL}/exercises`,
           getAuthConfig()
         );
+        console.log('Fetched exercises:', response.data);
         const formattedExercises = response.data.map(exercise => ({
           ...exercise,
           name: toTitleCase(exercise.name),
@@ -152,25 +177,43 @@ export function GymProvider({ children }) {
           target: Array.isArray(exercise.target)
             ? exercise.target.map(toTitleCase)
             : toTitleCase(exercise.target),
-          isDefault: !exercise.user  // Add this line to identify default exercises
+          isDefault: !exercise.user
         }));
+        console.log('Formatted exercises:', formattedExercises);
         setExercises(formattedExercises);
       } catch (error) {
         console.error("Error fetching exercises:", error);
-        addNotification("Failed to fetch exercises", "error");
+        if (error.response) {
+          console.error("Error response:", error.response.data);
+        }
+        showToast("error", "Error", "Failed to fetch exercises");
       }
     }
-  }, [user, API_URL, getAuthConfig, addNotification]);
+  }, [user, API_URL, getAuthConfig, showToast]);
 
   const fetchWorkoutPlans = useCallback(async () => {
     if (user) {
       try {
+        console.log('Fetching workout plans...');
         const response = await axiosInstance.get(
           `${API_URL}/workoutplans`,
           getAuthConfig()
         );
+  
+        console.log('Workout plans response:', response);
+  
+        if (response.headers['content-type']?.includes('text/html')) {
+          console.error('Received HTML response instead of JSON');
+          throw new Error('Server returned an HTML response instead of JSON');
+        }
+  
+        if (!response.data || !response.data.plans) {
+          console.error('Invalid response structure:', response.data);
+          throw new Error('Invalid response structure from server');
+        }
+  
         const plansWithFullExerciseDetails = await Promise.all(
-          response.data.map(async plan => {
+          response.data.plans.map(async plan => {
             const fullExercises = await Promise.all(
               plan.exercises.map(async exercise => {
                 if (!exercise.description || !exercise.imageUrl) {
@@ -186,16 +229,36 @@ export function GymProvider({ children }) {
             return { ...plan, exercises: fullExercises };
           })
         );
-        setWorkoutPlans(plansWithFullExerciseDetails);
-        return plansWithFullExerciseDetails;
+        
+        const uniquePlans = plansWithFullExerciseDetails.reduce((acc, current) => {
+          const x = acc.find(item => item._id === current._id);
+          if (!x) {
+            return acc.concat([current]);
+          } else {
+            return acc;
+          }
+        }, []);
+        
+        console.log('Unique plans after processing:', uniquePlans);
+        setWorkoutPlans(uniquePlans);
+        return uniquePlans;
       } catch (error) {
         console.error("Error fetching workout plans:", error);
-        addNotification("Failed to fetch workout plans", "error");
+        if (error.response) {
+          console.error('Error status:', error.response.status);
+          console.error('Error headers:', error.response.headers);
+          if (error.response.headers['content-type']?.includes('text/html')) {
+            console.error('HTML Error Response:', error.response.data);
+          } else {
+            console.error('Error Data:', error.response.data);
+          }
+        }
+        showToast("error", "Error", "Failed to fetch workout plans. Please check console for details.");
         return [];
       }
     }
     return [];
-  }, [user, API_URL, getAuthConfig, addNotification]);
+  }, [user, API_URL, getAuthConfig, showToast]);
 
   useEffect(() => {
     if (user) {
@@ -216,7 +279,7 @@ export function GymProvider({ children }) {
       console.log("Server response:", response.data);
       setWorkoutHistory(prevHistory => [response.data, ...prevHistory]);
       setWorkouts(prevWorkouts => [...prevWorkouts, response.data]);
-      addNotification("Workout added successfully", "success");
+      // showToast("success", "Success", "Workout added successfully");
     } catch (error) {
       console.error("Error adding workout:", error);
       if (error.response) {
@@ -228,7 +291,7 @@ export function GymProvider({ children }) {
       } else {
         console.error("Error setting up request:", error.message);
       }
-      addNotification("Failed to add workout", "error");
+      showToast("error", "Error", "Failed to add workout");
       throw error;
     }
   };
@@ -250,11 +313,11 @@ export function GymProvider({ children }) {
           workout._id === id ? response.data : workout
         )
       );
-      addNotification("Workout updated successfully", "success");
+      showToast("success", "Success", "Workout updated successfully");
       return response.data;
     } catch (error) {
       console.error("Error updating workout:", error);
-      addNotification("Failed to update workout", "error");
+      showToast("error", "Error", "Failed to update workout");
       throw error;
     }
   };
@@ -268,10 +331,32 @@ export function GymProvider({ children }) {
       setWorkoutHistory(prevHistory =>
         prevHistory.filter(workout => workout._id !== id)
       );
-      addNotification("Workout deleted successfully", "success");
+      showToast("success", "Success", "Workout deleted successfully");
     } catch (error) {
       console.error("Error deleting workout:", error);
-      addNotification("Failed to delete workout", "error");
+      showToast("error", "Error", "Failed to delete workout");
+      throw error;
+    }
+  };
+  // Admin add default exercise
+  const addDefaultExercise = async (exerciseData) => {
+    try {
+      const response = await axiosInstance.post(`${API_URL}/exercises/default`, exerciseData, getAuthConfig());
+      const newExercise = {
+        ...response.data,
+        name: toTitleCase(response.data.name),
+        description: toTitleCase(response.data.description),
+        target: Array.isArray(response.data.target)
+          ? response.data.target.map(toTitleCase)
+          : toTitleCase(response.data.target),
+        isDefault: true
+      };
+      setExercises(prevExercises => [...prevExercises, newExercise]);
+      // showToast('success', 'Success', 'Default exercise added successfully');
+      return newExercise;
+    } catch (error) {
+      console.error('Error adding default exercise:', error);
+      showToast('error', 'Error', 'Failed to add default exercise');
       throw error;
     }
   };
@@ -293,7 +378,7 @@ export function GymProvider({ children }) {
       return response.data;
     } catch (error) {
       console.error("Error adding exercise:", error);
-      addNotification("Failed to add exercise", "error");
+      showToast("error", "Error", "Failed to add exercise");
       throw error;
     }
   };
@@ -304,36 +389,117 @@ export function GymProvider({ children }) {
         ...updatedExercise,
         name: toTitleCase(updatedExercise.name),
         description: toTitleCase(updatedExercise.description),
-        target: toTitleCase(updatedExercise.target),
+        target: Array.isArray(updatedExercise.target)
+          ? updatedExercise.target.map(toTitleCase)
+          : toTitleCase(updatedExercise.target),
       };
+  
       const response = await axiosInstance.put(
         `${API_URL}/exercises/${id}`,
         exerciseWithTitleCase,
         getAuthConfig()
       );
+  
       setExercises(prevExercises =>
-        prevExercises.map(exercise =>
-          exercise._id === id ? response.data : exercise
-        )
+        prevExercises.map(exercise => {
+          if (exercise._id === id) {
+            return {
+              ...exercise,
+              ...response.data,
+              recommendations: {
+                ...exercise.recommendations,
+                [user.experienceLevel]: response.data.recommendations?.[user.experienceLevel]
+              }
+            };
+          }
+          return exercise;
+        })
       );
+  
+      showToast("success", "Success", "Exercise updated successfully");
       return response.data;
     } catch (error) {
       console.error("Error updating exercise:", error);
-      addNotification("Failed to update exercise", "error");
+      showToast("error", "Error", "Failed to update exercise");
       throw error;
     }
   };
 
+  const updateExerciseRecommendations = useCallback(async (exerciseId, level, newRecommendations) => {
+    try {
+      const response = await axiosInstance.put(
+        `${API_URL}/exercises/${exerciseId}/recommendations`,
+        { level, recommendations: newRecommendations },
+        getAuthConfig()
+      );
+      
+      // Update the local state
+      setExercises(prevExercises => 
+        prevExercises.map(exercise => 
+          exercise._id === exerciseId 
+            ? { 
+                ...exercise, 
+                recommendations: {
+                  ...exercise.recommendations,
+                  [level]: newRecommendations
+                }
+              }
+            : exercise
+        )
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Error updating exercise recommendations:', error);
+      throw error;
+    }
+  }, [API_URL, getAuthConfig]);
+
   const deleteExercise = async id => {
     try {
-      await axiosInstance.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
-      setExercises(prevExercises =>
-        prevExercises.filter(exercise => exercise._id !== id)
-      );
-      addNotification("Exercise deleted successfully", "success");
+      const response = await axiosInstance.delete(`${API_URL}/exercises/${id}`, getAuthConfig());
+      if (response.data.message === 'Exercise removed from your view') {
+        // For normal users, just remove the exercise from the local state
+        setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
+      } else {
+        // For admins or user's own custom exercises, remove from state as before
+        setExercises(prevExercises => prevExercises.filter(exercise => exercise._id !== id));
+      }
+      showToast("success", "Success", response.data.message);
     } catch (error) {
       console.error("Error deleting exercise:", error);
-      addNotification("Failed to delete exercise", "error");
+      showToast("error", "Error", "Failed to delete exercise");
+      throw error;
+    }
+  };
+
+  // Admin add default workout plan
+  const addDefaultWorkoutPlan = async (planData) => {
+    try {
+      const response = await axiosInstance.post(`${API_URL}/workoutplans/default`, planData, getAuthConfig());
+      const newPlan = {
+        ...response.data,
+        exercises: await Promise.all(
+          response.data.exercises.map(async exerciseId => {
+            return await getExerciseById(exerciseId);
+          })
+        ).then(exercises => exercises.filter(Boolean))
+      };
+      
+      setWorkoutPlans(prevPlans => {
+        // Check if the plan already exists to prevent duplicates
+        const planExists = prevPlans.some(plan => plan._id === newPlan._id);
+        if (!planExists) {
+          return [...prevPlans, newPlan];
+        }
+        return prevPlans;
+      });
+      
+      // showToast('success', 'Success', 'Default workout plan added successfully');
+      return newPlan;
+    } catch (error) {
+      console.error('Error adding default workout plan:', error);
+      showToast('error', 'Error', 'Failed to add default workout plan');
       throw error;
     }
   };
@@ -346,13 +512,13 @@ export function GymProvider({ children }) {
           typeof exercise === 'string' ? exercise : exercise._id
         ).filter(id => typeof id === 'string')
       };
-
+  
       const response = await axiosInstance.post(
         `${API_URL}/workoutplans`,
         planToSend,
         getAuthConfig()
       );
-
+  
       const fullPlan = {
         ...response.data,
         exercises: await Promise.all(
@@ -361,16 +527,31 @@ export function GymProvider({ children }) {
           })
         ).then(exercises => exercises.filter(Boolean))
       };
-
-      setWorkoutPlans(prevPlans => [...prevPlans, fullPlan]);
-      addNotification("Workout plan added successfully", "success");
+  
+      setWorkoutPlans(prevPlans => {
+        // Check if the plan already exists to prevent duplicates
+        const existingPlanIndex = prevPlans.findIndex(p => p._id === fullPlan._id);
+        if (existingPlanIndex === -1) {
+          return [...prevPlans, fullPlan];
+        } else {
+          // If the plan exists, replace it
+          return prevPlans.map((p, index) => index === existingPlanIndex ? fullPlan : p);
+        }
+      });
+  
+      // showToast("success", "Success", "Workout plan added successfully");
       return fullPlan;
     } catch (error) {
       console.error("Error adding workout plan:", error);
-      addNotification("Failed to add workout plan", "error");
+      if (error.response && error.response.data && error.response.data.message) {
+        showToast('warn', 'Warning', error.response.data.message);
+      } else {
+        showToast("error", "Error", "Failed to add workout plan");
+      }
       throw error;
     }
   };
+  
 
   const updateWorkoutPlan = async (id, updatedPlan) => {
     try {
@@ -399,81 +580,148 @@ export function GymProvider({ children }) {
       setWorkoutPlans(prevPlans =>
         prevPlans.map(plan => (plan._id === id ? fullPlan : plan))
       );
-      addNotification("Workout plan updated successfully", "success");
+      // showToast("success", "Success", "Workout plan updated successfully");
       return fullPlan;
     } catch (error) {
       console.error("Error updating workout plan:", error);
-      addNotification("Failed to update workout plan", "error");
+      showToast("error", "Error", "Failed to update workout plan");
       throw error;
     }
   };
 
-  const deleteWorkoutPlan = async id => {
+  const deleteWorkoutPlan = async (id) => {
     try {
-      await axiosInstance.delete(
+      const response = await axiosInstance.delete(
         `${API_URL}/workoutplans/${id}`,
         getAuthConfig()
       );
-      setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
-      setWorkoutHistory(prevHistory =>
-        prevHistory.map(workout =>
-          workout.plan && workout.plan._id === id
-            ? {
-                ...workout,
-                planDeleted: true,
-                planName: workout.planName || "Deleted Plan",
-              }
-            : workout
-        )
-      );
-      addNotification("Workout plan deleted successfully", "success");
+      
+      if (response.data.message === 'Workout plan removed from your view') {
+        // For normal users, just remove the plan from the local state
+        setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
+        showToast("success", "Success", "Workout plan removed from your view");
+      } else {
+        // For admins or user's own custom plans, remove from state as before
+        setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
+        showToast("success", "Success", "Workout plan deleted successfully");
+      }
     } catch (error) {
       console.error("Error deleting workout plan:", error);
-      addNotification("Failed to delete workout plan", "error");
+      if (error.response && error.response.status === 404) {
+        // If the plan is not found, remove it from the local state anyway
+        setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan._id !== id));
+        showToast("warn", "Warning", "Workout plan not found, but removed from local state");
+      } else {
+        showToast("error", "Error", "Failed to delete workout plan");
+      }
       throw error;
     }
   };
 
   const addExerciseToPlan = async (planId, exerciseId) => {
-    if (!planId || !exerciseId) {
-      throw new Error("Plan ID and Exercise ID are required");
-    }
-    console.log(`Attempting to add exercise ${exerciseId} to plan ${planId}`);
-
-    const plan = workoutPlans.find(p => p._id === planId);
-    if (!plan) {
-      console.error("Plan not found");
-      addNotification("Plan not found", "error");
-      return { success: false, error: "Plan not found" };
-    }
-
-    if (plan.exercises.some(e => e._id === exerciseId)) {
-      console.log("Exercise is already in the workout plan");
-      addNotification("This exercise is already in the workout plan", "info");
-      return { success: false, alreadyInPlan: true };
-    }
-
     try {
+      console.log('Adding exercise to plan:', planId, exerciseId);
+      
+      // Check if the plan exists and if the user has permission to modify it
+      const currentPlan = workoutPlans.find(plan => plan._id === planId);
+      if (!currentPlan) {
+        showToast("error", "Error", "Workout plan not found");
+        return { success: false, error: 'Plan not found' };
+      }
+  
+      if (currentPlan.isDefault && !user.isAdmin) {
+        showToast("error", "Error", "Unauthorized");
+        return { success: false, error: 'Unauthorized' };
+      }
+  
+      // Check if the exercise is already in the plan
+      if (currentPlan.exercises.some(ex => ex._id === exerciseId)) {
+        // showToast("warn", "Warning", "Exercise already in the plan");
+        return { success: false, error: 'Duplicate exercise' };
+      }
+  
       const response = await axiosInstance.post(
         `${API_URL}/workoutplans/${planId}/exercises`,
         { exerciseId },
         getAuthConfig()
       );
+  
+      setWorkoutPlans(prevPlans =>
+        prevPlans.map(p => p._id === planId ? response.data : p)
+      );
+      showToast("success", "Success", "Exercise added to plan successfully");
+      return { success: true, updatedPlan: response.data };
+    } catch (error) {
+      console.error("Error adding exercise to plan:", error);
+      if (error.response) {
+        switch (error.response.status) {
+          case 400:
+            if (error.response.data.message === 'Exercise already in the workout plan') {
+              showToast("warn", "Warning", "The exercise is already in the plan");
+            } else {
+              showToast("error", "Error", error.response.data.message || "Bad request");
+            }
+            break;
+          case 403:
+            showToast("error", "Error", "You don't have permission to modify this plan");
+            break;
+          case 404:
+            showToast("error", "Error", "Workout plan or exercise not found");
+            break;
+          default:
+            showToast("error", "Error", "Failed to add exercise to plan");
+        }
+      } else if (error.request) {
+        showToast("error", "Error", "No response received from server");
+      } else {
+        showToast("error", "Error", "Error setting up request");
+      }
+      return { success: false, error };
+    }
+  };
 
+  const removeExerciseFromPlan = async (planId, exerciseId) => {
+    try {
+      console.log(`Removing exercise ${exerciseId} from plan ${planId}`);
+      const response = await axiosInstance.delete(
+        `${API_URL}/workoutplans/${planId}/exercises/${exerciseId}`,
+        getAuthConfig()
+      );
+      setWorkoutPlans(prevPlans =>
+        prevPlans.map(p => p._id === planId ? response.data : p)
+      );
+      showToast("success", "Success", "Exercise removed from plan successfully");
+      return { success: true, updatedPlan: response.data };
+    } catch (error) {
+      console.error("Error removing exercise from plan:", error);
+      if (error.response && error.response.status === 404) {
+        showToast("error", "Error", "Exercise or workout plan not found");
+      } else {
+        showToast("error", "Error", "Failed to remove exercise from plan");
+      }
+      throw error;
+    }
+  };
+
+  const reorderExercisesInPlan = async (planId, exerciseId, newPosition) => {
+    try {
+      const response = await axiosInstance.put(
+        `${API_URL}/workoutplans/${planId}/reorder`,
+        { exerciseId, newPosition },
+        getAuthConfig()
+      );
+  
       console.log("Server response:", response.data);
       setWorkoutPlans(prevPlans =>
         prevPlans.map(p => (p._id === planId ? response.data : p))
       );
-      addNotification("Exercise added to plan successfully", "success");
+      showToast("success", "Success", "Exercises reordered successfully");
       return { success: true, data: response.data };
     } catch (error) {
-      console.error("Error adding exercise to plan:", error);
-      addNotification(
-        `Failed to add exercise to plan: ${
+      console.error("Error reordering exercises in plan:", error);
+      showToast("error", "Error", `Failed to reorder exercises: ${
           error.response ? error.response.data.message : error.message
-        }`,
-        "error"
-      );
+        }`);
       return { success: false, error };
     }
   };
@@ -497,13 +745,15 @@ export function GymProvider({ children }) {
           completedAt: set.completedAt || new Date().toISOString()
         })),
         notes: exercise.notes || '',
-        requiredSets: exercise.requiredSets || 3
+        requiredSets: exercise.requiredSets || 3,
+        recommendations: exercise.recommendations || {} // Include recommendations
       }));
       
       const dataToSave = {
         ...progressData,
         exercises: formattedExercises,
-        userId: user.id
+        userId: user.id,
+        experienceLevel: user.experienceLevel // Include user's experience level
       };
       
       console.log('Saving progress data:', dataToSave);
@@ -521,21 +771,21 @@ export function GymProvider({ children }) {
           console.log('New progress created successfully', newProgressResponse.data);
         } catch (newError) {
           console.error('Error creating new progress:', newError);
-          addNotification('Failed to create new progress: ' + (newError.response?.data?.message || newError.message), 'error');
+          showToast('error', 'Error', 'Failed to create new progress: ' + (newError.response?.data?.message || newError.message));
           throw newError;
         }
       } else if (error.response && error.response.status === 409) {
         // Handle version conflict
-        addNotification('Progress data is out of sync. Please refresh and try again.', 'warning');
+        showToast('warn', 'Warning', 'Progress data is out of sync. Please refresh and try again.');
       } else if (error.response && error.response.status === 401) {
-        addNotification('Session expired. Please log in again.', 'error');
+        showToast('error', 'Error', 'Session expired. Please log in again.');
         logout();
       } else {
-        addNotification('Failed to save progress: ' + (error.response?.data?.message || error.message), 'error');
+        showToast('error', 'Error', 'Failed to save progress: ' + (error.response?.data?.message || error.message));
       }
       throw error;
     }
-  }, [user, addNotification, logout, hostName, axiosInstance]);
+  }, [user, showToast, logout, hostName, axiosInstance]);
 
   const loadProgress = useCallback(async () => {
     if (!user) return null;
@@ -559,6 +809,7 @@ export function GymProvider({ children }) {
           skippedPauses: progressData.skippedPauses || 0,
           completedSets: progressData.completedSets || 0,
           totalSets: progressData.totalSets || 0,
+          experienceLevel: progressData.experienceLevel || user.experienceLevel || 'beginner',
           ...progressData
         };
   
@@ -573,8 +824,13 @@ export function GymProvider({ children }) {
                 } else {
                   fullExercise = exercise;
                 }
-                // Ensure requiredSets is set
+                // Ensure requiredSets and recommendations are set
                 fullExercise.requiredSets = progressData.exercises[index]?.requiredSets || 3;
+                fullExercise.recommendations = fullExercise.recommendations || {
+                  beginner: { weight: 0, reps: 10, sets: 3 },
+                  intermediate: { weight: 0, reps: 10, sets: 3 },
+                  advanced: { weight: 0, reps: 10, sets: 3 }
+                };
                 return fullExercise;
               } catch (error) {
                 console.error(`Error fetching exercise details: ${error.message}`);
@@ -598,6 +854,7 @@ export function GymProvider({ children }) {
       return null;
     } catch (error) {
       console.error('Error loading progress from server:', error);
+      showToast('error', 'Error', 'Failed to load workout progress from server');
       // If there's an error fetching from the server, try to load from localStorage
       const localProgress = localStorage.getItem(`workoutProgress_${user.id}`);
       if (localProgress) {
@@ -613,7 +870,7 @@ export function GymProvider({ children }) {
       }
       return null;
     }
-  }, [user, API_URL, getAuthConfig, getExerciseById]);
+  }, [user, API_URL, getAuthConfig, getExerciseById, showToast]);
 
   const clearWorkout = useCallback(async () => {
     if (!user) return;
@@ -633,18 +890,14 @@ export function GymProvider({ children }) {
         getAuthConfig()
       );
   
-      console.log("Workout cleared successfully");
-      addNotification("Workout cleared", "success");
+      // showToast("success", "Success", "Workout cleared");
     } catch (error) {
       console.error("Error clearing workout:", error);
-      addNotification(
-        "Failed to clear workout: " +
-          (error.response?.data?.message || error.message),
-        "error"
-      );
+      showToast("error", "Error", "Failed to clear workout: " +
+          (error.response?.data?.message || error.message));
       throw error;
     }
-  }, [user, API_URL, getAuthConfig, addNotification]);
+  }, [user, API_URL, getAuthConfig, showToast]);
 
   const shareWorkoutPlan = async (planId) => {
     try {
@@ -652,23 +905,22 @@ export function GymProvider({ children }) {
       const fullPlan = planResponse.data;
   
       if (!fullPlan.exercises || fullPlan.exercises.length === 0) {
-        throw new Error('The workout plan has no exercises');
+        // throw new Error('The workout plan has no exercises');
+        showToast('info', 'Info', 'You must add at least one exercise to the plan to share it');
       }
-  
-      // No need to fetch individual exercises here, we'll send the IDs
   
       const planToShare = {
         ...fullPlan,
-        exercises: fullPlan.exercises // This should be an array of exercise IDs
+        exercises: fullPlan.exercises.map(exercise => exercise._id)
       };
   
       const shareResponse = await axiosInstance.post(`${API_URL}/workoutplans/${planId}/share`, planToShare, getAuthConfig());
       
-      addNotification('Workout plan shared successfully', 'success');
+      // showToast('success', 'Success', 'Workout plan shared successfully');
       return shareResponse.data.shareLink;
     } catch (error) {
       console.error('Error sharing workout plan:', error);
-      addNotification(`Failed to share workout plan: ${error.message}`, 'error');
+      showToast('error', 'Error', `Failed to share workout plan: ${error.message}`);
       throw error;
     }
   };
@@ -676,27 +928,67 @@ export function GymProvider({ children }) {
   const importWorkoutPlan = async (shareId) => {
     try {
       console.log('Attempting to import workout plan with shareId:', shareId);
-      const response = await axiosInstance.post(`${hostName}/api/workoutplans/import/${shareId}`, {}, getAuthConfig());
+      const response = await axiosInstance.post(`${API_URL}/workoutplans/import/${shareId}`, {}, getAuthConfig());
       console.log('Import response:', response.data);
   
       const importedPlan = response.data;
   
-      // Add the imported plan to the local state
+      // Check if the plan already exists
+      const existingPlan = workoutPlans.find(plan => plan._id === importedPlan._id);
+      if (existingPlan) {
+        console.log('Plan already imported:', importedPlan.name);
+        return { alreadyImported: true };
+      }
+  
       setWorkoutPlans(prevPlans => [...prevPlans, importedPlan]);
   
-      // Add any new exercises to the local exercises state
       const newExercises = importedPlan.exercises.filter(exercise => 
         !exercises.some(existingExercise => existingExercise._id === exercise._id)
       );
       if (newExercises.length > 0) {
         setExercises(prevExercises => [...prevExercises, ...newExercises]);
       }
-  
-      addNotification('Workout plan imported successfully', 'success');
-      return importedPlan;
+      showToast('success', 'Success', 'Workout plan imported successfully');
+      return { success: true, plan: importedPlan };
     } catch (error) {
       console.error('Error importing workout plan:', error);
-      addNotification(`Failed to import workout plan: ${error.message}`, 'error');
+      if (error.response && error.response.status === 404) {
+        throw new Error('Shared workout plan not found');
+      }
+      throw error;
+    }
+  };
+
+  const updateUserRecommendation = async (exerciseId, recommendation) => {
+    try {
+      const response = await axiosInstance.put(
+        `${API_URL}/exercises/${exerciseId}/user-recommendation`,
+        recommendation,
+        getAuthConfig()
+      );
+      console.log('User recommendation updated:', response.data);
+      
+      // Update the local state
+      setExercises(prevExercises => 
+        prevExercises.map(exercise => 
+          exercise._id === exerciseId 
+            ? { 
+                ...exercise, 
+                userRecommendation: response.data.userRecommendation
+              }
+            : exercise
+        )
+      );
+  
+      // showToast('success', 'Success', 'Exercise recommendation updated');
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user recommendation:', error);
+      if (error.response && error.response.status === 404) {
+        showToast('error', 'Error', 'Exercise not found');
+      } else {
+        showToast('error', 'Error', 'Failed to update exercise recommendation');
+      }
       throw error;
     }
   };
@@ -719,6 +1011,7 @@ export function GymProvider({ children }) {
       fetchWorkoutHistory,
       fetchWorkoutPlans,
       addExerciseToPlan,
+      reorderExercisesInPlan,
       saveProgress,
       clearWorkout,
       loadProgress,
@@ -728,6 +1021,13 @@ export function GymProvider({ children }) {
       shareWorkoutPlan,
       fetchExercises,
       importWorkoutPlan,
+      updateExerciseRecommendations,
+      removeExerciseFromPlan,
+      addDefaultExercise,
+      addDefaultWorkoutPlan,
+      updateUserRecommendation,
+      showToast,
+      confirm,
     }),
     [
       workouts,
@@ -746,6 +1046,7 @@ export function GymProvider({ children }) {
       fetchWorkoutHistory,
       fetchWorkoutPlans,
       addExerciseToPlan,
+      reorderExercisesInPlan,
       saveProgress,
       clearWorkout,
       loadProgress,
@@ -753,12 +1054,23 @@ export function GymProvider({ children }) {
       getLastWorkoutForPlan,
       getExerciseById,
       shareWorkoutPlan,
+      fetchExercises,
       importWorkoutPlan,
+      updateExerciseRecommendations,
+      removeExerciseFromPlan,
+      addDefaultExercise,
+      addDefaultWorkoutPlan,
+      updateUserRecommendation,
+      showToast,
+      confirm,
     ]
   );
 
   return (
-    <GymContext.Provider value={contextValue}>{children}</GymContext.Provider>
+    <GymContext.Provider value={contextValue}>
+      {children}
+      <Toast ref={toast} />
+    </GymContext.Provider>
   );
 }
 

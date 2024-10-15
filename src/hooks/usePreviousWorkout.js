@@ -1,11 +1,13 @@
 // src/hooks/usePreviousWorkout.js
 
 import { useState, useEffect } from "react";
-import axiosInstance from "./../utils/axiosConfig";
+import axiosInstance from "../utils/axiosConfig";
+import { useGymContext } from '../context/GymContext';
 
-export const usePreviousWorkout = (planId, API_URL, addNotification) => {
+export const usePreviousWorkout = (planId, API_URL) => {
   const [isPreviousWorkoutLoading, setIsPreviousWorkoutLoading] = useState(false);
   const [previousWorkout, setPreviousWorkout] = useState(null);
+  const { showToast } = useGymContext();
 
   useEffect(() => {
     const fetchPreviousWorkout = async () => {
@@ -27,14 +29,14 @@ export const usePreviousWorkout = (planId, API_URL, addNotification) => {
         }
       } catch (error) {
         console.error("Error fetching previous workout:", error);
-        addNotification("Failed to fetch previous workout data", "error");
+        showToast("error", "Error", "Failed to fetch previous workout data");
       } finally {
         setIsPreviousWorkoutLoading(false);
       }
     };
 
     fetchPreviousWorkout();
-  }, [planId, API_URL, addNotification]);
+  }, [planId, API_URL, showToast]);
 
   return { isPreviousWorkoutLoading, previousWorkout };
 };

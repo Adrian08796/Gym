@@ -1,0 +1,151 @@
+/* src/pages/ExerciseLibrary.css */
+
+.workout-plan-drop-zone {
+  transition: all 0.3s ease;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.workout-plan-drop-zone.active {
+  border: 3px dashed #45FFCA;
+  border-radius: 8px;
+  padding: 2rem;
+  background-color: rgba(69, 255, 202, 0.1);
+}
+
+.workout-plan-drop-zone select {
+  cursor: pointer;
+}
+
+.drop-zone {
+  border: 3px dashed #45FFCA;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.drop-zone > * {
+  pointer-events: none;
+}
+
+.exercise-library-container {
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.exercise-library-inner {
+  padding-left: 1rem;
+}
+
+/* Hide scrollbar for mobile devices */
+@media (max-width: 640px) {
+  .exercise-library-container {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+  }
+
+  .exercise-library-container::-webkit-scrollbar {
+      display: none;
+  }
+}
+
+/* Show scrollbar for larger screens */
+@media (min-width: 641px) {
+  .exercise-library-container {
+      overflow-x: auto;
+  }
+
+  .exercise-library-container::-webkit-scrollbar {
+      height: 8px;
+  }
+
+  .exercise-library-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+  }
+
+  .exercise-library-container::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+  }
+
+  .exercise-library-container::-webkit-scrollbar-thumb:hover {
+      background: #555;
+  }
+}
+
+/* Add styles for horizontal scroll snap */
+.snap-x {
+  scroll-snap-type: x mandatory;
+}
+
+.snap-center {
+  scroll-snap-align: center;
+}
+
+@media (max-width: 640px) {
+  .workout-plan-drop-zone {
+      padding: 0.5rem;
+  }
+
+  .exercise-library-container {
+      margin-left: -0.5rem;
+      margin-right: -0.5rem;
+  }
+
+  .exercise-library-inner {
+      padding-left: 0.5rem;
+  }
+}
+
+/* Responsive styles for filter dropdown */
+@media (max-width: 640px) {
+  .filter-dropdown {
+      width: 100%;
+  }
+
+  .filter-dropdown button {
+      width: 100%;
+      justify-content: center;
+  }
+
+  .filter-dropdown .dropdown-content {
+      width: 100%;
+      left: 0;
+  }
+}
+
+/* Responsive styles for exercise cards */
+@media (max-width: 640px) {
+  .exercise-card {
+      width: calc(100% - 1rem);
+      margin-right: 1rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .exercise-card {
+      width: calc(50% - 1rem);
+      margin-right: 1rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .exercise-card {
+      width: calc(33.333% - 1rem);
+      margin-right: 1rem;
+  }
+}
+
+/* Dark mode styles */
+.dark .exercise-library-container::-webkit-scrollbar-track {
+  background: #2d3748;
+}
+
+.dark .exercise-library-container::-webkit-scrollbar-thumb {
+  background: #4a5568;
+}
+
+.dark .exercise-library-container::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}

@@ -3,13 +3,18 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useGymContext } from '../context/GymContext';
-import { FiPlay, FiEdit, FiTrash2, FiShare2, FiUser } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
+import { FiPlay, FiEdit, FiTrash2, FiShare2, FiUser, FiEyeOff, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
 
 function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const { darkMode } = useTheme();
-  const { shareWorkoutPlan } = useGymContext();
+  const { shareWorkoutPlan, deleteWorkoutPlan, showToast } = useGymContext();
+  const { user } = useAuth();
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [shareLink, setShareLink] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleAction = (action, e) => {
     if (e && e.stopPropagation) {
@@ -22,10 +27,14 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     }
   };
 
-  const confirmDelete = (e) => {
+  const confirmDelete = async (e) => {
     e.stopPropagation();
-    onDelete(plan._id);
-    setIsDeleteConfirmOpen(false);
+    try {
+      await deleteWorkoutPlan(plan._id);
+      setIsDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error('Error deleting workout plan:', error);
+    }
   };
 
   const cancelDelete = (e) => {
@@ -33,45 +42,36 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     setIsDeleteConfirmOpen(false);
   };
 
-  const typeColors = {
-    strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    other: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-  };
-
   const buttonStyles = {
-    base: 'text-xs font-semibold py-1 px-2 rounded transition-all duration-200 flex items-center justify-center',
-    start: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md',
-    edit: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md',
-    delete: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md',
-    share: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md'
+    base: 'text-xs font-semibold p-2 rounded transition-all duration-300 flex items-center justify-center',
+    start: 'bg-emerald-500 hover:bg-emerald-600 text-white',
+    edit: 'bg-emerald-500 hover:bg-emerald-600 text-white',
+    delete: 'bg-emerald-500 hover:bg-emerald-600 text-white',
+    share: 'bg-emerald-500 hover:bg-emerald-600 text-white'
   };
 
-  const TypeBadge = () => (
-    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${typeColors[plan.type] || typeColors.other}`}>
-      {plan.type || 'Other'}
-    </span>
-  );
-
-  const ActionButton = ({ action, style, icon, text }) => (
+  const ActionButton = ({ action, style, icon, label }) => (
     <button 
       onClick={(e) => handleAction(action, e)}
-      className={`${buttonStyles.base} ${style}`}
+      className={`${buttonStyles.base} ${style} opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0`}
+      aria-label={label}
     >
       {icon}
-      <span className="ml-1">{text}</span>
     </button>
   );
 
   const DeleteConfirmation = () => (
     <div className="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center rounded-lg z-10">
       <div className="bg-white dark:bg-gray-700 p-4 rounded-lg text-center">
-        <p className="mb-4 text-sm">Are you sure you want to delete this workout plan?</p>
+        <p className="mb-4 text-sm">
+          {plan.isDefault && !user.isAdmin
+            ? "Are you sure you want to remove this workout plan from your view?"
+            : "Are you sure you want to delete this workout plan?"}
+        </p>
         <div className="flex justify-center space-x-2">
           <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>
-            <FiTrash2 className="mr-1" />
-            Yes, Delete
+            {plan.isDefault && !user.isAdmin ? <FiEyeOff className="mr-1" /> : <FiTrash2 className="mr-1" />}
+            {plan.isDefault && !user.isAdmin ? "Yes, Remove" : "Yes, Delete"}
           </button>
           <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>
             Cancel
@@ -80,67 +80,150 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
       </div>
     </div>
   );
-  // Identify if the workout plan was imported from another user
-  const isImported = plan.importedFrom && plan.importedFrom.username;
 
   const handleShare = async (e) => {
     if (e && e.stopPropagation) {
       e.stopPropagation();
     }
+    if (plan.isDefault) {
+      showToast('warn', 'Warning', 'Only user-created plans can be shared at the moment');
+      return;
+    }
+  
+    setIsSharing(true);
     try {
       const link = await shareWorkoutPlan(plan._id);
       setShareLink(link);
     } catch (error) {
       console.error('Error sharing workout plan:', error);
+      showToast('error', 'Error', `Failed to share workout plan: ${error.message}`);
+    } finally {
+      setIsSharing(false);
     }
   };
 
+  const copyToClipboard = (text) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('success', 'Success', 'Link copied to clipboard');
+      }, () => {
+        showToast('error', 'Error', 'Failed to copy link');
+      });
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showToast('success', 'Success', 'Link copied to clipboard');
+        } else {
+          showToast('error', 'Error', 'Failed to copy link');
+        }
+      } catch (err) {
+        console.error('Error copying text: ', err);
+        showToast('error', 'Error', 'Failed to copy link');
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  const typeIcons = {
+    strength: <PiBarbellBold size={20} />,
+    cardio: <PiHeartbeatBold size={20} />,
+    flexibility: null,
+    other: null
+  };
+
+  const TypeIcon = () => (
+    <div className="w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center">
+      {typeIcons[plan.type]}
+    </div>
+  );
+
   return (
-    <div className={`relative border rounded-lg p-4 mb-4 shadow-sm ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} transition-transform duration-300 hover:shadow-xl`}>
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="text-xl font-semibold">{plan.name}</h3>
-        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${typeColors[plan.type] || typeColors.other}`}>
-          {plan.type || 'Other'}
-        </span>
-      </div>
-      <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-        Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
-      </p>
-      {isImported && (
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 flex items-center">
-          <FiUser className="mr-1" />
-          Imported from {plan.importedFrom.username}
+    <div 
+      className={`row group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-pointer h-full flex flex-col`}
+      onClick={() => setIsExpanded(!isExpanded)}
+    >
+      <div className="p-4 flex-grow flex flex-col">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-lg sm:text-xl font-semibold">{plan.name}</h3>
+          <TypeIcon />
+        </div>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">
+          Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
         </p>
-      )}
-      <div className="mb-4 max-h-40 overflow-y-auto">
-        <h4 className="font-semibold mb-1">Exercises:</h4>
-        <ul className="list-disc list-inside">
-          {plan.exercises.map((exercise) => (
-            <li key={exercise._id} className="mb-1">
-              <span className="font-medium">{exercise.name}</span>
-            </li>
-          ))}
-        </ul>
+        {plan.importedFrom && (
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 flex items-center">
+            <FiUser className="mr-1" />
+            Imported from {plan.importedFrom.username}
+          </p>
+        )}
+        <div className={`overflow-hidden transition-max-height duration-300 ease-in-out ${isExpanded ? 'max-h-96' : 'max-h-20'}`}>
+          <h4 className="text-xs sm:text-sm font-semibold mb-1">Exercises:</h4>
+          <ul className="list-disc list-inside text-xs sm:text-sm">
+            {plan.exercises.map((exercise) => (
+              <li key={exercise._id} className="mb-1">
+                <span className="font-medium">{exercise.name}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
+          className="text-blue-500 hover:text-blue-700 text-sm mt-2"
+        >
+          {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
+          {isExpanded ? ' Show less' : ' Show more'}
+        </button>
       </div>
-      <div className="flex justify-between mt-4">
-        <ActionButton action={onStart} style={buttonStyles.start} icon={<FiPlay className="mr-1" />} text="Start Workout" />
-        <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit className="mr-1" />} text="Edit Plan" />
-        <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 className="mr-1" />} text="Delete Plan" />
-        <ActionButton action={handleShare} style={buttonStyles.share} icon={<FiShare2 className="mr-1" />} text="Share Plan" />
-      </div>
-      {shareLink && (
-        <div className="mt-4">
-          <p>Share this link:</p>
-          <input
-            type="text"
-            value={shareLink}
-            readOnly
-            className="w-full p-2 mt-2 border rounded"
-            onClick={(e) => e.target.select()}
+      <div className="absolute bottom-0 left-0 right-0 p-2 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+        <div className="flex justify-end space-x-2">
+          <ActionButton action={onStart} style={buttonStyles.start} icon={<FiPlay />} label="Start workout" />
+          {(!plan.isDefault || user.isAdmin) && (
+            <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} label="Edit plan" />
+          )}
+          <ActionButton 
+            action={onDelete} 
+            style={buttonStyles.delete} 
+            icon={plan.isDefault && !user.isAdmin ? <FiEyeOff /> : <FiTrash2 />} 
+            label={plan.isDefault && !user.isAdmin ? "Remove plan" : "Delete plan"} 
+          />
+          <ActionButton 
+            action={handleShare} 
+            style={buttonStyles.share} 
+            icon={<FiShare2 />} 
+            label={isSharing ? "Sharing..." : "Share plan"} 
           />
         </div>
-      )}
+      </div>
       {isDeleteConfirmOpen && <DeleteConfirmation />}
+      {shareLink && (
+        <div className="mt-4 p-2 bg-gray-100 dark:bg-gray-700 rounded">
+          <p className="text-xs sm:text-sm mb-1">Share this link:</p>
+          <div className="flex">
+            <input
+              type="text"
+              value={shareLink}
+              readOnly
+              className="flex-grow p-1 text-xs sm:text-sm bg-white dark:bg-gray-600 border rounded-l"
+              onClick={(e) => e.target.select()}
+            />
+            <button
+              onClick={() => copyToClipboard(shareLink)}
+              className="bg-emerald-500 text-white px-2 rounded-r text-xs sm:text-sm"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

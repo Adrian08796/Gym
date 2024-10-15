@@ -2,10 +2,13 @@
 
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_BACKEND_HOST;
+const BASE_URL = import.meta.env.VITE_BACKEND_HOST || 'http://localhost:4500/api';
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
+  validateStatus: function (status) {
+    return status >= 200 && status < 300; // default
+  },
 });
 
 let isRefreshing = false;
@@ -32,6 +35,7 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
@@ -42,6 +46,25 @@ axiosInstance.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+
+    console.error('Response error:', error);
+
+    if (error.response) {
+      console.error('Error Response:', error.response.status, error.response.statusText);
+      console.error('Error Headers:', error.response.headers);
+      
+      if (error.response.headers['content-type']?.includes('text/html')) {
+        console.error('HTML Error Response:', error.response.data);
+        // You might want to extract and log only a portion of the HTML if it's too large
+        console.error('HTML Error Response (first 500 characters):', error.response.data.substring(0, 500));
+      } else {
+        console.error('Error Data:', error.response.data);
+      }
+    } else if (error.request) {
+      console.error('Error Request:', error.request);
+    } else {
+      console.error('Error Message:', error.message);
+    }
 
     if (error.response?.status === 401 && error.response?.data?.tokenExpired && !originalRequest._retry) {
       if (isRefreshing) {
@@ -75,6 +98,7 @@ axiosInstance.interceptors.response.use(
           throw new Error('Invalid refresh token response');
         }
       } catch (refreshError) {
+        console.error('Refresh token error:', refreshError);
         processQueue(refreshError, null);
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');

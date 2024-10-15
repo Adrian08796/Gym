@@ -7,17 +7,28 @@ const ThemeContext = createContext();
 export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true); // Set default to true for dark mode
 
   useEffect(() => {
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(isDarkMode);
+    const isDarkMode = localStorage.getItem('darkMode');
+    if (isDarkMode === null) {
+      // If no preference is saved, use dark mode as default
+      localStorage.setItem('darkMode', 'true');
+      document.documentElement.classList.add('dark');
+    } else {
+      setDarkMode(isDarkMode === 'true');
+      if (isDarkMode === 'true') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
   }, []);
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode.toString());
     if (newDarkMode) {
       document.documentElement.classList.add('dark');
     } else {

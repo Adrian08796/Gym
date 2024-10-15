@@ -1,0 +1,29 @@
+@media (max-width: 640px) {
+    .workout-plans-controls > * {
+      margin-bottom: 0.5rem;
+    }
+  
+    .workout-plans-controls > *:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  .workout-plan-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .workout-plan-card:hover {
+    transform: translateY(-5px);
+    transition: transform 0.3s ease;
+  }
+  
+  .workout-plan-actions {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  
+  .workout-plan-card:hover .workout-plan-actions {
+    opacity: 1;
+    transform: translateY(0);
+  }
