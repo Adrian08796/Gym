@@ -77,13 +77,13 @@ function UserProfile() {
     if (isConfirmingCancel) return;
     setIsConfirmingCancel(true);
     confirm({
-      message: 'Are you sure you want to delete your account? This action cannot be undone.',
-      header: 'Delete Account',
+      message: t("Are you sure you want to delete your account? This action cannot be undone."),
+      header: t("Delete Account"),
       icon: 'pi pi-exclamation-triangle',
       acceptClassName: 'custom-nav-btn custom-nav-btn-danger',
       rejectClassName: 'custom-nav-btn',
-      acceptLabel: 'Yes, Delete',
-      rejectLabel: 'No, Continue',
+      acceptLabel: t("Yes, Delete"),
+      rejectLabel: t("No, Continue"),
       className: 'custom-confirm-dialog',
       style: { width: '350px' },
       contentClassName: 'confirm-content',

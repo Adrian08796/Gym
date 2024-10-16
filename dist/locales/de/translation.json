@@ -285,5 +285,10 @@
   "Your account has been deleted successfully": "Ihr Konto wurde erfolgreich gelöscht",
   "Only user-created plans can be shared at the moment": "Derzeit können nur benutzererstellte Pläne geteilt werden",
   "Link copied to clipboard": "Link in die Zwischenablage kopiert",
-  "Failed to copy link": "Fehler beim Kopieren des Links"
+  "Failed to copy link": "Fehler beim Kopieren des Links",
+  "Cancel Workout": "Workout abbrechen",
+  "Are you sure you want to cancel this workout? All progress will be lost.": "Sind Sie sicher, dass Sie dieses Workout abbrechen möchten? Aller Fortschritt geht verloren.",
+  "Yes, Cancel": "Ja, abbrechen",
+  "No, Continue": "Nein, fortfahren",
+  "Are you sure you want to delete your account? This action cannot be undone.": "Sind Sie sicher, dass Sie Ihr Konto löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
 }

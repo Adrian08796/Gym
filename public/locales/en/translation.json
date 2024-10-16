@@ -284,5 +284,10 @@
   "Your account has been deleted successfully": "Your account has been deleted successfully",
   "Only user-created plans can be shared at the moment": "Only user-created plans can be shared at the moment",
   "Link copied to clipboard": "Link copied to clipboard",
-  "Failed to copy link": "Failed to copy link"
+  "Failed to copy link": "Failed to copy link",
+  "Are you sure you want to cancel this workout? All progress will be lost.": "Are you sure you want to cancel this workout? All progress will be lost.",
+  "Cancel Workout": "Cancel Workout",
+  "Yes, Cancel": "Yes, Cancel",
+  "No, Continue": "No, Continue",
+  "Are you sure you want to delete your account? This action cannot be undone.": "Are you sure you want to delete your account? This action cannot be undone."
 }

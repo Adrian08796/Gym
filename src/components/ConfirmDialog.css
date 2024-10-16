@@ -29,7 +29,7 @@
   .custom-confirm-dialog .p-confirm-dialog-message {
     color: #ffffff;
   }
-  
+
   .custom-confirm-dialog .custom-nav-btn {
     display: inline-block;
     padding: 0.5rem 1rem;
@@ -41,8 +41,22 @@
     font-weight: 600;
     transition: all 0.3s ease;
     text-align: center;
-    white-space: nowrap;
+    white-space: normal; /* Changed from nowrap to normal */
     margin: 0 0.5rem;
+    min-width: 120px; /* Add this line */
+    max-width: 200px; /* Add this line */
+  }
+  
+  /* Add this new rule */
+  .custom-confirm-dialog .p-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  
+  /* Add this new rule */
+  .custom-confirm-dialog .p-dialog-footer button {
+    margin-top: 0.5rem;
   }
   
   .custom-confirm-dialog .custom-nav-btn:hover {

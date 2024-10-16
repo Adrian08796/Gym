@@ -731,13 +731,13 @@ function WorkoutTracker() {
     setIsConfirmingCancel(true);
     
     confirm({
-      message: 'Are you sure you want to cancel this workout? All progress will be lost.',
-      header: 'Cancel Workout',
+      message: t("Are you sure you want to cancel this workout? All progress will be lost."),
+      header: t("Cancel Workout"),
       icon: 'pi pi-exclamation-triangle',
       acceptClassName: 'custom-nav-btn custom-nav-btn-danger',
       rejectClassName: 'custom-nav-btn',
-      acceptLabel: 'Yes, Cancel',
-      rejectLabel: 'No, Continue',
+      acceptLabel: t("Yes, Cancel"),
+      rejectLabel: t("No, Continue"),
       className: 'custom-confirm-dialog',
       style: { width: '350px' },
       contentClassName: 'confirm-content',
