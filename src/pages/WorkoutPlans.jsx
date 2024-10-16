@@ -8,8 +8,10 @@ import { useAuth } from '../context/AuthContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
 import WorkoutPlanCard from '../components/WorkoutPlanCard';
 import WorkoutPlanModal from '../components/WorkoutPlanModal';
+import { useTranslation } from 'react-i18next';
 
 function WorkoutPlans() {
+  const { t } = useTranslation();
   const { 
     workoutPlans, 
     deleteWorkoutPlan, 
@@ -164,18 +166,18 @@ function WorkoutPlans() {
   return (
     <>
       <h1 data-aos="fade-up" className="header text-3xl text-gray-800 dark:text-white font-bold mb-4 text-center">
-        Workout <span className='headerSpan'>Plans</span>
+        {t("Workout")} <span className='headerSpan'>{t("Plans")}</span>
       </h1>
       <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'}`}>
         {ongoingWorkout && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-            <p className="font-bold">Ongoing Workout</p>
-            <p>You have an unfinished workout: {ongoingWorkout.name}</p>
+            <p className="font-bold">{t("Ongoing Workout")}</p>
+            <p>{t("You have an unfinished workout")}: {ongoingWorkout.name}</p>
             <button
               onClick={handleResumeWorkout}
               className="mt-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
             >
-              Resume Workout
+              {t("Resume Workout")}
             </button>
           </div>
         )}

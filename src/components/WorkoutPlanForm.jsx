@@ -5,8 +5,10 @@ import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { useTranslation } from 'react-i18next';
 
 function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
+  const { t } = useTranslation();
   const [planName, setPlanName] = useState('');
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [workoutType, setWorkoutType] = useState('');
@@ -121,7 +123,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
     <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
       <div className="mb-4">
         <label htmlFor="planName" className="block text-sm font-bold mb-2">
-          Workout Plan Name
+          {t("Workout Plan Name")}
         </label>
         <input
           type="text"
@@ -135,7 +137,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       </div>
       <div className="mb-4">
         <label htmlFor="workoutType" className="block text-sm font-bold mb-2">
-          Workout Type
+          {t("Workout Type")}
         </label>
         <select
           id="workoutType"
@@ -145,15 +147,15 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           required
           disabled={!isEditable}
         >
-          <option value="">Select a type</option>
-          <option value="strength">Strength</option>
-          <option value="cardio">Cardio</option>
-          <option value="flexibility">Flexibility</option>
+          <option value="">{t("Select a type")}</option>
+          <option value="strength">{t("Strength")}</option>
+          <option value="cardio">{t("Cardio")}</option>
+          <option value="flexibility">{t("Flexibility")}</option>
         </select>
       </div>
       <div className="mb-4">
         <label htmlFor="scheduledDate" className="block text-sm font-bold mb-2">
-          Scheduled Date
+          {t("Scheduled Date")}
         </label>
         <input
           type="date"
@@ -166,7 +168,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       </div>
       <div className="mb-4">
         <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
-          Select Exercises
+          {t("Select Exercises")}
         </label>
         <input
           type="text"
@@ -195,7 +197,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
                       {exercise.name}
                       {exercise.importedFrom && exercise.importedFrom.username && (
                         <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                          (Imported from {exercise.importedFrom.username})
+                          ({t("Imported from")} {exercise.importedFrom.username})
                         </span>
                       )}
                     </label>
@@ -205,7 +207,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
             ))}
           </div>
           <div className={`border rounded p-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} overflow-y-auto h-96`}>
-            <h3 className="font-bold mb-2">Selected Exercises</h3>
+            <h3 className="font-bold mb-2">{t("Selected Exercises")}</h3>
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="selected-exercises" isDropDisabled={!isEditable}>
                 {(provided) => (
@@ -223,7 +225,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
                               {exercise.name}
                               {exercise.importedFrom && exercise.importedFrom.username && (
                                 <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                  (Imported from {exercise.importedFrom.username})
+                                  ({t("Imported from")} {exercise.importedFrom.username})
                                 </span>
                               )}
                             </span>
@@ -233,7 +235,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
                               className={`text-red-500 hover:text-red-700 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                               disabled={!isEditable}
                             >
-                              Remove
+                              {t("Remove")}
                             </button>
                           </li>
                         )}
@@ -256,7 +258,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
               onChange={(e) => setIsDefault(e.target.checked)}
               className="form-checkbox h-5 w-5 text-emerald-500"
             />
-            <span className="ml-2 text-gray-700 dark:text-gray-300">Set as Default Workout Plan (Admin Only)</span>
+            <span className="ml-2 text-gray-700 dark:text-gray-300">{t("Set as Default Workout Plan (Admin Only)")}</span>
           </label>
         </div>
       )}
@@ -273,12 +275,12 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           onClick={handleCancel}
           className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
       {!isEditable && (
         <p className="mt-4 text-red-500 text-sm">
-          This is a default plan created by an admin. You don't have permission to edit it.
+          {t("This is a default plan created by an admin. You don't have permission to edit it.")}
         </p>
       )}
     </form>

@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
+import { useTranslation } from 'react-i18next';
 
 function ImportWorkoutPlan() {
+  const { t } = useTranslation();
   const { shareId } = useParams();
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState(null);
@@ -51,11 +53,11 @@ function ImportWorkoutPlan() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-        <h2 className="text-2xl font-bold mb-4">Import Shared Workout Plan</h2>
+        <h2 className="text-2xl font-bold mb-4">{t("Import Shared Workout Plan")}</h2>
         {error ? (
           <p className="text-red-500 mb-4">{error}</p>
         ) : (
-          <p className="mb-4">You're about to import a shared workout plan. This will add the plan and its exercises to your library.</p>
+          <p className="mb-4">{t("You're about to import a shared workout plan. This will add the plan and its exercises to your library")}.</p>
         )}
         <button
           onClick={handleImport}
@@ -71,7 +73,7 @@ function ImportWorkoutPlan() {
             onClick={() => navigate('/plans')}
             className="w-full mt-4 bg-gray-300 text-gray-700 hover:bg-gray-400 font-bold py-2 px-4 rounded"
           >
-            Go Back to Plans
+            {t("Go Back to Plans")}
           </button>
         )}
       </div>

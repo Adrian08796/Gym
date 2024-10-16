@@ -5,8 +5,10 @@ import { FiEdit, FiTrash2, FiPlus, FiTarget, FiUser, FiEye } from 'react-icons/f
 import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
 import { useAuth } from '../context/AuthContext';
 import '../components/ExerciseItem.css';
+import { useTranslation } from 'react-i18next';
 
 function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragging }) {
+  const { t } = useTranslation();
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const { user } = useAuth();
 
@@ -57,10 +59,10 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
   const DeleteConfirmation = () => (
     <div className="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center rounded-lg z-10">
       <div className="bg-white dark:bg-gray-700 p-4 rounded-lg text-center">
-        <p className="mb-4 text-sm">Are you sure you want to delete this exercise?</p>
+        <p className="mb-4 text-sm">{t("Are you sure you want to delete this exercise?")}</p>
         <div className="flex justify-center space-x-2">
-          <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>Yes, Delete</button>
-          <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>Cancel</button>
+          <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>{t("Yes")}, {t("Delete")}</button>
+          <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>{t("Cancel")}</button>
         </div>
       </div>
     </div>
@@ -68,7 +70,7 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
 
   const isImported = exercise.importedFrom && exercise.importedFrom.username;
   const experienceLevel = useMemo(() => {
-    return user?.experienceLevel || 'beginner';
+    return user?.experienceLevel || t("beginner");
   }, [user]);
 
   const userExerciseData = useMemo(() => {
@@ -95,20 +97,20 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
     if (exercise.category === 'Strength') {
       return (
         <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          <p>Your Recommendation:</p>
-          <p>Weight: {recommendation?.weight || 0} kg</p>
-          <p>Reps: {recommendation?.reps || 0}</p>
-          <p>Sets: {recommendation?.sets || 0}</p>
+          <p>{t("Your Recommendation:")}</p>
+          <p>{t("Weight")}: {recommendation?.weight || 0} kg</p>
+          <p>{t("Reps")}: {recommendation?.reps || 0}</p>
+          <p>{t("Sets")}: {recommendation?.sets || 0}</p>
         </div>
       );
     } else if (exercise.category === 'Cardio') {
       return (
         <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          <p>Your Recommendation:</p>
-          <p>Duration: {recommendation?.duration || 0} minutes</p>
-          {recommendation?.distance && <p>Distance: {recommendation.distance} km</p>}
-          {recommendation?.intensity && <p>Intensity: {recommendation.intensity}</p>}
-          {recommendation?.incline && <p>Incline: {recommendation.incline}%</p>}
+          <p>{t("Your Recommendation")}:</p>
+          <p>{t("Duration")}: {recommendation?.duration || 0} {t("minutes")}</p>
+          {recommendation?.distance && <p>{t("Distance")}: {recommendation.distance} km</p>}
+          {recommendation?.intensity && <p>{t("Intensity")}: {recommendation.intensity}</p>}
+          {recommendation?.incline && <p>{t("Incline")}: {recommendation.incline}%</p>}
         </div>
       );
     }
@@ -140,16 +142,16 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
         {isImported && (
           <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
             <FiUser className="mr-1" />
-            <span>Imported from {exercise.importedFrom.username}</span>
+            <span>{t("Imported from")} {exercise.importedFrom.username}</span>
           </div>
         )}
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-2 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <div className="flex justify-end space-x-2">
-          <ActionButton action={onView} style={buttonStyles.view} icon={<FiEye />} label="View exercise" />
-          <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} label="Edit exercise" />
-          <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} label="Delete exercise" />
-          <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} label="Add to plan" />
+          <ActionButton action={onView} style={buttonStyles.view} icon={<FiEye />} label={t("View exercise")} />
+          <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} label={t("Edit exercise")} />
+          <ActionButton action={onDelete} style={buttonStyles.delete} icon={<FiTrash2 />} label={t("Delete exercise")} />
+          <ActionButton action={onAddToPlan} style={buttonStyles.addToPlan} icon={<FiPlus />} label={t("Add to plan")} />
         </div>
       </div>
       {isDeleteConfirmOpen && <DeleteConfirmation />}

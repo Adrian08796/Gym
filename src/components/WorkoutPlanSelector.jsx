@@ -125,7 +125,7 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
         </div>
       )}
       <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-        {selectedPlan ? "Drag exercises here or use the '+' button to add them to the selected plan." : "Select a plan to add exercises."}
+        {t(selectedPlan ? "Drag exercises here or use the '+' button to add them to the selected plan." : "Select a plan to add exercises.")}
       </p>
     </div>
   );

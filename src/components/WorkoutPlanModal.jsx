@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 function WorkoutPlanModal({ plan, onClose, onEdit, onStart }) {
+  const { t } = useTranslation();
   const { darkMode } = useTheme();
 
   if (!plan) return null;
@@ -15,23 +17,23 @@ function WorkoutPlanModal({ plan, onClose, onEdit, onStart }) {
           <h3 className="text-lg leading-6 font-medium">{plan.name}</h3>
           <div className="mt-2 px-7 py-3">
             <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-              Type: {plan.type || 'Not specified'}
+              {t("Type")}: {plan.type || 'Not specified'}
             </p>
             <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-              Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleString() : 'Not scheduled'}
+              {t("Scheduled")}: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleString() : 'Not scheduled'}
             </p>
             <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-              Status: {plan.completed ? 'Completed' : 'Scheduled'}
+              {t("Status")}: {plan.completed ? 'Completed' : 'Scheduled'}
             </p>
             <div className="mt-4">
-              <h4 className="text-md font-medium">Exercises:</h4>
+              <h4 className="text-md font-medium">{t("Exercises")}:</h4>
               <ul className="list-disc list-inside">
                 {plan.exercises.map((exercise, index) => (
                   <li key={exercise._id || index} className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                     {exercise.name}
                     {exercise.importedFrom && (
                       <span className="text-xs ml-2">
-                        (Imported from {exercise.importedFrom.username})
+                        ({t("Imported from")} {exercise.importedFrom.username})
                       </span>
                     )}
                   </li>
@@ -47,7 +49,7 @@ function WorkoutPlanModal({ plan, onClose, onEdit, onStart }) {
                 onClose();
               }}
             >
-              Edit
+              {t("Edit")}
             </button>
             <button
               className={`px-4 py-2 ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300`}
@@ -56,13 +58,13 @@ function WorkoutPlanModal({ plan, onClose, onEdit, onStart }) {
                 onClose();
               }}
             >
-              Start Workout
+              {t("Start Workout")}
             </button>
             <button
               className={`px-4 py-2 ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300`}
               onClick={onClose}
             >
-              Close
+              {t("Close")}
             </button>
           </div>
         </div>

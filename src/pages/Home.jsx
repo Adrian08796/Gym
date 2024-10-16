@@ -4,8 +4,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useGymContext } from '../context/GymContext';
 import { FiActivity } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 
 function Home() {
+  const { t } = useTranslation();
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
   const { user } = useAuth();
   const { loadProgress } = useGymContext();
@@ -49,9 +51,9 @@ function Home() {
   return (
     <div className="text-gray-900 dark:text-gray-100 p-6">
       <h1 data-aos="fade-up" className="text-3xl font-bold text-center my-8">
-        Welcome <span className="text-emerald-500">{user ? user.username : "Guest"}</span> to Your Gym App
+        {t("Welcome")} <span className="text-emerald-500">{user ? user.username : "Guest"}</span> {t("to Your Gym App")}
       </h1>
-      <p className="text-center mb-8">This is where your fitness journey begins!</p>
+      <p className="text-center mb-8">{t("This is where your fitness journey begins")}!</p>
 
       {ongoingWorkout && (
         <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl mb-8">
@@ -61,7 +63,7 @@ function Home() {
                 <FiActivity className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Ongoing Workout</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t("Ongoing Workout")}</p>
                 <p className="text-2xl font-semibold text-gray-700 dark:text-gray-200">{ongoingWorkout.name}</p>
               </div>
             </div>
@@ -70,7 +72,7 @@ function Home() {
             to="/tracker" 
             className="mt-4 inline-block bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 font-bold py-2 px-4 rounded transition-colors duration-300"
           >
-            Resume Workout
+            {t("Resume Workout")}
           </Link>
         </div>
       )}

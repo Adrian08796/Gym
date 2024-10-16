@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useGymContext } from '../context/GymContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { FiActivity, FiClock, FiBarChart, FiPieChart } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 
 function Dashboard() {
   const { workoutHistory } = useGymContext();
@@ -11,6 +12,7 @@ function Dashboard() {
   const [exerciseFrequencyData, setExerciseFrequencyData] = useState([]);
   const [workoutTypeData, setWorkoutTypeData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (workoutHistory.length > 0) {
@@ -88,27 +90,27 @@ function Dashboard() {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <FiActivity className="text-6xl text-gray-400 mb-4" />
-        <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-2">No Workout Data Yet</h2>
-        <p className="text-gray-500 dark:text-gray-400">Start logging your workouts to see your progress!</p>
+        <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-2">{t("No Workout Data Yet")}</h2>
+        <p className="text-gray-500 dark:text-gray-400">{t("Start logging your workouts to see your progress!")}</p>
       </div>
     );
   }
 
   return (
     <div className="p-6 bg-gray-100 dark:bg-gray-900 min-h-screen">
-      <h2 data-aos="fade-up" className="header text-center text-3xl font-bold mb-8 text-gray-800 dark:text-white">Workout <span className='headerSpan'>Dashboard</span></h2>
+      <h2 data-aos="fade-up" className="header text-center text-3xl font-bold mb-8 text-gray-800 dark:text-white">{t("Workout")} <span className='headerSpan'>{t("Dashboard")}</span></h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <StatCard 
           icon={<FiActivity className="h-6 w-6" />}
-          title="Total Workouts"
+          title={t("Total Workouts")}
           value={totalWorkouts}
           color="bg-#111827"
         />
         <StatCard 
           icon={<FiClock className="h-6 w-6" />}
-          title="Average Workout Duration"
-          value={`${averageWorkoutDuration.toFixed(1)} minutes`}
+          title={t("Average Workout Duration")}
+          value={`${averageWorkoutDuration.toFixed(1)} ${t("minutes")}`}
           color="bg-#111827"
         />
       </div>

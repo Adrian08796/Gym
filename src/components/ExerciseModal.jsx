@@ -3,13 +3,15 @@
 import React, { useEffect, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
+  const { t } = useTranslation();
   const { darkMode } = useTheme();
   const { user } = useAuth();
 
   // Assume user profile has an 'experienceLevel' field
-  const experienceLevel = user?.experienceLevel || 'beginner';
+  const experienceLevel = user?.experienceLevel || t("'beginner'");
 
   const recommendations = exercise.recommendations?.[experienceLevel] || {};
 
@@ -75,14 +77,14 @@ function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
               </div>
               <p className="text-gray-700 dark:text-gray-300 mb-6 text-lg lg:text-xl">{exercise.description}</p>
               <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg lg:text-xl">
-                Target: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
+                {t("Target")}: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
               </p>
               {exercise.category === 'Strength' && (
                 <div className="mb-6">
-                  <h4 className="text-xl font-semibold mb-2">Recommendations for {experienceLevel}s:</h4>
-                  <p className="text-gray-600 dark:text-gray-400">Weight: {recommendations.weight} kg</p>
-                  <p className="text-gray-600 dark:text-gray-400">Reps: {recommendations.reps}</p>
-                  <p className="text-gray-600 dark:text-gray-400">Sets: {recommendations.sets}</p>
+                  <h4 className="text-xl font-semibold mb-2">{t("Recommendations for")} {experienceLevel}s:</h4>
+                  <p className="text-gray-600 dark:text-gray-400">{t("Weight")}: {recommendations.weight} kg</p>
+                  <p className="text-gray-600 dark:text-gray-400">{t("Reps")}: {recommendations.reps}</p>
+                  <p className="text-gray-600 dark:text-gray-400">{t("Sets")}: {recommendations.sets}</p>
                 </div>
               )}
             </div>
@@ -93,19 +95,19 @@ function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
             onClick={() => onEdit(exercise)}
             className="bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md text-xs font-semibold py-1 px-2 rounded transition-all duration-200 flex items-center justify-center"
           >
-            Edit
+            {t("Edit")}
           </button>
           <button 
             onClick={() => onDelete(exercise)}
             className="bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md text-xs font-semibold py-1 px-2 rounded transition-all duration-200 flex items-center justify-center"
           >
-            Delete
+            {t("Delete")}
           </button>
           <button 
             onClick={() => onAddToPlan(exercise)}
             className="bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md text-xs font-semibold py-1 px-2 rounded transition-all duration-200 flex items-center justify-center"
           >
-            Add to Plan
+            {t("Add to Plan")}
           </button>
         </div>
       </div>

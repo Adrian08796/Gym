@@ -6,6 +6,7 @@ import { useGymContext } from '../context/GymContext';
 import { useAuth } from '../context/AuthContext';
 import { FiPlay, FiEdit, FiTrash2, FiShare2, FiUser, FiEyeOff, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { PiBarbellBold, PiHeartbeatBold } from "react-icons/pi";
+import { useTranslation } from 'react-i18next';
 
 function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const { darkMode } = useTheme();
@@ -15,6 +16,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const [shareLink, setShareLink] = useState('');
   const [isSharing, setIsSharing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useTranslation();
 
   const handleAction = (action, e) => {
     if (e && e.stopPropagation) {
@@ -64,14 +66,14 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     <div className="absolute inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center rounded-lg z-10">
       <div className="bg-white dark:bg-gray-700 p-4 rounded-lg text-center">
         <p className="mb-4 text-sm">
-          {plan.isDefault && !user.isAdmin
+          {t(plan.isDefault && !user.isAdmin
             ? "Are you sure you want to remove this workout plan from your view?"
-            : "Are you sure you want to delete this workout plan?"}
+            : "Are you sure you want to delete this workout plan?")}
         </p>
         <div className="flex justify-center space-x-2">
           <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>
             {plan.isDefault && !user.isAdmin ? <FiEyeOff className="mr-1" /> : <FiTrash2 className="mr-1" />}
-            {plan.isDefault && !user.isAdmin ? "Yes, Remove" : "Yes, Delete"}
+            {t(plan.isDefault && !user.isAdmin ? "Yes, Remove" : "Yes, Delete")}
           </button>
           <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>
             Cancel
@@ -154,16 +156,16 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
           <TypeIcon />
         </div>
         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">
-          Scheduled: {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
+          {t("Scheduled:")} {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
         </p>
         {plan.importedFrom && (
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 flex items-center">
             <FiUser className="mr-1" />
-            Imported from {plan.importedFrom.username}
+            {t("Imported from")} {plan.importedFrom.username}
           </p>
         )}
         <div className={`overflow-hidden transition-max-height duration-300 ease-in-out ${isExpanded ? 'max-h-96' : 'max-h-20'}`}>
-          <h4 className="text-xs sm:text-sm font-semibold mb-1">Exercises:</h4>
+          <h4 className="text-xs sm:text-sm font-semibold mb-1">{t("Exercises:")}</h4>
           <ul className="list-disc list-inside text-xs sm:text-sm">
             {plan.exercises.map((exercise) => (
               <li key={exercise._id} className="mb-1">
@@ -180,33 +182,33 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
           className="text-blue-500 hover:text-blue-700 text-sm mt-2"
         >
           {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
-          {isExpanded ? ' Show less' : ' Show more'}
+          {t(isExpanded ? ' Show less' : ' Show more')}
         </button>
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-2 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <div className="flex justify-end space-x-2">
-          <ActionButton action={onStart} style={buttonStyles.start} icon={<FiPlay />} label="Start workout" />
+          <ActionButton action={onStart} style={buttonStyles.start} icon={<FiPlay />} label={t("Start workout")} />
           {(!plan.isDefault || user.isAdmin) && (
-            <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} label="Edit plan" />
+            <ActionButton action={onEdit} style={buttonStyles.edit} icon={<FiEdit />} label={t("Edit plan")} />
           )}
           <ActionButton 
             action={onDelete} 
             style={buttonStyles.delete} 
             icon={plan.isDefault && !user.isAdmin ? <FiEyeOff /> : <FiTrash2 />} 
-            label={plan.isDefault && !user.isAdmin ? "Remove plan" : "Delete plan"} 
+            label={t(plan.isDefault && !user.isAdmin ? "Remove plan" : "Delete plan")} 
           />
           <ActionButton 
             action={handleShare} 
             style={buttonStyles.share} 
             icon={<FiShare2 />} 
-            label={isSharing ? "Sharing..." : "Share plan"} 
+            label={t(isSharing ? "Sharing..." : "Share plan")} 
           />
         </div>
       </div>
       {isDeleteConfirmOpen && <DeleteConfirmation />}
       {shareLink && (
         <div className="mt-4 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-          <p className="text-xs sm:text-sm mb-1">Share this link:</p>
+          <p className="text-xs sm:text-sm mb-1">{t("Share this link:")}</p>
           <div className="flex">
             <input
               type="text"
@@ -219,7 +221,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
               onClick={() => copyToClipboard(shareLink)}
               className="bg-emerald-500 text-white px-2 rounded-r text-xs sm:text-sm"
             >
-              Copy
+              {t("Copy")}
             </button>
           </div>
         </div>

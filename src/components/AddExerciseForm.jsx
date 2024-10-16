@@ -218,7 +218,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
               id="name"
               type="text"
-              placeholder="Exercise Name"
+              placeholder={t("Exercise Name")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -233,7 +233,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             <textarea
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
               id="description"
-              placeholder="Exercise Description"
+              placeholder={t("Exercise Description")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
@@ -292,7 +292,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
               id="imageUrl"
               type="text"
-              placeholder="Image URL"
+              placeholder={t("Image URL")}
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
             />

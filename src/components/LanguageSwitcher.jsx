@@ -14,6 +14,7 @@ function LanguageSwitcher() {
     >
       <option value="en">EN</option>
       <option value="de">DE</option>
+      <option value="ro">RO</option>
     </select>
   );
 }

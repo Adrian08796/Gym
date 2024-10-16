@@ -25,8 +25,10 @@ import PreviousWorkoutDisplay from "../components/PreviousWorkoutDisplay";
 import { formatTime } from "../utils/timeUtils";
 import { canVibrate, vibrateDevice } from "../utils/deviceUtils";
 import "./WorkoutTracker.css";
+import { useTranslation } from "react-i18next";
 
 function WorkoutTracker() {
+  const { t } = useTranslation();
   const [currentPlan, setCurrentPlan] = useState(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [sets, setSets] = useState([]);
@@ -471,7 +473,7 @@ function WorkoutTracker() {
                 onChange={e => setWeight(e.target.value)}
                 className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
-              <span className="placeholder-text">Weight (kg)</span>
+              <span className="placeholder-text">{t("Weight")} (kg)</span>
             </div>
             <div className="relative w-full">
               <input
@@ -480,7 +482,7 @@ function WorkoutTracker() {
                 onChange={e => setReps(e.target.value)}
                 className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
-              <span className="placeholder-text">Reps</span>
+              <span className="placeholder-text">{t("Reps")}</span>
             </div>
           </div>
         </div>
@@ -920,7 +922,7 @@ function WorkoutTracker() {
   };
 
   if (isLoading) {
-    return <div className="text-center mt-8">Loading workout...</div>;
+    return <div className="text-center mt-8">{t("Loading workout")}...</div>;
   }
 
   if (
@@ -930,11 +932,11 @@ function WorkoutTracker() {
   ) {
     return (
       <div className="text-center mt-8">
-        <p>No workout plan or exercises found. Please select a plan.</p>
+        <p>{t("No workout plan or exercises found. Please select a plan")}.</p>
         <button
           onClick={() => navigate("/plans")}
           className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-          Go to Plans
+          {t("Go to Plans")}
         </button>
       </div>
     );
@@ -958,7 +960,7 @@ function WorkoutTracker() {
 
   return (
     <>
-      <h2 data-aos="fade-up" className="header text-3xl font-bold text-center mb-4">Workout <span className="headerSpan">Tracker</span></h2>
+      <h2 data-aos="fade-up" className="header text-3xl font-bold text-center mb-4">{t("Workout")} <span className="headerSpan">{t("Tracker")}</span></h2>
       <div
         className={`workout-tracker container mx-auto mt-8 p-4 ${
           darkMode ? 'dark-mode bg-gray-800 text-white' : 'bg-white text-gray-800'
@@ -986,7 +988,7 @@ function WorkoutTracker() {
         </div>
 
       <div className="mb-4 text-lg text-center">
-        Elapsed Time: {formatTime(elapsedTime)}
+        {t("Elapsed Time")}: {formatTime(elapsedTime)}
       </div>
 
       <div className="mb-4">
@@ -996,7 +998,7 @@ function WorkoutTracker() {
             style={{ width: `${calculateProgress().toFixed(2)}%` }}></div>
         </div>
         <p className="text-sm mt-2 text-center">
-          Overall Progress: {calculateProgress().toFixed(2)}%
+          {t("Overall Progress")}: {calculateProgress().toFixed(2)}%
         </p>
       </div>
 
@@ -1055,16 +1057,16 @@ function WorkoutTracker() {
                         isExerciseDetailsOpen ? "open" : ""
                       }`}>
                       <p className="mb-2">
-                        <strong>Description:</strong>{" "}
+                        <strong>{t("Description")}:</strong>{" "}
                         {currentExercise.description}
                       </p>
                       <p className="mb-2">
-                        <strong>Target Muscle:</strong> {currentExercise.target}
+                        <strong>{t("Target Muscle")}:</strong> {currentExercise.target}
                       </p>
                     </div>
                     {currentExercise.category === "Cardio" ? (
                       <p className="mb-2">
-                        <strong>Exercise completed:</strong>{" "}
+                        <strong>{t("Exercise completed")}:</strong>{" "}
                         {isExerciseComplete(
                           currentExercise._id,
                           sets[currentExerciseIndex] || []
@@ -1075,7 +1077,7 @@ function WorkoutTracker() {
                       </p>
                     ) : (
                       <p className="mb-2">
-                        <strong>Sets completed:</strong>{" "}
+                        <strong>{t("Sets completed")}:</strong>{" "}
                         {(sets[currentExerciseIndex] || []).length} /{" "}
                         {requiredSets[currentExercise._id] || 3}
                       </p>
@@ -1095,7 +1097,7 @@ function WorkoutTracker() {
                   <button
                     onClick={toggleExerciseOptions}
                     className="btn btn-secondary flex items-center">
-                    <FiSettings className="mr-2" /> Options
+                    <FiSettings className="mr-2" /> {t("Options")}
                     {isExerciseOptionsOpen ? (
                       <FiChevronUp className="ml-2" />
                     ) : (
@@ -1112,7 +1114,7 @@ function WorkoutTracker() {
                     <label
                       className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
                       htmlFor="restTime">
-                      Rest Time (seconds):
+                      {t("Rest Time (seconds)")}:
                     </label>
                     <input
                       type="text"
@@ -1128,7 +1130,7 @@ function WorkoutTracker() {
                     <label
                       className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
                       htmlFor={`notes-${currentExerciseIndex}`}>
-                      Exercise Notes:
+                      {t("Exercise Notes")}:
                     </label>
                     <textarea
                       id={`notes-${currentExerciseIndex}`}
@@ -1143,7 +1145,7 @@ function WorkoutTracker() {
 
                 {isResting && (
                   <div className="rest-timer mb-4">
-                    <p>Rest Time Remaining: {formatTime(remainingRestTime)}</p>
+                    <p>{t("Rest Time Remaining")}: {formatTime(remainingRestTime)}</p>
                     <div className="rest-timer-bar">
                       <div
                         className="rest-timer-fill"
@@ -1158,14 +1160,14 @@ function WorkoutTracker() {
                     </button> */}
                     {canVibrate() && (
                       <p className="text-sm mt-2">
-                        Your device will vibrate when the rest time is over.
+                        {t("Your device will vibrate when the rest time is over")}.
                       </p>
                     )}
                   </div>
                 )}
               </>
             ) : (
-              <p>No exercise data available for this index.</p>
+              <p>{t("No exercise data available for this index")}.</p>
             )}
           </div>
         </CSSTransition>
@@ -1180,7 +1182,7 @@ function WorkoutTracker() {
             currentExerciseIndex === 0 ? "opacity-50 cursor-not-allowed" : ""
           }`}
           disabled={currentExerciseIndex === 0}>
-          <FiChevronLeft className="inline-block mr-1" /> Previous
+          <FiChevronLeft className="inline-block mr-1" /> {t("Previous")}
         </button>
         <span className="text-lg font-semibold">
           {currentExerciseIndex + 1} / {currentPlan.exercises.length}
@@ -1189,11 +1191,11 @@ function WorkoutTracker() {
           <button
             onClick={() => handleExerciseChange(currentExerciseIndex + 1)}
             className="btn btn-primary">
-            Next <FiChevronRight className="inline-block ml-1" />
+            {t("Next")} <FiChevronRight className="inline-block ml-1" />
           </button>
         ) : (
           <button onClick={handleFinishWorkout} className="btn btn-primary">
-            Finish Workout
+            {t("Finish Workout")}
           </button>
         )}
       </div>
@@ -1207,7 +1209,7 @@ function WorkoutTracker() {
           className={`w-full p-4 text-left font-semibold flex justify-between items-center ${
             darkMode ? "text-blue-300" : "text-blue-800"
           }`}>
-          <span>Previous Workout and Exercise Performance</span>
+          <span>{t("Previous Workout and Exercise Performance")}</span>
           {isPreviousWorkoutOpen ? <FiChevronUp /> : <FiChevronDown />}
         </button>
         <div
@@ -1234,7 +1236,7 @@ function WorkoutTracker() {
           className={`w-full p-4 text-left font-semibold flex justify-between items-center ${
             darkMode ? "text-green-300" : "text-green-800"
           }`}>
-          <span>Current Workout Log</span>
+          <span>{t("Current Workout Log")}</span>
           {isCurrentSetLogOpen ? <FiChevronUp /> : <FiChevronDown />}
         </button>
         <div
@@ -1261,18 +1263,18 @@ function WorkoutTracker() {
                     ) : (
                       sets[index].map((set, setIndex) => (
                         <li key={setIndex}>
-                          Set {setIndex + 1}:{" "}
+                          {t("Set")} {setIndex + 1}:{" "}
                           {renderSetDetails(set, exercise.category)}
                         </li>
                       ))
                     )}
                   </ul>
                 ) : (
-                  <p>No data recorded yet</p>
+                  <p>{t("No data recorded yet")}</p>
                 )}
                 {exercise.category === "Cardio" ? (
                   <p>
-                    Exercise completed:{" "}
+                    {t("Exercise completed")}:{" "}
                     {isExerciseComplete(exercise._id, sets[index] || [])
                       ? "1"
                       : "0"}{" "}
@@ -1281,11 +1283,11 @@ function WorkoutTracker() {
                 ) : (
                   <p>
                     {sets[index] ? sets[index].length : 0} /{" "}
-                    {requiredSets[exercise._id] || 0} sets completed
+                    {requiredSets[exercise._id] || 0} {t("sets completed")}
                   </p>
                 )}
                 {notes[index] && (
-                  <p className="mt-2 italic">Notes: {notes[index]}</p>
+                  <p className="mt-2 italic">{t("Notes")}: {notes[index]}</p>
                 )}
               </div>
             ))}

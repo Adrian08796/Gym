@@ -7,8 +7,10 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatDuration, formatTime, formatDate } from '../utils/dateUtils';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 
 function WorkoutSummary() {
+  const { t } = useTranslation();
   const { workoutHistory, fetchWorkoutHistory } = useGymContext();
   const { user } = useAuth();
   const { darkMode } = useTheme();
@@ -24,11 +26,11 @@ function WorkoutSummary() {
   }, [user, fetchWorkoutHistory]);
 
   if (!user) {
-    return <div className="container mx-auto mt-8">Please log in to view your workout history.</div>;
+    return <div className="container mx-auto mt-8">{t("Please log in to view your workout history")}.</div>;
   }
 
   if (workoutHistory.length === 0) {
-    return <div className="container mx-auto mt-8">No workout history available.</div>;
+    return <div className="container mx-auto mt-8">{t("No workout history available")}.</div>;
   }
 
   const sortedWorkouts = [...workoutHistory].sort((a, b) => {
@@ -95,7 +97,7 @@ function WorkoutSummary() {
             <p>{formatDate(workout.date || workout.startTime)}</p>
           </div>
           <div className="mb-4">
-            <h4 className="font-semibold mb-2">Exercises:</h4>
+            <h4 className="font-semibold mb-2">{t("Exercises")}:</h4>
             <ul className="list-none">
               {workout.exercises.map((exercise, index) => (
                 <li key={index} className="mb-2">
@@ -133,11 +135,11 @@ function WorkoutSummary() {
                           )}
                         </ul>
                       ) : (
-                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>No data recorded for this exercise.</p>
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{t("No data recorded for this exercise")}.</p>
                       )}
                       {exercise.notes && (
                         <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          <strong>Notes:</strong> {exercise.notes}
+                          <strong>{t("Notes")}:</strong> {exercise.notes}
                         </p>
                       )}
                     </div>
@@ -147,8 +149,8 @@ function WorkoutSummary() {
             </ul>
           </div>
           <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-            <p>Duration: {formatDuration(workout.startTime, workout.endTime)}</p>
-            <p>Progression: {workout.progression ? `${workout.progression.toFixed(2)}%` : 'N/A'}</p>
+            <p>{t("Duration")}: {formatDuration(workout.startTime, workout.endTime)}</p>
+            <p>{t("Progression")}: {workout.progression ? `${workout.progression.toFixed(2)}%` : 'N/A'}</p>
           </div>
         </div>
       ))}
@@ -156,7 +158,7 @@ function WorkoutSummary() {
         onClick={() => navigate('/')}
         className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded`}
       >
-        Back to Home
+        {t("Back to Home")}
       </button>
     </div>
   );
