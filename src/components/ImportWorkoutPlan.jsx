@@ -30,9 +30,9 @@ function ImportWorkoutPlan() {
       await fetchExercises(); // Fetch exercises after successful import
       
       if (result.alreadyImported) {
-        showToast('info', 'Already Imported', 'This workout plan has already been imported.');
+        showToast('info', 'Already Imported', t("This workout plan has already been imported."));
       } else {
-        showToast('success', 'Success', 'Workout plan imported successfully');
+        showToast('success', 'Success', t("Workout plan imported successfully"));
       }
       
       navigate('/plans');
@@ -40,10 +40,10 @@ function ImportWorkoutPlan() {
       console.error('Import error:', error);
       if (error.message === 'Shared workout plan not found') {
         setError('The shared workout plan is no longer available. It may have been deleted by the owner.');
-        showToast('error', 'Import Failed', 'The shared workout plan is no longer available.');
+        showToast('error', 'Import Failed', t("The shared workout plan is no longer available."));
       } else {
         setError('An error occurred while importing the workout plan. Please try again.');
-        showToast('error', 'Import Failed', 'An error occurred while importing the workout plan.');
+        showToast('error', 'Import Failed', t("An error occurred while importing the workout plan."));
       }
     } finally {
       setIsImporting(false);

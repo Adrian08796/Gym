@@ -268,7 +268,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
           disabled={!isEditable}
         >
-          {initialPlan ? 'Update Workout Plan' : 'Create Workout Plan'}
+          {t(initialPlan ? 'Update Workout Plan' : 'Create Workout Plan')}
         </button>
         <button
           type="button"

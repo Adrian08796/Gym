@@ -37,16 +37,16 @@ function UserProfile() {
     try {
       await updateUser({ username, email, experienceLevel });
       setIsEditing(false);
-      showToast('success', 'Success', 'Profile updated successfully');
+      showToast('success', 'Success', t("Profile updated successfully"));
     } catch (error) {
-      showToast('error', 'Error', 'Failed to update profile');
+      showToast('error', 'Error', t("Failed to update profile"));
     }
   };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmNewPassword) {
-      showToast('error', 'Error', 'New passwords do not match');
+      showToast('error', 'Error', t("New passwords do not match"));
       return;
     }
     try {
@@ -55,9 +55,9 @@ function UserProfile() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
-      showToast('success', 'Success', 'Password changed successfully');
+      showToast('success', 'Success', t("Password changed successfully"));
     } catch (error) {
-      showToast('error', 'Error', 'Failed to change password');
+      showToast('error', 'Error', t("Failed to change password"));
     }
   };
 
@@ -66,7 +66,7 @@ function UserProfile() {
     try {
       await updateExperienceLevel(newLevel);
       setExperienceLevel(newLevel);
-      showToast('success', 'Success', 'Experience level updated successfully');
+      showToast('success', 'Success', t("Experience level updated successfully"));
     } catch (error) {
       console.error('Failed to update experience level:', error);
       showToast('error', 'Error', `Failed to update experience level: ${error.message}`);
@@ -93,7 +93,7 @@ function UserProfile() {
       accept: async () => {
         try {
           await deleteAccount();
-          showToast('success', 'Success', 'Your account has been deleted successfully');
+          showToast('success', 'Success', t("Your account has been deleted successfully"));
           navigate('/');
         } catch (error) {
           showToast('error', 'Error', `Failed to delete account: ${error.message}`);

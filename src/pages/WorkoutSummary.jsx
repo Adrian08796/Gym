@@ -72,17 +72,17 @@ function WorkoutSummary() {
 
   return (
     <div className={`container mx-auto mt-8 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-      <h2 data-aos="fade-up" className="header text-center text-gray-800 dark:text-white text-3xl font-bold mb-4">Workout <span className='headerSpan'>History</span></h2>
+      <h2 data-aos="fade-up" className="header text-center text-gray-800 dark:text-white text-3xl font-bold mb-4">{t("Workout")} <span className='headerSpan'>{t("History")}</span></h2>
       <div className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
         <button
           onClick={toggleSortOrder}
           className={`mb-2 sm:mb-0 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded`}
         >
-          Sort {sortOrder === 'desc' ? 'Oldest First' : 'Newest First'}
+          {t(sortOrder === 'desc' ? 'Oldest First' : 'Newest First')}
         </button>
         <input
           type="text"
-          placeholder="Filter by plan name"
+          placeholder={t("Filter by plan name")}
           value={filterPlan}
           onChange={(e) => setFilterPlan(e.target.value)}
           className={`px-2 py-1 border rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}

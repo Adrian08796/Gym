@@ -36,7 +36,7 @@ function Login() {
         const result = await login(username, password);
         console.log('Login result:', result);
         if (result && result.user) {
-          showToast('success', 'Success', 'Logged in successfully');
+          showToast('success', 'Success', t("Logged in successfully"));
           setTimeout(() => navigate('/'), 500);
         }
       } catch (err) {

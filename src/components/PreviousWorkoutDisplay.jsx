@@ -77,7 +77,7 @@ const PreviousWorkoutDisplay = ({ previousWorkout, exerciseHistory, isLoading, f
         {previousWorkout.exercises && previousWorkout.exercises.map((exercise, index) => (
           <div key={index} className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             <h4 className="text-lg font-medium">
-              {t(exercise.exercise ? exercise.exercise.name : 'Unknown Exercise')}
+              {exercise.exercise ? exercise.exercise.name : t("Unknown Exercise")}
             </h4>
             {exercise.sets && exercise.sets.length > 0 ? (
               <ul className="list-disc pl-5">

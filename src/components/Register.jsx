@@ -42,7 +42,7 @@ function Register() {
         console.log('Attempting to register user:', username);
         const result = await register(username, email, password);
         console.log('Registration result:', result);
-        showToast('success', 'Success', 'Registration successful! Please log in.');
+        showToast('success', 'Success', t("Registration successful! Please log in."));
         navigate('/login');
       } catch (err) {
         console.error('Registration error:', err);

@@ -89,7 +89,7 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
   }, [userExerciseData, exercise.recommendations, experienceLevel]);
 
   const displayName = userExerciseData.name || exercise.name;
-  const displayDescription = userExerciseData.description || exercise.description;
+  const displayDescription = t(userExerciseData.description || exercise.description);
   const displayTarget = userExerciseData.target || exercise.target;
   const displayImageUrl = userExerciseData.imageUrl || exercise.imageUrl;
 
@@ -97,7 +97,7 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
     if (exercise.category === 'Strength') {
       return (
         <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          <p>{t("Your Recommendation:")}</p>
+          <p>{t("Your Recommendation")}</p>
           <p>{t("Weight")}: {recommendation?.weight || 0} kg</p>
           <p>{t("Reps")}: {recommendation?.reps || 0}</p>
           <p>{t("Sets")}: {recommendation?.sets || 0}</p>

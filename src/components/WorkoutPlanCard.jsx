@@ -88,7 +88,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
       e.stopPropagation();
     }
     if (plan.isDefault) {
-      showToast('warn', 'Warning', 'Only user-created plans can be shared at the moment');
+      showToast('warn', 'Warning', t("Only user-created plans can be shared at the moment"));
       return;
     }
   
@@ -107,9 +107,9 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const copyToClipboard = (text) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(() => {
-        showToast('success', 'Success', 'Link copied to clipboard');
+        showToast('success', 'Success', t("Link copied to clipboard"));
       }, () => {
-        showToast('error', 'Error', 'Failed to copy link');
+        showToast('error', 'Error', t("Failed to copy link"));
       });
     } else {
       const textArea = document.createElement("textarea");
@@ -120,13 +120,13 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
       try {
         const successful = document.execCommand('copy');
         if (successful) {
-          showToast('success', 'Success', 'Link copied to clipboard');
+          showToast('success', 'Success', t("Link copied to clipboard"));
         } else {
-          showToast('error', 'Error', 'Failed to copy link');
+          showToast('error', 'Error', t("Failed to copy link"));
         }
       } catch (err) {
         console.error('Error copying text: ', err);
-        showToast('error', 'Error', 'Failed to copy link');
+        showToast('error', 'Error', t("Failed to copy link"));
       }
       document.body.removeChild(textArea);
     }
@@ -156,7 +156,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
           <TypeIcon />
         </div>
         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">
-          {t("Scheduled:")} {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : 'Not scheduled'}
+          {t("Scheduled")} {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : t("Not scheduled")}
         </p>
         {plan.importedFrom && (
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 flex items-center">
@@ -165,7 +165,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
           </p>
         )}
         <div className={`overflow-hidden transition-max-height duration-300 ease-in-out ${isExpanded ? 'max-h-96' : 'max-h-20'}`}>
-          <h4 className="text-xs sm:text-sm font-semibold mb-1">{t("Exercises:")}</h4>
+          <h4 className="text-xs sm:text-sm font-semibold mb-1">{t("Exercises")}</h4>
           <ul className="list-disc list-inside text-xs sm:text-sm">
             {plan.exercises.map((exercise) => (
               <li key={exercise._id} className="mb-1">
@@ -182,7 +182,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
           className="text-blue-500 hover:text-blue-700 text-sm mt-2"
         >
           {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
-          {t(isExpanded ? ' Show less' : ' Show more')}
+          {t(isExpanded ? "Show less" : "Show more")}
         </button>
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-2 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">

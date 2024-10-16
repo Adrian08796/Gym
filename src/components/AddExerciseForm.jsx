@@ -87,13 +87,13 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     setIsSubmitting(true);
   
     if (target.length === 0) {
-      showToast('error', 'Error', 'Please select at least one target muscle group');
+      showToast('error', 'Error', t("Please select at least one target muscle group"));
       setIsSubmitting(false);
       return;
     }
   
     if (!category) {
-      showToast('error', 'Error', 'Please select a category');
+      showToast('error', 'Error', t("Please select a category"));
       setIsSubmitting(false);
       return;
     }
@@ -155,7 +155,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       onSave(savedExercise);
     } catch (error) {
       console.error('Error saving exercise:', error);
-      showToast('error', 'Error', 'Failed to save exercise. Please try again.');
+      showToast('error', 'Error', t("Failed to save exercise. Please try again."));
     } finally {
       setIsSubmitting(false);
     }

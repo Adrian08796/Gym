@@ -190,13 +190,13 @@ function WorkoutPlans() {
             }}
             className="mb-2 sm:mb-0 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
           >
-            {showForm ? 'Hide Form' : 'Create New Plan'}
+            {t(showForm ? 'Hide Form' : 'Create New Plan')}
           </button>
           
           <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
             <input
               type="text"
-              placeholder="Search plans..."
+              placeholder={t("Search plans...")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border rounded py-1 px-2 text-gray-700 w-full sm:w-auto"
@@ -218,7 +218,7 @@ function WorkoutPlans() {
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
           <input
             type="text"
-            placeholder="Paste import link here..."
+            placeholder={t("Paste import link here...")}
             value={importLink}
             onChange={(e) => setImportLink(e.target.value)}
             className="border rounded py-1 px-2 text-gray-700 w-full sm:flex-grow"
@@ -229,7 +229,7 @@ function WorkoutPlans() {
             className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-2 rounded text-xs sm:text-sm sm:px-3 w-full sm:w-auto ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={isImporting}
           >
-            {isImporting ? 'Importing...' : 'Import Plan'}
+            {t(isImporting ? "Importing..." : "Import Plan")}
           </button>
         </div>
 

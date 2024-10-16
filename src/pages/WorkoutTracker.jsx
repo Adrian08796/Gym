@@ -240,7 +240,7 @@ function WorkoutTracker() {
             }
           } else {
             console.log("No workout plan found in progress or localStorage");
-            showToast("info", "Info", "No workout plan selected. Please choose a plan.");
+            showToast("info", "Info", t("No workout plan selected. Please choose a plan."));
             navigate("/plans");
           }
         }
@@ -1090,9 +1090,9 @@ function WorkoutTracker() {
                   <button
                     onClick={handleSetComplete}
                     className="btn btn-secondary">
-                    {currentExercise.category === "Cardio"
+                    {t(currentExercise.category === "Cardio"
                       ? "Complete Exercise"
-                      : "Complete Set"}
+                      : "Complete Set")}
                   </button>
                   <button
                     onClick={toggleExerciseOptions}

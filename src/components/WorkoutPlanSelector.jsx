@@ -87,7 +87,7 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
         <option value="">{t("Select a workout plan for drag and drop")}</option>
         {workoutPlans.map((plan) => (
           <option key={plan._id} value={plan._id}>
-            {plan.name} ({plan.exercises?.length || 0} {t("exercises")})
+            {plan.name} ({plan.exercises?.length || 0} "exercises")
           </option>
         ))}
       </select>
