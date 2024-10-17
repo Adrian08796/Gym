@@ -355,5 +355,7 @@
   "This username is already taken": "Acest nume de utilizator este deja folosit",
   "Username already exists": "Numele de utilizator există deja",
   "Username is already taken": "Numele de utilizator este deja folosit",
-  "Default exercises cannot be deleted": "Exercițiile implicite nu pot fi șterse"
+  "Default exercises cannot be deleted": "Exercițiile implicite nu pot fi șterse",
+  "Update Workout Plan": "Actualizează planul de antrenament",
+  "Create Workout Plan": "Creează plan de antrenament"
   }

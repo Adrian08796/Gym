@@ -355,5 +355,7 @@
   "This username is already taken": "Dieser Benutzername ist bereits vergeben",
   "Username already exists": "Benutzername existiert bereits",
   "Username is already taken": "Benutzername ist bereits vergeben",
-  "Default exercises cannot be deleted": "Standardübungen können nicht gelöscht werden"
+  "Default exercises cannot be deleted": "Standardübungen können nicht gelöscht werden",
+  "Update Workout Plan": "Trainingsplan aktualisieren", 
+  "Create Workout Plan": "Trainingsplan erstellen"
 }

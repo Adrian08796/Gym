@@ -354,5 +354,7 @@
   "This username is already taken": "This username is already taken",
   "Username already exists": "Username already exists",
   "Username is already taken": "Username is already taken",
-  "Default exercises cannot be deleted": "Default exercises cannot be deleted"
+  "Default exercises cannot be deleted": "Default exercises cannot be deleted",
+  "Update Workout Plan": "Update Workout Plan",
+  "Create Workout Plan": "Create Workout Plan"
 }
