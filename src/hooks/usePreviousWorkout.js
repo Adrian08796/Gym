@@ -29,7 +29,7 @@ export const usePreviousWorkout = (planId, API_URL) => {
         }
       } catch (error) {
         console.error("Error fetching previous workout:", error);
-        showToast("error", "Error", "Failed to fetch previous workout data");
+        showToast("error", "Error", t("Failed to fetch previous workout data"));
       } finally {
         setIsPreviousWorkoutLoading(false);
       }

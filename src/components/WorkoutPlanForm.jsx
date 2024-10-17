@@ -43,7 +43,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isEditable) {
-      showToast('error', 'Error', "You don't have permission to edit this plan.");
+      showToast('error', 'Error', t("You don't have permission to edit this plan."));
       return;
     }
     const workoutPlan = {
@@ -77,7 +77,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
 
   const handleExerciseToggle = (exercise) => {
     if (!isEditable) {
-      showToast('error', 'Error', "You don't have permission to modify this plan.");
+      showToast('error', 'Error', t("You don't have permission to modify this plan."));
       return;
     }
     setSelectedExercises(prev => 
@@ -89,7 +89,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
 
   const onDragEnd = (result) => {
     if (!isEditable) {
-      showToast('error', 'Error', "You don't have permission to modify this plan.");
+      showToast('error', 'Error', t("You don't have permission to modify this plan."));
       return;
     }
     if (!result.destination) {

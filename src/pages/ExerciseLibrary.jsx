@@ -87,13 +87,13 @@ function ExerciseLibrary() {
       triggerRefresh();
     } catch (error) {
       console.error('Error deleting exercise:', error);
-      showToast('error', 'Error', 'Failed to delete exercise');
+      showToast('error', 'Error', t("Failed to delete exercise"));
     }
   };
 
   const handleAddToPlan = async (exercise) => {
     if (!selectedPlan) {
-      showToast('warn', 'Warning', 'Please select a workout plan first');
+      showToast('warn', 'Warning', t("Please select a workout plan first"));
       return;
     }
   
@@ -103,7 +103,7 @@ function ExerciseLibrary() {
         // showToast('success', 'Success', 'Exercise added to plan');
         setSelectedPlan(updatedPlan);
       } else if (error === 'Duplicate exercise') {
-        showToast('warn', 'Warning', 'This exercise is already in the plan');
+        showToast('warn', 'Warning', t("This exercise is already in the plan"));
       } else {
         // showToast('error', 'Error', 'Failed to add exercise to plan');
       }
@@ -121,7 +121,7 @@ function ExerciseLibrary() {
       handleSelectPlan(selectedPlan);
     } catch (error) {
       console.error('Error removing exercise from plan:', error);
-      showToast('error', 'Error', 'Failed to remove exercise from plan');
+      showToast('error', 'Error', t("Failed to remove exercise from plan"));
     }
   };
 
@@ -135,7 +135,7 @@ function ExerciseLibrary() {
         setSelectedPlan(fullPlan);
       } catch (error) {
         console.error('Error fetching full plan details:', error);
-        showToast('error', 'Error', 'Failed to load full plan details');
+        showToast('error', 'Error', t("Failed to load full plan details"));
       }
     }
   };
@@ -143,12 +143,12 @@ function ExerciseLibrary() {
   const handleSave = async (savedExercise) => {
     setEditingExercise(null);
     triggerRefresh();
-    showToast('success', 'Success', 'Exercise saved successfully');
+    showToast('success', 'Success', t("Exercise saved successfully"));
   };
 
   const handleSelectWorkoutPlan = async (plan) => {
     if (!exerciseToAddToPlan || !exerciseToAddToPlan._id) {
-      showToast('error', 'Error', 'No exercise selected');
+      showToast('error', 'Error', t("No exercise selected"));
       return;
     }
 

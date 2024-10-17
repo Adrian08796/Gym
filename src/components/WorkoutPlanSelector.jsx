@@ -22,7 +22,7 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
         setWorkoutPlans(plans || []);
       } catch (error) {
         console.error('Error fetching workout plans:', error);
-        showToast('error', 'Error', 'Failed to fetch workout plans');
+        showToast('error', 'Error', t("Failed to fetch workout plans"));
       } finally {
         setIsLoading(false);
       }
@@ -50,7 +50,7 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
     try {
       // Check if the plan is admin-created and the user is not an admin
       if (selectedPlan.isDefault && !user.isAdmin) {
-        showToast('error', 'Error', 'You cannot remove exercises from admin-created plans');
+        showToast('error', 'Error', t("You cannot remove exercises from admin-created plans"));
         return;
       }
 
@@ -66,7 +66,7 @@ function WorkoutPlanSelector({ onSelect, selectedPlan, isDragging, onRemoveExerc
       }
     } catch (error) {
       console.error('Error removing exercise from plan:', error);
-      showToast('error', 'Error', 'Failed to remove exercise from plan');
+      showToast('error', 'Error', t("Failed to remove exercise from plan"));
     }
   };
 

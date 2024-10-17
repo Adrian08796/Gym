@@ -78,17 +78,17 @@ function WorkoutPlans() {
       const validExercises = fullExercises.filter(Boolean);
       
       if (validExercises.length !== plan.exercises.length) {
-        showToast('warn', 'Warning', 'Some exercises could not be found. The plan will be created with available exercises.');
+        showToast('warn', 'Warning', t("Some exercises could not be found. The plan will be created with available exercises."));
       }
 
       const newPlan = { ...plan, exercises: validExercises };
       await addWorkoutPlan(newPlan);
       handleCancelForm();
       await fetchWorkoutPlans();
-      showToast('success', 'Success', 'Workout plan added successfully');
+      showToast('success', 'Success', t("Workout plan added successfully"));
     } catch (error) {
       console.error('Error adding workout plan:', error);
-      showToast('error', 'Error', 'Failed to add workout plan');
+      showToast('error', 'Error', t("Failed to add workout plan"));
     }
   };
 
@@ -104,17 +104,17 @@ function WorkoutPlans() {
       const validExercises = fullExercises.filter(Boolean);
       
       if (validExercises.length !== plan.exercises.length) {
-        showToast('warn', 'Warning', 'Some exercises could not be found. The plan will be updated with available exercises.');
+        showToast('warn', 'Warning', t("Some exercises could not be found. The plan will be updated with available exercises."));
       }
 
       const updatedPlan = { ...plan, exercises: validExercises };
       await updateWorkoutPlan(plan._id, updatedPlan);
       handleCancelForm();
       await fetchWorkoutPlans();
-      showToast('success', 'Success', 'Workout plan updated successfully');
+      showToast('success', 'Success', t("Workout plan updated successfully"));
     } catch (error) {
       console.error('Error updating workout plan:', error);
-      showToast('error', 'Error', 'Failed to update workout plan');
+      showToast('error', 'Error', t("Failed to update workout plan"));
     }
   };
 
@@ -131,17 +131,17 @@ function WorkoutPlans() {
   const handleDelete = async (planId) => {
     try {
       await deleteWorkoutPlan(planId);
-      showToast('success', 'Success', 'Workout plan deleted successfully');
+      showToast('success', 'Success', t("Workout plan deleted successfully"));
       fetchWorkoutPlans();
     } catch (error) {
       console.error('Error deleting workout plan:', error);
-      showToast('error', 'Error', 'Failed to delete workout plan');
+      showToast('error', 'Error', t("Failed to delete workout plan"));
     }
   };
 
   const handleImportPlan = async () => {
     if (!importLink) {
-      showToast('error', 'Error', 'Please enter a valid import link');
+      showToast('error', 'Error', t("Please enter a valid import link"));
       return;
     }
     setIsImporting(true);
