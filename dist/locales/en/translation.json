@@ -353,5 +353,6 @@
   "You don't have permission to edit this plan.": "You don't have permission to edit this plan.",
   "This username is already taken": "This username is already taken",
   "Username already exists": "Username already exists",
-  "Username is already taken": "Username is already taken"
+  "Username is already taken": "Username is already taken",
+  "Default exercises cannot be deleted": "Default exercises cannot be deleted"
 }
