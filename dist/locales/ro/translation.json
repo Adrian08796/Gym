@@ -351,5 +351,8 @@
   "Network error while fetching exercise details": "Eroare de rețea la preluarea detaliilor exercițiului",
   "Failed to fetch exercise details": "Nu s-au putut prelua detaliile exercițiului",
   "Failed to fetch last workout for plan": "Nu s-a putut prelua ultimul antrenament pentru plan",
-  "You don't have permission to edit this plan.": "Nu aveți permisiunea de a edita acest plan."
+  "You don't have permission to edit this plan.": "Nu aveți permisiunea de a edita acest plan.",
+  "This username is already taken": "Acest nume de utilizator este deja folosit",
+  "Username already exists": "Numele de utilizator există deja",
+  "Username is already taken": "Numele de utilizator este deja folosit"
   }

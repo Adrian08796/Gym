@@ -350,5 +350,8 @@
   "Network error while fetching exercise details": "Network error while fetching exercise details",
   "Failed to fetch exercise details": "Failed to fetch exercise details",
   "Failed to fetch last workout for plan": "Failed to fetch last workout for plan",
-  "You don't have permission to edit this plan.": "You don't have permission to edit this plan."
+  "You don't have permission to edit this plan.": "You don't have permission to edit this plan.",
+  "This username is already taken": "This username is already taken",
+  "Username already exists": "Username already exists",
+  "Username is already taken": "Username is already taken"
 }

@@ -351,5 +351,8 @@
   "Network error while fetching exercise details": "Netzwerkfehler beim Abrufen der Übungsdetails",
   "Failed to fetch exercise details": "Abrufen der Übungsdetails fehlgeschlagen",
   "Failed to fetch last workout for plan": "Abrufen des letzten Workouts für den Plan fehlgeschlagen",
-  "You don't have permission to edit this plan.": "Sie haben keine Berechtigung, diesen Plan zu bearbeiten."
+  "You don't have permission to edit this plan.": "Sie haben keine Berechtigung, diesen Plan zu bearbeiten.",
+  "This username is already taken": "Dieser Benutzername ist bereits vergeben",
+  "Username already exists": "Benutzername existiert bereits",
+  "Username is already taken": "Benutzername ist bereits vergeben"
 }

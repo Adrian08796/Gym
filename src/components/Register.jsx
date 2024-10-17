@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiAlertCircle } from 'react-icons/fi';
 import '../components/Header.css';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +18,7 @@ function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isUsernameTaken, setIsUsernameTaken] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
   const { darkMode } = useTheme();
@@ -25,7 +26,7 @@ function Register() {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!username.trim()) newErrors.username = t("Username is required");
+    if (!username.trim()) newErrors.username = t(t("Username is required"));
     if (!email.trim()) newErrors.email = t("Email is required");
     else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = t("Email is invalid");
     if (!password) newErrors.password = t("Password is required");
@@ -49,7 +50,12 @@ function Register() {
         let errorMessage = 'Registration failed: ';
         if (err.response) {
           console.error('Error response:', err.response);
-          errorMessage += err.response.data?.message || err.response.statusText;
+          if (err.response.data.message.includes(t("Username already exists"))) {
+            setIsUsernameTaken(true);
+            errorMessage += t("Username is already taken");
+          } else {
+            errorMessage += err.response.data?.message || err.response.statusText;
+          }
         } else if (err.request) {
           console.error('Error request:', err.request);
           errorMessage += 'No response received from server';
@@ -74,14 +80,26 @@ function Register() {
                 type="text"
                 placeholder={t("Enter Username")}
                 id="username"
-                className="shadow appearance-none border rounded w-full py-2 px-3 pl-10 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
+                className={`shadow appearance-none border rounded w-full py-2 px-3 pl-10 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600 ${isUsernameTaken ? 'border-red-500' : ''}`}
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setIsUsernameTaken(false);
+                }}
                 required
               />
               <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              {isUsernameTaken && (
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <FiAlertCircle className="h-5 w-5 text-red-500" aria-hidden="true" />
+                </div>
+              )}
             </div>
-            {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+            {isUsernameTaken && (
+              <p className="mt-2 text-sm text-red-600" id="username-error">
+                {t("This username is already taken")}
+              </p>
+            )}
           </div>
           <div className="mt-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="email">{t("Email")}</label>
@@ -126,7 +144,7 @@ function Register() {
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="confirmPassword">{t("Confirm Password")}</label>
             <div className="relative">
               <input
-                type={t(showConfirmPassword ? "text" : "password")}
+                type={showConfirmPassword ? "text" : "password"}
                 placeholder={t("Confirm Password")}
                 id="confirmPassword"
                 className="shadow appearance-none border rounded w-full py-2 px-3 pl-10 pr-10 text-gray-700 dark:text-white leading-tight focus:outline-none focus:shadow-outline dark:bg-gray-700 dark:border-gray-600"
