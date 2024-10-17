@@ -75,7 +75,7 @@ function ExerciseModal({ exercise, onClose, onEdit, onDelete, onAddToPlan }) {
                   {exercise.category}
                 </span>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 mb-6 text-lg lg:text-xl">{exercise.description}</p>
+              <p className="text-gray-700 dark:text-gray-300 mb-6 text-lg lg:text-xl">{t(exercise.description)}</p>
               <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg lg:text-xl">
                 {t("Target")}: {Array.isArray(exercise.target) ? exercise.target.join(', ') : exercise.target}
               </p>

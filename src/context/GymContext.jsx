@@ -5,6 +5,7 @@ import axiosInstance from "../utils/axiosConfig";
 import { useAuth } from "./AuthContext";
 import { Toast } from 'primereact/toast';
 import { confirmDialog } from 'primereact/confirmdialog';
+import { useTranslation } from 'react-i18next';
 
 export const hostName = import.meta.env.VITE_BACKEND_HOST;
 
@@ -15,6 +16,7 @@ export function useGymContext() {
 }
 
 export function GymProvider({ children }) {
+  const { t } = useTranslation();
   const [workouts, setWorkouts] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [workoutPlans, setWorkoutPlans] = useState([]);
