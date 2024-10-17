@@ -470,7 +470,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
       showToast("success", "Success", response.data.message);
     } catch (error) {
       console.error("Error deleting exercise:", error);
-      showToast("error", "Error", t("Failed to delete exercise"));
+      showToast("warn", "Warning", t("Default exercises cannot be deleted"));
       throw error;
     }
   };

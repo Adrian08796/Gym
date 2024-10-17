@@ -354,5 +354,6 @@
   "You don't have permission to edit this plan.": "Sie haben keine Berechtigung, diesen Plan zu bearbeiten.",
   "This username is already taken": "Dieser Benutzername ist bereits vergeben",
   "Username already exists": "Benutzername existiert bereits",
-  "Username is already taken": "Benutzername ist bereits vergeben"
+  "Username is already taken": "Benutzername ist bereits vergeben",
+  "Default exercises cannot be deleted": "Standardübungen können nicht gelöscht werden"
 }

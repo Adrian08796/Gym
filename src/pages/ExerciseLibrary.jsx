@@ -87,7 +87,7 @@ function ExerciseLibrary() {
       triggerRefresh();
     } catch (error) {
       console.error('Error deleting exercise:', error);
-      showToast('error', 'Error', t("Failed to delete exercise"));
+      // showToast('error', 'Error', t("Failed to delete exercise"));
     }
   };
 

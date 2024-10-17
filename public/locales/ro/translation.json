@@ -354,5 +354,6 @@
   "You don't have permission to edit this plan.": "Nu aveți permisiunea de a edita acest plan.",
   "This username is already taken": "Acest nume de utilizator este deja folosit",
   "Username already exists": "Numele de utilizator există deja",
-  "Username is already taken": "Numele de utilizator este deja folosit"
+  "Username is already taken": "Numele de utilizator este deja folosit",
+  "Default exercises cannot be deleted": "Exercițiile implicite nu pot fi șterse"
   }
