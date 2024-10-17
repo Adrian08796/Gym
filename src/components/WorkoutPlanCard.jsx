@@ -156,7 +156,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
           <TypeIcon />
         </div>
         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">
-          {t("Scheduled")} {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : t("Not scheduled")}
+          {/*{t("Scheduled")}*/} {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : t("Not scheduled")}
         </p>
         {plan.importedFrom && (
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 flex items-center">
