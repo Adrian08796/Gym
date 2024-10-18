@@ -357,5 +357,6 @@
   "Username is already taken": "Numele de utilizator este deja folosit",
   "Default exercises cannot be deleted": "Exercițiile implicite nu pot fi șterse",
   "Update Workout Plan": "Actualizează planul de antrenament",
-  "Create Workout Plan": "Creează plan de antrenament"
+  "Create Workout Plan": "Creează plan de antrenament",
+  "Please select a workout plan before adding exercises": "Vă rugăm să selectați un plan de antrenament înainte de a adăuga exerciții"
   }

@@ -199,8 +199,12 @@ function ExerciseLibrary() {
   
     const exerciseId = result.draggableId;
   
-    if (destination.droppableId === 'workoutPlanDropZone' && selectedPlan) {
-      handleAddToPlan({ _id: exerciseId });
+    if (destination.droppableId === 'workoutPlanDropZone') {
+      if (selectedPlan) {
+        handleAddToPlan({ _id: exerciseId });
+      } else {
+        showToast('warn', 'Warning', t("Please select a workout plan before adding exercises"));
+      }
     } else if (source.droppableId === 'exerciseLibrary' && destination.droppableId === 'exerciseLibrary') {
       console.log('Reordering exercises:', source.index, destination.index);
       // Implement reordering logic here if needed

@@ -356,5 +356,6 @@
   "Username is already taken": "Username is already taken",
   "Default exercises cannot be deleted": "Default exercises cannot be deleted",
   "Update Workout Plan": "Update Workout Plan",
-  "Create Workout Plan": "Create Workout Plan"
+  "Create Workout Plan": "Create Workout Plan",
+  "Please select a workout plan before adding exercises": "Please select a workout plan before adding exercises"
 }

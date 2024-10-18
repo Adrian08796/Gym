@@ -357,5 +357,6 @@
   "Username is already taken": "Benutzername ist bereits vergeben",
   "Default exercises cannot be deleted": "Standardübungen können nicht gelöscht werden",
   "Update Workout Plan": "Trainingsplan aktualisieren", 
-  "Create Workout Plan": "Trainingsplan erstellen"
+  "Create Workout Plan": "Trainingsplan erstellen",
+  "Please select a workout plan before adding exercises": "Bitte wählen Sie einen Trainingsplan aus, bevor Sie Übungen hinzufügen"
 }

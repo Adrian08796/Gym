@@ -11,7 +11,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
   const { t } = useTranslation();
   const [planName, setPlanName] = useState('');
   const [selectedExercises, setSelectedExercises] = useState([]);
-  const [workoutType, setWorkoutType] = useState('');
+  const [workoutType, setWorkoutType] = useState('strength');
   const [scheduledDate, setScheduledDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isDefault, setIsDefault] = useState(false);
@@ -26,14 +26,14 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       setSelectedExercises(initialPlan.exercises.map(exercise => 
         typeof exercise === 'string' ? exercises.find(e => e._id === exercise) : exercise
       ));
-      setWorkoutType(initialPlan.type || '');
+      setWorkoutType(initialPlan.type || 'strength');
       setScheduledDate(initialPlan.scheduledDate ? new Date(initialPlan.scheduledDate).toISOString().split('T')[0] : '');
       setIsDefault(initialPlan.isDefault || false);
       setIsEditable(user.isAdmin || !initialPlan.isDefault);
     } else {
       setPlanName('');
       setSelectedExercises([]);
-      setWorkoutType('');
+      setWorkoutType('strength');
       setScheduledDate('');
       setIsDefault(false);
       setIsEditable(true);
@@ -147,10 +147,8 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
           required
           disabled={!isEditable}
         >
-          <option value="">{t("Select a type")}</option>
           <option value="strength">{t("Strength")}</option>
           <option value="cardio">{t("Cardio")}</option>
-          <option value="flexibility">{t("Flexibility")}</option>
         </select>
       </div>
       <div className="mb-4">

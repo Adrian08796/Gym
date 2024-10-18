@@ -1,6 +1,6 @@
 // src/pages/WorkoutPlans.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
 import { useTheme } from '../context/ThemeContext';
@@ -33,6 +33,7 @@ function WorkoutPlans() {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { user } = useAuth();
+  const formRef = useRef(null);
 
   useEffect(() => {
     const storedPlan = localStorage.getItem('currentPlan');
@@ -126,6 +127,10 @@ function WorkoutPlans() {
   const handleEdit = (plan) => {
     setEditingPlan(plan);
     setShowForm(true);
+    // Scroll to the form
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   const handleDelete = async (planId) => {
@@ -182,7 +187,7 @@ function WorkoutPlans() {
           </div>
         )}
 
-        <div className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
+        <div ref={formRef} className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
           <button
             onClick={() => {
               setShowForm(!showForm);
@@ -201,17 +206,6 @@ function WorkoutPlans() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border rounded py-1 px-2 text-gray-700 w-full sm:w-auto"
             />
-            {/* <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="border rounded py-1 px-2 text-gray-700 w-full sm:w-auto"
-            >
-              <option value="all">All Types</option>
-              <option value="strength">Strength</option>
-              <option value="cardio">Cardio</option>
-              <option value="flexibility">Flexibility</option>
-              <option value="other">Other</option>
-            </select> */}
           </div>
         </div>
         
