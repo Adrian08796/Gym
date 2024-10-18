@@ -1,65 +1,75 @@
 // src/pages/Home.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useGymContext } from '../context/GymContext';
 import { FiActivity } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
+import AppGuideModal from '../components/AppGuideModal';
 
 function Home() {
   const { t } = useTranslation();
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
-  const { user } = useAuth();
-  const { loadProgress } = useGymContext();
+  const [showGuide, setShowGuide] = useState(false);
+  const { user, updateUser } = useAuth();
+  const { loadProgress, showToast } = useGymContext();
+
+  const fetchWorkoutPlan = useCallback(async () => {
+    if (user) {
+      try {
+        const serverProgress = await loadProgress();
+        
+        if (serverProgress && serverProgress.plan) {
+          setOngoingWorkout(serverProgress.plan);
+          localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(serverProgress.plan));
+        } else {
+          const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
+          if (storedPlan) {
+            setOngoingWorkout(JSON.parse(storedPlan));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching workout plan:', error);
+        showToast('error', 'Error', t("Failed to load workout plan"));
+      }
+    }
+  }, [user, loadProgress, showToast, t]);
 
   useEffect(() => {
-    const fetchWorkoutPlan = async () => {
-      if (user) {
-        try {
-          // First, try to load progress from the server
-          const serverProgress = await loadProgress();
-          
-          if (serverProgress && serverProgress.plan) {
-            setOngoingWorkout(serverProgress.plan);
-            localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(serverProgress.plan));
-          } else {
-            // If no server data, check localStorage
-            const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
-            if (storedPlan) {
-              setOngoingWorkout(JSON.parse(storedPlan));
-            } else {
-              // If no localStorage data, make a separate API call
-              const response = await fetch(`/api/workoutPlan/${user.id}`);
-              if (response.ok) {
-                const data = await response.json();
-                setOngoingWorkout(data);
-                localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(data));
-              } else {
-                console.error('Failed to fetch workout plan from server');
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching workout plan:', error);
-        }
-      }
-    };
-
     fetchWorkoutPlan();
-  }, [user, loadProgress]);
+
+    if (user && user.hasSeenGuide === false) {
+      setShowGuide(true);
+    }
+  }, [user, fetchWorkoutPlan]);
+
+  const handleCloseGuide = async () => {
+    try {
+      const updatedUser = await updateUser({ hasSeenGuide: true });
+      if (updatedUser && updatedUser.hasSeenGuide) {
+        setShowGuide(false);
+        showToast('success', 'Success', t("Guide preferences updated"));
+      } else {
+        throw new Error('Failed to update hasSeenGuide status');
+      }
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      showToast('error', 'Error', t("Failed to update user preferences"));
+    }
+  };
 
   return (
     <div className="text-gray-900 dark:text-gray-100 p-6">
       <h1 data-aos="fade-up" className="text-3xl font-bold text-center my-8">
-        {t("Welcome")} <span className="text-emerald-500">{user ? user.username : "Guest"}</span> {t("to Your Gym App")}
+        {t("Welcome")} <span className="text-emerald-500">{user ? user.username : t("Guest")}</span> {t("to Level Up")}
       </h1>
       <p className="text-center mb-8">{t("This is where your fitness journey begins")}!</p>
 
-      {ongoingWorkout && (
+      {ongoingWorkout ? (
         <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-#111827 text-white mr-4">
+              <div className="p-3 rounded-full bg-gray-800 dark:bg-gray-700 text-white mr-4">
                 <FiActivity className="h-6 w-6" />
               </div>
               <div>
@@ -70,12 +80,28 @@ function Home() {
           </div>
           <Link 
             to="/tracker" 
-            className="mt-4 inline-block bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 font-bold py-2 px-4 rounded transition-colors duration-300"
+            className="mt-4 inline-block w-full text-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 font-bold py-2 px-4 rounded transition-colors duration-300"
           >
             {t("Resume Workout")}
           </Link>
         </div>
+      ) : (
+        <div className="flex flex-col items-center space-y-4">
+          <Link 
+            to="/plans" 
+            className="w-full sm:w-auto text-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 font-bold py-2 px-4 rounded transition-colors duration-300"
+          >
+            {t("Start a New Workout")}
+          </Link>
+          <Link 
+            to="/exercises" 
+            className="w-full sm:w-auto text-center bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 font-bold py-2 px-4 rounded transition-colors duration-300"
+          >
+            {t("Explore Exercises")}
+          </Link>
+        </div>
       )}
+      <AppGuideModal isOpen={showGuide} onClose={handleCloseGuide} />
     </div>
   );
 }

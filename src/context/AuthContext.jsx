@@ -106,58 +106,43 @@ export function AuthProvider({ children }) {
   const login = async (username, password) => {
     try {
       const response = await axiosInstance.post('/api/auth/login', { username, password });
-  
-      // Check if the response is JSON
-      const contentType = response.headers['content-type'];
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('Received non-JSON response:', response.data);
-        throw new Error('Server returned an invalid response');
-      }
-  
       if (response.data?.accessToken && response.data?.refreshToken && response.data?.user) {
         const userData = {
           ...response.data.user,
           experienceLevel: response.data.user.experienceLevel || 'beginner',
-          isAdmin: response.data.user.isAdmin || false
+          isAdmin: response.data.user.isAdmin || false,
+          hasSeenGuide: response.data.user.hasSeenGuide || false
         };
         localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
         setUser(userData);
-        
-        console.log('Logged in user:', userData);
-        
-        setTimeout(() => refreshToken(true), 1000);
-        
         return userData;
       } else {
-        console.error('Invalid response structure:', response.data);
         throw new Error('Invalid response from server');
       }
     } catch (error) {
       console.error('Login error:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        console.error('Error status:', error.response.status);
-        console.error('Error headers:', error.response.headers);
-      }
       throw error;
     }
   };
 
-  const updateUser = async (userData) => {
+  const updateUser = useCallback(async (userData) => {
     try {
-      const response = await axiosInstance.put('/api/auth/user', userData);
-      setUser(prevUser => {
-        const updatedUser = { ...prevUser, ...response.data };
-        console.log('Updated user data:', updatedUser);
-        return updatedUser;
-      });
-      return response.data;
+      const response = await axiosInstance.put('/api/users/update', userData);
+      if (response.data && response.data.user) {
+        setUser(prevUser => ({
+          ...prevUser,
+          ...response.data.user
+        }));
+        return response.data.user;
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (error) {
       console.error('Error updating user:', error);
       throw error;
     }
-  };
+  }, []);
 
   const changePassword = async (currentPassword, newPassword) => {
     try {
@@ -269,6 +254,7 @@ export function AuthProvider({ children }) {
     updateActivity,
     updateExperienceLevel,
     deleteAccount,
+    updateUser
   };
 
   return (
