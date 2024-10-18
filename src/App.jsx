@@ -17,6 +17,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import ImportWorkoutPlan from './components/ImportWorkoutPlan';
+import AppGuide from './components/AppGuide';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GymProvider } from './context/GymContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -98,6 +99,7 @@ function AppContent() {
             <Route path="/workout-summary/:id" element={<PrivateRoute><IndividualWorkoutSummary /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><UserProfile /></PrivateRoute>} />
             <Route path="/import/:shareId" element={<PrivateRoute><ImportWorkoutPlan /></PrivateRoute>} />
+            <Route path="/guide" element={<AppGuide />} />
           </Routes>
         </div>
       </main>

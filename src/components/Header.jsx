@@ -27,6 +27,7 @@ function Header() {
   }, [isMenuOpen]);
 
   const menuItems = [
+    { to: "/guide", text: t("App Guide") },
     { to: "/dashboard", text: t("Dashboard") },
     { to: "/tracker", text: t("Tracker") },
     { to: "/exercises", text: t("Exercises") },
