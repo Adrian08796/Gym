@@ -249,7 +249,6 @@ export function AuthProvider({ children }) {
     register,
     loading,
     refreshToken,
-    updateUser,
     changePassword,
     updateActivity,
     updateExperienceLevel,
