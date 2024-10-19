@@ -20,7 +20,10 @@ function WorkoutPlans() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [importLink, setImportLink] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  const [showDefaultPlans, setShowDefaultPlans] = useState(true);
+  const [showDefaultPlans, setShowDefaultPlans] = useState(() => {
+    const savedPreference = localStorage.getItem('showDefaultPlans');
+    return savedPreference !== null ? JSON.parse(savedPreference) : true;
+  });
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { user } = useAuth();
@@ -165,7 +168,9 @@ function WorkoutPlans() {
   };
 
   const toggleDefaultPlans = () => {
-    setShowDefaultPlans(!showDefaultPlans);
+    const newValue = !showDefaultPlans;
+    setShowDefaultPlans(newValue);
+    localStorage.setItem('showDefaultPlans', JSON.stringify(newValue));
   };
 
   const filteredPlans = workoutPlans.filter(plan => {
