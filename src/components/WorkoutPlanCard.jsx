@@ -1,6 +1,6 @@
 // src/components/WorkoutPlanCard.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useGymContext } from '../context/GymContext';
 import { useAuth } from '../context/AuthContext';
@@ -16,19 +16,26 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const [shareLink, setShareLink] = useState('');
   const [isSharing, setIsSharing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const { t } = useTranslation();
-
-  // Check for correct functionality of "Imported from" tag
-  // useEffect(() => {
-  //   console.log('WorkoutPlanCard rendered with plan:', plan);
-  //   console.log('importedFrom:', plan.importedFrom);
-  //   console.log('isDefault:', plan.isDefault);
-  //   console.log('Current user:', user);
-  // }, [plan, user]);
+  const cardRef = useRef(null);
 
   // Determine if the plan was imported
   const isImported = plan.importedFrom && plan.importedFrom.username && !plan.isDefault;
-  console.log('Is plan imported?', isImported);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (cardRef.current && !cardRef.current.contains(event.target)) {
+        setShareLink('');
+        setLinkCopied(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleAction = (action, e) => {
     if (e && e.stopPropagation) {
@@ -88,7 +95,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
             {t(plan.isDefault && !user.isAdmin ? "Yes, Remove" : "Yes, Delete")}
           </button>
           <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </div>
@@ -108,6 +115,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     try {
       const link = await shareWorkoutPlan(plan._id);
       setShareLink(link);
+      setLinkCopied(false);
     } catch (error) {
       console.error('Error sharing workout plan:', error);
       showToast('error', 'Error', `Failed to share workout plan: ${error.message}`);
@@ -120,6 +128,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(() => {
         showToast('success', 'Success', t("Link copied to clipboard"));
+        setLinkCopied(true);
       }, () => {
         showToast('error', 'Error', t("Failed to copy link"));
       });
@@ -133,6 +142,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
         const successful = document.execCommand('copy');
         if (successful) {
           showToast('success', 'Success', t("Link copied to clipboard"));
+          setLinkCopied(true);
         } else {
           showToast('error', 'Error', t("Failed to copy link"));
         }
@@ -159,6 +169,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
 
   return (
     <div 
+      ref={cardRef}
       className={`row group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-pointer h-full flex flex-col`}
       onClick={() => setIsExpanded(!isExpanded)}
     >
@@ -176,13 +187,6 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
             {t("Imported from")} {plan.importedFrom.username}
           </p>
         )}
-
-        {/* Check if the plan is imported and display the imported user */}
-        {/* {!isImported && plan.importedFrom && (
-          <p className="text-xs sm:text-sm text-red-500 mb-2">
-            Debug: Import info present but not displayed
-          </p>
-        )} */}
         <div className={`overflow-hidden transition-max-height duration-300 ease-in-out ${isExpanded ? 'max-h-96' : 'max-h-20'}`}>
           <h4 className="text-xs sm:text-sm font-semibold mb-1">{t("Exercises")}</h4>
           <ul className="list-disc list-inside text-xs sm:text-sm">
@@ -205,7 +209,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
             {t(isExpanded ? "Show less" : "Show more")}
           </button>
         </div>
-        {shareLink && (
+        {shareLink && !linkCopied && (
           <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
             <p className="text-xs sm:text-sm mb-1">{t("Share this link:")}</p>
             <div className="flex">
@@ -217,7 +221,10 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
                 onClick={(e) => e.target.select()}
               />
               <button
-                onClick={() => copyToClipboard(shareLink)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(shareLink);
+                }}
                 className="bg-emerald-500 text-white px-2 rounded-r text-xs sm:text-sm"
               >
                 {t("Copy")}
