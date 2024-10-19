@@ -1,6 +1,6 @@
 // src/pages/ExerciseLibrary.jsx
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
@@ -9,9 +9,10 @@ import ExerciseModal from '../components/ExerciseModal';
 import { useGymContext } from "../context/GymContext";
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { FiFilter, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FiFilter, FiChevronDown, FiChevronUp, FiRefreshCw } from 'react-icons/fi';
 import './ExerciseLibrary.css';
 import { useTranslation } from 'react-i18next';
+
 
 const categories = ['Strength', 'Cardio', 'Flexibility', 'Imported'];
 const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'];
@@ -37,6 +38,7 @@ function ExerciseLibrary() {
   const [isDragging, setIsDragging] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { user } = useAuth();
+  const filterRef = useRef(null);
 
   const { 
     exercises, 
@@ -49,6 +51,19 @@ function ExerciseLibrary() {
     showToast, 
   } = useGymContext();
   const { darkMode } = useTheme();
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setShowFilters(false);
+      }
+    }
+  
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   
   useEffect(() => {
     console.log('Fetching exercises for user:', user);
@@ -212,7 +227,7 @@ function ExerciseLibrary() {
   };
 
   const FilterDropdown = () => (
-    <div className="relative">
+    <div className="relative" ref={filterRef}>
       <button
         onClick={() => setShowFilters(!showFilters)}
         className="nav-btn flex items-center font-bold py-1 px-3 rounded"
@@ -256,11 +271,25 @@ function ExerciseLibrary() {
                 </button>
               ))}
             </div>
+            <button
+              onClick={resetFilters}
+              className="mt-4 nav-btn flex items-center justify-center w-full"
+            >
+              <FiRefreshCw className="mr-2" />
+              {t("Reset Filters")}
+            </button>
           </div>
         </div>
       )}
     </div>
   );
+
+  const resetFilters = () => {
+    setFilterText('');
+    setSelectedCategories([]);
+    setSelectedMuscleGroups([]);
+    setShowFilters(false);
+  };
 
   return (
     <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
