@@ -162,7 +162,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   };
 
   const TypeIcon = () => (
-    <div className="w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center">
+    <div className="absolute top-2 right-2 w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center">
       {typeIcons[plan.type]}
     </div>
   );
@@ -173,11 +173,9 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
       className={`row group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-pointer h-full flex flex-col`}
       onClick={() => setIsExpanded(!isExpanded)}
     >
+      <TypeIcon />
       <div className="p-4 flex-grow flex flex-col">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-lg sm:text-xl font-semibold">{plan.name}</h3>
-          <TypeIcon />
-        </div>
+        <h3 className="text-lg sm:text-xl font-semibold mb-2">{plan.name}</h3>
         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">
           {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : t("Not scheduled")}
         </p>
