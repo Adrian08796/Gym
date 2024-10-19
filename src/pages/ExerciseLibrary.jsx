@@ -14,7 +14,7 @@ import './ExerciseLibrary.css';
 import { useTranslation } from 'react-i18next';
 
 
-const categories = ['Strength', 'Cardio', 'Flexibility', 'Imported'];
+const categories = ['Strength', 'Cardio', 'Imported'];
 const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'];
 
 const categoryColors = {

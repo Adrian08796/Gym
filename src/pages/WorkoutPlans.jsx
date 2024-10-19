@@ -12,16 +12,6 @@ import { useTranslation } from 'react-i18next';
 
 function WorkoutPlans() {
   const { t } = useTranslation();
-  const { 
-    workoutPlans, 
-    deleteWorkoutPlan, 
-    addWorkoutPlan, 
-    updateWorkoutPlan, 
-    fetchWorkoutPlans,
-    importWorkoutPlan,
-    getExerciseById,
-    showToast,
-  } = useGymContext();
   const [showForm, setShowForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
   const [ongoingWorkout, setOngoingWorkout] = useState(null);
@@ -35,6 +25,17 @@ function WorkoutPlans() {
   const { darkMode } = useTheme();
   const { user } = useAuth();
   const formRef = useRef(null);
+
+  const { 
+    workoutPlans, 
+    deleteWorkoutPlan, 
+    addWorkoutPlan, 
+    updateWorkoutPlan, 
+    fetchWorkoutPlans,
+    importWorkoutPlan,
+    getExerciseById,
+    showToast,
+  } = useGymContext();
 
   useEffect(() => {
     const storedPlan = localStorage.getItem('currentPlan');
@@ -128,7 +129,6 @@ function WorkoutPlans() {
   const handleEdit = (plan) => {
     setEditingPlan(plan);
     setShowForm(true);
-    // Scroll to the form
     if (formRef.current) {
       formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -168,11 +168,15 @@ function WorkoutPlans() {
     setShowDefaultPlans(!showDefaultPlans);
   };
 
-  const filteredPlans = workoutPlans.filter(plan => 
-    plan.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (filterType === 'all' || plan.type === filterType) &&
-    (showDefaultPlans || !plan.isDefault)
-  );
+  const filteredPlans = workoutPlans.filter(plan => {
+    const matchesSearch = plan.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = 
+      filterType === 'all' || 
+      (filterType === 'imported' && plan.importedFrom && plan.importedFrom.user && plan.importedFrom.user !== user.id) ||
+      (filterType !== 'imported' && plan.type === filterType);
+    const isVisible = showDefaultPlans || !plan.isDefault;
+    return matchesSearch && matchesType && isVisible;
+  });
 
   return (
     <>
@@ -193,7 +197,7 @@ function WorkoutPlans() {
           </div>
         )}
 
-<div ref={formRef} className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
+        <div ref={formRef} className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
           <button
             onClick={() => {
               setShowForm(!showForm);
@@ -220,13 +224,14 @@ function WorkoutPlans() {
               <option value="all">{t("All Types")}</option>
               <option value="strength">{t("Strength")}</option>
               <option value="cardio">{t("Cardio")}</option>
+              <option value="imported">{t("Imported")}</option>
             </select>
             <button
-            onClick={toggleDefaultPlans}
-            className="nav-btn"
-          >
-            {showDefaultPlans ? t("Hide Default Plans") : t("Show Default Plans")}
-          </button>
+              onClick={toggleDefaultPlans}
+              className="nav-btn"
+            >
+              {showDefaultPlans ? t("Hide Default Plans") : t("Show Default Plans")}
+            </button>
           </div>
         </div>
         
@@ -256,7 +261,7 @@ function WorkoutPlans() {
           />
         )}
 
-<div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredPlans.map((plan) => (
             <WorkoutPlanCard
               key={plan._id}
