@@ -215,7 +215,7 @@ function ExerciseLibrary() {
     <div className="relative">
       <button
         onClick={() => setShowFilters(!showFilters)}
-        className="flex items-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
+        className="nav-btn flex items-center font-bold py-1 px-3 rounded"
       >
         <FiFilter className="mr-2 md:mr-0" />
         <span className="hidden md:inline">{t("Filters")}</span>
@@ -232,8 +232,8 @@ function ExerciseLibrary() {
                   onClick={() => toggleCategory(category)}
                   className={`px-3 py-1 rounded-full text-sm font-semibold ${
                     selectedCategories.includes(category)
-                      ? categoryColors[category]
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                      ? 'nav-btn'
+                      : 'nav-btn-outline'
                   }`}
                 >
                   {t(category)}
@@ -248,8 +248,8 @@ function ExerciseLibrary() {
                   onClick={() => toggleMuscleGroup(group)}
                   className={`px-3 py-1 rounded-full text-sm font-semibold ${
                     selectedMuscleGroups.includes(group)
-                      ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                      ? 'nav-btn'
+                      : 'nav-btn-outline'
                   }`}
                 >
                   {t(group)}
@@ -274,7 +274,7 @@ function ExerciseLibrary() {
               placeholder={t("Search exercises...")}
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
-              className="w-full px-4 py-2 lg:py-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
+              className="w-full px-2 py-1 lg:py-1 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
             />
           </div>
           <FilterDropdown />

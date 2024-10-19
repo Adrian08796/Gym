@@ -199,7 +199,7 @@ function WorkoutPlans() {
               setShowForm(!showForm);
               setEditingPlan(null);
             }}
-            className="mb-2 sm:mb-0 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
+            className="nav-btn"
           >
             {t(showForm ? 'Hide Form' : 'Create New Plan')}
           </button>
@@ -210,25 +210,23 @@ function WorkoutPlans() {
               placeholder={t("Search plans...")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="border rounded py-1 px-2 text-gray-700 w-full sm:w-auto"
+              className="w-full px-2 py-1 lg:py-1 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
             />
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="border rounded py-1 px-2 text-gray-700 w-full sm:w-auto"
+              className="nav-btn w-full sm:w-auto"
             >
               <option value="all">{t("All Types")}</option>
               <option value="strength">{t("Strength")}</option>
               <option value="cardio">{t("Cardio")}</option>
-              {/* <option value="flexibility">{t("Flexibility")}</option>
-              <option value="other">{t("Other")}</option> */}
             </select>
             <button
-              onClick={() => setShowDefaultPlans(!showDefaultPlans)}
-              className="mb-2 sm:mb-0 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
-            >
-              {showDefaultPlans ? t("Hide Default Plans") : t("Show Default Plans")}
-            </button>
+            onClick={toggleDefaultPlans}
+            className="nav-btn"
+          >
+            {showDefaultPlans ? t("Hide Default Plans") : t("Show Default Plans")}
+          </button>
           </div>
         </div>
         
@@ -238,12 +236,12 @@ function WorkoutPlans() {
             placeholder={t("Paste import link here...")}
             value={importLink}
             onChange={(e) => setImportLink(e.target.value)}
-            className="border rounded py-1 px-2 text-gray-700 w-auto sm:flex-grow"
+            className="w-full px-2 py-1 lg:py-1 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
             disabled={isImporting}
           />
           <button
             onClick={handleImportPlan}
-            className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-2 rounded text-xs sm:text-sm sm:px-3 w-full sm:w-auto ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`nav-btn ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={isImporting}
           >
             {t(isImporting ? "Importing..." : "Import Plan")}
