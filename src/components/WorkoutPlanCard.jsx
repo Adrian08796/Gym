@@ -1,6 +1,6 @@
 // src/components/WorkoutPlanCard.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useGymContext } from '../context/GymContext';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +17,18 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
   const [isSharing, setIsSharing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const { t } = useTranslation();
+
+  // Check for correct functionality of "Imported from" tag
+  // useEffect(() => {
+  //   console.log('WorkoutPlanCard rendered with plan:', plan);
+  //   console.log('importedFrom:', plan.importedFrom);
+  //   console.log('isDefault:', plan.isDefault);
+  //   console.log('Current user:', user);
+  // }, [plan, user]);
+
+  // Determine if the plan was imported
+  const isImported = plan.importedFrom && plan.importedFrom.username && !plan.isDefault;
+  console.log('Is plan imported?', isImported);
 
   const handleAction = (action, e) => {
     if (e && e.stopPropagation) {
@@ -158,12 +170,19 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">
           {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : t("Not scheduled")}
         </p>
-        {plan.importedFrom && (
+        {isImported && (
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 flex items-center">
             <FiUser className="mr-1" />
             {t("Imported from")} {plan.importedFrom.username}
           </p>
         )}
+
+        {/* Check if the plan is imported and display the imported user */}
+        {/* {!isImported && plan.importedFrom && (
+          <p className="text-xs sm:text-sm text-red-500 mb-2">
+            Debug: Import info present but not displayed
+          </p>
+        )} */}
         <div className={`overflow-hidden transition-max-height duration-300 ease-in-out ${isExpanded ? 'max-h-96' : 'max-h-20'}`}>
           <h4 className="text-xs sm:text-sm font-semibold mb-1">{t("Exercises")}</h4>
           <ul className="list-disc list-inside text-xs sm:text-sm">
@@ -174,7 +193,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
             ))}
           </ul>
         </div>
-        <div className="mt-4 mb-8"> {/* Increased bottom margin */}
+        <div className="mt-4 mb-8">
           <button 
             onClick={(e) => {
               e.stopPropagation();
