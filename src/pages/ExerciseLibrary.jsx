@@ -218,7 +218,7 @@ function ExerciseLibrary() {
         className="nav-btn flex items-center font-bold py-1 px-3 rounded"
       >
         <FiFilter className="mr-2 md:mr-0" />
-        <span className="hidden md:inline">{t("Filters")}</span>
+        <span className="px-1 hidden md:inline">{t("Filters")}</span>
         {showFilters ? <FiChevronUp className="ml-2" /> : <FiChevronDown className="ml-2" />}
       </button>
       {showFilters && (
