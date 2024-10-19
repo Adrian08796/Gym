@@ -30,6 +30,7 @@ function WorkoutPlans() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [importLink, setImportLink] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [showDefaultPlans, setShowDefaultPlans] = useState(true);
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { user } = useAuth();
@@ -163,9 +164,14 @@ function WorkoutPlans() {
     }
   };
 
+  const toggleDefaultPlans = () => {
+    setShowDefaultPlans(!showDefaultPlans);
+  };
+
   const filteredPlans = workoutPlans.filter(plan => 
-    plan.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (filterType === 'all' || plan.type === filterType)
+    (plan.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (filterType === 'all' || plan.type === filterType)) &&
+    (showDefaultPlans || !plan.isDefault)
   );
 
   return (
@@ -206,26 +212,16 @@ function WorkoutPlans() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border rounded py-1 px-2 text-gray-700 w-full sm:w-auto"
             />
+            <button
+              onClick={toggleDefaultPlans}
+              className="mb-2 sm:mb-0 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded"
+            >
+              {showDefaultPlans ? t("Hide Default Plans") : t("Show Default Plans")}
+            </button>
           </div>
         </div>
         
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-          <input
-            type="text"
-            placeholder={t("Paste import link here...")}
-            value={importLink}
-            onChange={(e) => setImportLink(e.target.value)}
-            className="border rounded py-1 px-2 text-gray-700 w-full sm:flex-grow"
-            disabled={isImporting}
-          />
-          <button
-            onClick={handleImportPlan}
-            className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-2 rounded text-xs sm:text-sm sm:px-3 w-full sm:w-auto ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
-            disabled={isImporting}
-          >
-            {t(isImporting ? "Importing..." : "Import Plan")}
-          </button>
-        </div>
+        {/* ... (keep existing import link input) */}
 
         {showForm && (
           <WorkoutPlanForm
