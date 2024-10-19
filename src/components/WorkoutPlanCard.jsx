@@ -156,7 +156,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
           <TypeIcon />
         </div>
         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">
-          {/*{t("Scheduled")}*/} {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : t("Not scheduled")}
+          {plan.scheduledDate ? new Date(plan.scheduledDate).toLocaleDateString() : t("Not scheduled")}
         </p>
         {plan.importedFrom && (
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 flex items-center">
@@ -174,16 +174,38 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
             ))}
           </ul>
         </div>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsExpanded(!isExpanded);
-          }}
-          className="text-blue-500 hover:text-blue-700 text-sm mt-2"
-        >
-          {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
-          {t(isExpanded ? "Show less" : "Show more")}
-        </button>
+        <div className="mt-4 mb-8"> {/* Increased bottom margin */}
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            className="text-blue-500 hover:text-blue-700 text-sm"
+          >
+            {isExpanded ? <FiChevronUp className="inline mr-1" /> : <FiChevronDown className="inline mr-1" />}
+            {t(isExpanded ? "Show less" : "Show more")}
+          </button>
+        </div>
+        {shareLink && (
+          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
+            <p className="text-xs sm:text-sm mb-1">{t("Share this link:")}</p>
+            <div className="flex">
+              <input
+                type="text"
+                value={shareLink}
+                readOnly
+                className="flex-grow p-1 text-xs sm:text-sm bg-white dark:bg-gray-600 border rounded-l"
+                onClick={(e) => e.target.select()}
+              />
+              <button
+                onClick={() => copyToClipboard(shareLink)}
+                className="bg-emerald-500 text-white px-2 rounded-r text-xs sm:text-sm"
+              >
+                {t("Copy")}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-2 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <div className="flex justify-end space-x-2">
@@ -206,26 +228,6 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
         </div>
       </div>
       {isDeleteConfirmOpen && <DeleteConfirmation />}
-      {shareLink && (
-        <div className="mt-4 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-          <p className="text-xs sm:text-sm mb-1">{t("Share this link:")}</p>
-          <div className="flex">
-            <input
-              type="text"
-              value={shareLink}
-              readOnly
-              className="flex-grow p-1 text-xs sm:text-sm bg-white dark:bg-gray-600 border rounded-l"
-              onClick={(e) => e.target.select()}
-            />
-            <button
-              onClick={() => copyToClipboard(shareLink)}
-              className="bg-emerald-500 text-white px-2 rounded-r text-xs sm:text-sm"
-            >
-              {t("Copy")}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
