@@ -1,6 +1,6 @@
 // src/components/Header.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -16,8 +16,10 @@ function Header() {
   const { user, logout } = useAuth();
   const { darkMode } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   const handleLogout = () => {
+    console.log('Logging out user');
     logout();
     setIsMenuOpen(false);
   };
@@ -25,6 +27,19 @@ function Header() {
   useEffect(() => {
     AOS.refresh();
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const menuItems = [
     { to: "/guide", text: t("App Guide") },
@@ -119,6 +134,7 @@ function Header() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <nav 
+            ref={menuRef}
             className="lg:hidden mt-4 bg-gray-700 rounded-lg shadow-lg absolute right-0 w-64 z-50"
             data-aos="fade-left"
             data-aos-duration="300"
