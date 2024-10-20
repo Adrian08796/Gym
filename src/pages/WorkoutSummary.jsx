@@ -76,7 +76,7 @@ function WorkoutSummary() {
       <div className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
         <button
           onClick={toggleSortOrder}
-          className={`mb-2 sm:mb-0 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded`}
+          className={`nav-btn mb-2 sm:mb-0 font-bold py-1 px-3 rounded`}
         >
           {t(sortOrder === 'desc' ? 'Oldest First' : 'Newest First')}
         </button>
@@ -85,7 +85,7 @@ function WorkoutSummary() {
           placeholder={t("Filter by plan name")}
           value={filterPlan}
           onChange={(e) => setFilterPlan(e.target.value)}
-          className={`px-2 py-1 border rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+          className={`rounded px-2 py-1 lg:py-1 border border-gray-300 dark:border-gray-700 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg`}
         />
       </div>
       {filteredWorkouts.map((workout) => (
@@ -156,7 +156,7 @@ function WorkoutSummary() {
       ))}
       <button
         onClick={() => navigate('/')}
-        className={`bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded`}
+        className={`nav-btn font-bold py-1 px-3 rounded`}
       >
         {t("Back to Home")}
       </button>

@@ -213,50 +213,54 @@ function WorkoutPlans() {
             {t(showForm ? 'Hide Form' : 'Create New Plan')}
           </button>
           
-          <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-            <input
-              type="text"
-              placeholder={t("Search plans...")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-2 py-1 lg:py-1 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
-            />
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="nav-btn w-full sm:w-auto"
-            >
-              <option value="all">{t("All Types")}</option>
-              <option value="strength">{t("Strength")}</option>
-              <option value="cardio">{t("Cardio")}</option>
-              <option value="imported">{t("Imported")}</option>
-            </select>
-            <button
-              onClick={toggleDefaultPlans}
-              className="nav-btn"
-            >
-              {showDefaultPlans ? t("Hide Default Plans") : t("Show Default Plans")}
-            </button>
-          </div>
+          {!showForm && (
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+              <input
+                type="text"
+                placeholder={t("Search plans...")}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full mt-2 px-2 py-1 lg:py-1 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white lg:text-lg sm:text-xs"
+              />
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="nav-btn w-full sm:w-auto"
+              >
+                <option value="all">{t("All Types")}</option>
+                <option value="strength">{t("Strength")}</option>
+                <option value="cardio">{t("Cardio")}</option>
+                <option value="imported">{t("Imported")}</option>
+              </select>
+              <button
+                onClick={toggleDefaultPlans}
+                className="nav-btn"
+              >
+                {showDefaultPlans ? t("Hide Default Plans") : t("Show Default Plans")}
+              </button>
+            </div>
+          )}
         </div>
         
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-          <input
-            type="text"
-            placeholder={t("Paste import link here...")}
-            value={importLink}
-            onChange={(e) => setImportLink(e.target.value)}
-            className="w-full px-2 py-1 lg:py-1 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
-            disabled={isImporting}
-          />
-          <button
-            onClick={handleImportPlan}
-            className={`nav-btn ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
-            disabled={isImporting}
-          >
-            {t(isImporting ? "Importing..." : "Import Plan")}
-          </button>
-        </div>
+        {!showForm && (
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+            <input
+              type="text"
+              placeholder={t("Paste import link here...")}
+              value={importLink}
+              onChange={(e) => setImportLink(e.target.value)}
+              className="w-full px-2 py-1 lg:py-1 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white lg:text-lg sm:text-xs"
+              disabled={isImporting}
+            />
+            <button
+              onClick={handleImportPlan}
+              className={`nav-btn ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isImporting}
+            >
+              {t(isImporting ? "Importing..." : "Import Plan")}
+            </button>
+          </div>
+        )}
 
         {showForm && (
           <WorkoutPlanForm

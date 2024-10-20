@@ -61,7 +61,7 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
       <div className="bg-white dark:bg-gray-700 p-4 rounded-lg text-center">
         <p className="mb-4 text-sm">{t("Are you sure you want to delete this exercise?")}</p>
         <div className="flex justify-center space-x-2">
-          <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>{t("Yes")}, {t("Delete")}</button>
+          <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>{t("Yes")}</button>
           <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>{t("Cancel")}</button>
         </div>
       </div>

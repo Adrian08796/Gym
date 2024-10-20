@@ -271,7 +271,7 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
         <button
           type="button"
           onClick={handleCancel}
-          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          className="nav-btn rounded "
         >
           {t("Cancel")}
         </button>

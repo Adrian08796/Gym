@@ -90,7 +90,10 @@ function ExerciseLibrary() {
   };
 
   const handleEdit = (exercise) => {
-    setEditingExercise(exercise);
+    setEditingExercise({
+      ...exercise,
+      target: Array.isArray(exercise.target) ? exercise.target : [exercise.target]
+    });
     setSelectedExercise(null);
   };
 

@@ -89,13 +89,13 @@ function Home() {
         <div className="flex flex-col items-center space-y-4">
           <Link 
             to="/plans" 
-            className="w-full sm:w-auto text-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 font-bold py-2 px-4 rounded transition-colors duration-300"
+            className="nav-btn w-full sm:w-auto text-center  font-bold py-2 px-4 rounded"
           >
             {t("Start a New Workout")}
           </Link>
           <Link 
             to="/exercises" 
-            className="w-full sm:w-auto text-center bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 font-bold py-2 px-4 rounded transition-colors duration-300"
+            className="nav-btn w-full sm:w-auto text-center font-bold py-2 px-4 rounded"
           >
             {t("Explore Exercises")}
           </Link>

@@ -9,8 +9,8 @@ const ThemeToggle = () => {
       onClick={toggleDarkMode}
       className="test nav-btn-cycle relative rounded-full p-1 transition-all duration-300 ease-in-out focus:outline-none overflow-hidden"
       style={{
-        width: '5rem',
-        height: '2.5rem',
+        width: 'var(--toggle-width)',
+        height: 'var(--toggle-height)',
         backgroundColor: 'transparent',
         border: '2px solid #45FFCA',
         boxShadow: darkMode ? '0 0 10px #45FFCA' : 'none'
@@ -51,6 +51,26 @@ const ThemeToggle = () => {
           </svg>
         </span>
       </div>
+      <style jsx>{`
+        @media (max-width: 640px) {
+          :root {
+            --toggle-width: 3.5rem;
+            --toggle-height: 1.75rem;
+          }
+          .nav-btn-cycle {
+            font-size: 0.75rem;
+          }
+        }
+        @media (min-width: 641px) {
+          :root {
+            --toggle-width: 5rem;
+            --toggle-height: 2.5rem;
+          }
+          .nav-btn-cycle {
+            font-size: 1rem;
+          }
+        }
+      `}</style>
     </button>
   );
 };

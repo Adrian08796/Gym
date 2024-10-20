@@ -14,6 +14,7 @@ const categories = ['Strength', 'Cardio', 'Flexibility'];
 const experienceLevels = ['beginner', 'intermediate', 'advanced'];
 
 function AddExerciseForm({ onSave, initialExercise, onCancel }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState([]);
@@ -25,12 +26,10 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
   const [actingAsAdmin, setActingAsAdmin] = useState(false);
   const { addExercise, updateExercise, addDefaultExercise, showToast } = useGymContext();
   const { user } = useAuth();
-  const { t } = useTranslation();
-  
 
   useEffect(() => {
     console.log('DEBUGG:::: User:', user);
-  } , [user]);
+  }, [user]);
 
   const [recommendations, setRecommendations] = useState({
     beginner: { weight: 0, reps: 10, sets: 3, duration: 30, distance: 1, intensity: 5, incline: 0 },
@@ -50,7 +49,6 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       setIsDefault(initialExercise.isDefault || false);
       setActingAsAdmin(user.isAdmin && initialExercise.isDefault);
 
-      // Handle recommendations based on user role and exercise data
       const updatedRecommendations = { ...recommendations };
       experienceLevels.forEach(level => {
         if (initialExercise.recommendations && initialExercise.recommendations[level]) {
@@ -131,7 +129,6 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             ...exerciseData
           });
         } else {
-          // If not acting as admin, only update the user's experience level
           savedExercise = await updateExercise(initialExercise._id, {
             ...initialExercise,
             recommendations: {
@@ -140,14 +137,12 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             }
           });
         }
-        // showToast('success', 'Success', 'Exercise updated successfully');
       } else {
         if (isDefault && user.isAdmin) {
           savedExercise = await addDefaultExercise(exerciseData);
         } else {
           savedExercise = await addExercise(exerciseData);
         }
-        // showToast('success', 'Success', 'Exercise added successfully');
       }
       console.log('Saved exercise:', savedExercise);
       resetForm();
@@ -206,10 +201,9 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       {isExpanded && (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
           <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
-          {t(initialExercise ? "Edit Exercise" : "Add New Exercise")}
+            {t(initialExercise ? "Edit Exercise" : "Add New Exercise")}
           </h2>
 
-          {/* Name input */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="name">
               {t("Exercise Name")}
@@ -225,7 +219,6 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             />
           </div>
 
-          {/* Description input */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="description">
               {t("Description")}
@@ -240,7 +233,6 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             />
           </div>
 
-          {/* Target muscle groups */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
               {t("Target Muscle Groups")}
@@ -264,7 +256,6 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             </div>
           </div>
 
-          {/* Category selection */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="category">
               {t("Category")}
@@ -283,7 +274,6 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             </select>
           </div>
 
-          {/* Image URL input */}
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" htmlFor="imageUrl">
               {t("Image URL")}
@@ -298,55 +288,54 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
             />
           </div>
 
-          {/* Recommendations for exercises */}
-      {(category === 'Strength' || category === 'Cardio') && (
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">{t("Recommendations")}</h3>
-          {(actingAsAdmin ? experienceLevels : [user.experienceLevel]).map(level => (
-            <div key={level} className="mb-4">
-              <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {console.log("LEVEL:::", level)}
-                {typeof level === "string" && level.charAt(0).toUpperCase() + level.slice(1)}
-              </h4>
-              <div className="grid grid-cols-3 gap-2">
-                {category === 'Strength' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-weight`}>
-                        {t("Weight (kg)")}
-                      </label>
-                      <input
-                        id={`${level}-weight`}
-                        type="number"
-                        value={recommendations[level]?.weight || 0}
-                        onChange={(e) => handleRecommendationChange(level, 'weight', e.target.value)}
-                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-reps`}>
-                        {t("Reps")}
-                      </label>
-                      <input
-                        id={`${level}-reps`}
-                        type="number"
-                        value={recommendations[level]?.reps || 0}
-                        onChange={(e) => handleRecommendationChange(level, 'reps', e.target.value)}
-                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-sets`}>
-                        {t("Sets")}
-                      </label>
-                      <input
-                        id={`${level}-sets`}
-                        type="number"
-                        value={recommendations[level]?.sets || 0}
-                        onChange={(e) => handleRecommendationChange(level, 'sets', e.target.value)}
-                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                      />
-                    </div>
+          {(category === 'Strength' || category === 'Cardio') && (
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">{t("Recommendations")}</h3>
+              {(actingAsAdmin ? experienceLevels : [user.experienceLevel]).map(level => (
+                <div key={level} className="mb-4">
+                  <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {console.log("LEVEL:::", level)}
+                    {typeof level === "string" && level.charAt(0).toUpperCase() + level.slice(1)}
+                  </h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    {category === 'Strength' && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-weight`}>
+                            {t("Weight (kg)")}
+                          </label>
+                          <input
+                            id={`${level}-weight`}
+                            type="number"
+                            value={recommendations[level]?.weight || 0}
+                            onChange={(e) => handleRecommendationChange(level, 'weight', e.target.value)}
+                            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-reps`}>
+                            {t("Reps")}
+                          </label>
+                          <input
+                            id={`${level}-reps`}
+                            type="number"
+                            value={recommendations[level]?.reps || 0}
+                            onChange={(e) => handleRecommendationChange(level, 'reps', e.target.value)}
+                            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1" htmlFor={`${level}-sets`}>
+                            {t("Sets")}
+                          </label>
+                          <input
+                            id={`${level}-sets`}
+                            type="number"
+                            value={recommendations[level]?.sets || 0}
+                            onChange={(e) => handleRecommendationChange(level, 'sets', e.target.value)}
+                            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                          />
+                        </div>
                   </>
                 )}
                 {category === 'Cardio' && (

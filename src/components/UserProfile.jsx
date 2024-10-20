@@ -155,10 +155,10 @@ function UserProfile() {
                 </select>
               </div>
               <div className="flex space-x-2">
-                <button type="submit" className="flex items-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded">
+                <button type="submit" className="nav-btn flex items-center font-bold py-1 px-3 rounded">
                   <FiSave className="mr-2" /> {t("Save")}
                 </button>
-                <button type="button" onClick={() => setIsEditing(false)} className="flex items-center bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                <button type="button" onClick={() => setIsEditing(false)} className="nav-btn flex items-center px-4 py-2 rounded">
                   <FiX className="mr-2" /> {t("Cancel")}
                 </button>
               </div>
@@ -168,7 +168,7 @@ function UserProfile() {
               <p><strong>{t("Username")}:</strong> {user?.username}</p>
               <p><strong>{t("Email")}:</strong> {user?.email}</p>
               <p><strong>{t("Experience Level")}:</strong> {t(experienceLevel.charAt(0).toUpperCase() + experienceLevel.slice(1))}</p>
-              <button onClick={() => setIsEditing(true)} className="flex items-center mt-4 bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded">
+              <button onClick={() => setIsEditing(true)} className="nav-btn flex items-center mt-4 font-bold py-1 px-3 rounded">
                 <FiEdit2 className="mr-2" /> {t("Edit Profile")}
               </button>
             </div>
@@ -213,16 +213,16 @@ function UserProfile() {
                 />
               </div>
               <div className="flex space-x-2">
-                <button type="submit" className="flex items-center bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                <button type="submit" className="nav-btn flex items-center  px-4 py-2 rounded">
                   <FiSave className="mr-2" /> {t("Change Password")}
                 </button>
-                <button type="button" onClick={() => setIsChangingPassword(false)} className="flex items-center bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                <button type="button" onClick={() => setIsChangingPassword(false)} className="nav-btn flex items-center px-4 py-2 rounded">
                   <FiX className="mr-2" /> {t("Cancel")}
                 </button>
               </div>
             </form>
           ) : (
-            <button onClick={() => setIsChangingPassword(true)} className="flex items-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 hover:shadow-md font-bold py-1 px-3 rounded">
+            <button onClick={() => setIsChangingPassword(true)} className="nav-btn flex items-center font-bold py-1 px-3 rounded">
               <FiLock className="mr-2" /> {t("Change Password")}
             </button>
           )}
