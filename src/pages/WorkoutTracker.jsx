@@ -1089,14 +1089,14 @@ function WorkoutTracker() {
                 <div className="mb-4 flex justify-between items-center">
                   <button
                     onClick={handleSetComplete}
-                    className="btn btn-secondary">
+                    className="nav-btn">
                     {t(currentExercise.category === "Cardio"
                       ? "Complete Exercise"
                       : "Complete Set")}
                   </button>
                   <button
                     onClick={toggleExerciseOptions}
-                    className="btn btn-secondary flex items-center">
+                    className="nav-btn flex items-center">
                     <FiSettings className="mr-2" /> {t("Options")}
                     {isExerciseOptionsOpen ? (
                       <FiChevronUp className="ml-2" />
