@@ -149,3 +149,16 @@
 .dark .exercise-library-container::-webkit-scrollbar-thumb:hover {
   background: #718096;
 }
+
+@media (max-width: 640px) {
+  .exercise-library-container {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .exercise-library-inner {
+    padding-left: 1rem;
+  }
+}

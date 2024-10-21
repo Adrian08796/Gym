@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { useNavigate } from 'react-router-dom';
 import ExerciseItem from '../components/ExerciseItem';
 import AddExerciseForm from '../components/AddExerciseForm';
 import WorkoutPlanSelector from '../components/WorkoutPlanSelector';
@@ -9,20 +10,9 @@ import ExerciseModal from '../components/ExerciseModal';
 import { useGymContext } from "../context/GymContext";
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { FiFilter, FiChevronDown, FiChevronUp, FiRefreshCw } from 'react-icons/fi';
+import { FiFilter, FiChevronDown, FiChevronUp, FiRefreshCw, FiPlay } from 'react-icons/fi';
 import './ExerciseLibrary.css';
 import { useTranslation } from 'react-i18next';
-
-
-const categories = ['Strength', 'Cardio', 'Imported'];
-const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Full Body', 'Abs'];
-
-const categoryColors = {
-  Strength: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  Cardio: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  Flexibility: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  Imported: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-};
 
 function ExerciseLibrary() {
   const { t } = useTranslation();
@@ -39,6 +29,7 @@ function ExerciseLibrary() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { user } = useAuth();
   const filterRef = useRef(null);
+  const navigate = useNavigate();
 
   const { 
     exercises, 
@@ -101,11 +92,9 @@ function ExerciseLibrary() {
     try {
       await deleteExercise(exercise._id);
       setSelectedExercise(null);
-      // showToast('success', 'Success', 'Exercise deleted successfully');
       triggerRefresh();
     } catch (error) {
       console.error('Error deleting exercise:', error);
-      // showToast('error', 'Error', t("Failed to delete exercise"));
     }
   };
 
@@ -118,7 +107,6 @@ function ExerciseLibrary() {
     try {
       const { success, updatedPlan, error } = await addExerciseToPlan(selectedPlan._id, exercise._id);
       if (success) {
-        // showToast('success', 'Success', 'Exercise added to plan');
         setSelectedPlan(updatedPlan);
       } else if (error === 'Duplicate exercise') {
         showToast('warn', 'Warning', t("This exercise is already in the plan"));
@@ -134,7 +122,6 @@ function ExerciseLibrary() {
   const handleRemoveFromPlan = async (planId, exerciseId) => {
     try {
       await removeExerciseFromPlan(planId, exerciseId);
-      // showToast('success', 'Success', 'Exercise removed from plan');
       // Refresh the selected plan to update the exercise list
       handleSelectPlan(selectedPlan);
     } catch (error) {
@@ -294,19 +281,32 @@ function ExerciseLibrary() {
     setShowFilters(false);
   };
 
+  const handleStartWorkout = () => {
+    if (selectedPlan && selectedPlan.exercises.length > 0) {
+      // Save the selected plan to localStorage or your state management system
+      localStorage.setItem(`currentPlan_${user.id}`, JSON.stringify(selectedPlan));
+      // Navigate to the workout tracker page
+      navigate('/tracker');
+    } else {
+      showToast('warn', 'Warning', t("Please select a plan with exercises before starting a workout"));
+    }
+  };
+
   return (
     <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8`}>
-        <h1 data-aos="fade-up" className="header text-center text-3xl text-gray-800 dark:text-white font-bold mb-6 lg:mb-8">{t("Exercise")} <span className='headerSpan'>{t("Library")}</span></h1>
+      <div className={`bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 lg:p-8 min-h-screen`}>
+        <h1 data-aos="fade-up" className="header text-center text-2xl sm:text-3xl text-gray-800 dark:text-white font-bold mb-4 lg:mb-8">
+          {t("Exercise")} <span className='headerSpan'>{t("Library")}</span>
+        </h1>
 
-        <div className="mb-6 lg:mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex-grow">
+        <div className="mb-4 lg:mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="w-full sm:w-auto flex-grow">
             <input
               type="text"
               placeholder={t("Search exercises...")}
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
-              className="w-full px-2 py-1 lg:py-1 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-lg"
+              className="w-full px-2 py-1 lg:py-1 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-base sm:text-lg"
             />
           </div>
           <FilterDropdown />
@@ -324,14 +324,27 @@ function ExerciseLibrary() {
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className={`workout-plan-drop-zone ${isDragging ? 'active' : ''}`}
+              className={`workout-plan-drop-zone ${isDragging ? 'active' : ''} p-4 rounded-lg bg-white dark:bg-gray-800 shadow-md`}
             >
-              <WorkoutPlanSelector
-                onSelect={handleSelectPlan}
-                selectedPlan={selectedPlan}
-                isDragging={isDragging}
-                onRemoveExercise={handleRemoveFromPlan}
-              />
+              <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                <div className="w-full sm:w-auto">
+                  <WorkoutPlanSelector
+                    onSelect={handleSelectPlan}
+                    selectedPlan={selectedPlan}
+                    isDragging={isDragging}
+                    onRemoveExercise={handleRemoveFromPlan}
+                  />
+                </div>
+                {selectedPlan && selectedPlan.exercises.length > 0 && (
+                  <button
+                    onClick={handleStartWorkout}
+                    className="nav-btn flex items-center w-full sm:w-auto justify-center"
+                  >
+                    <FiPlay className="mr-2" />
+                    {t("Start Workout")}
+                  </button>
+                )}
+              </div>
               {provided.placeholder}
             </div>
           )}
@@ -342,9 +355,9 @@ function ExerciseLibrary() {
             <div
               {...provided.droppableProps}
               ref={provided.innerRef}
-              className="exercise-library-container overflow-x-auto pb-4"
+              className="exercise-library-container overflow-x-auto pb-4 mt-8"
             >
-              <div className="exercise-library-inner flex space-x-4 snap-x snap-mandatory w-full pt-4 pl-4">
+              <div className="exercise-library-inner flex flex-nowrap space-x-4 snap-x snap-mandatory w-full pt-4">
                 {filteredExercises.map((exercise, index) => (
                   <Draggable key={exercise._id} draggableId={exercise._id} index={index}>
                     {(provided, snapshot) => (
@@ -352,7 +365,7 @@ function ExerciseLibrary() {
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        className="snap-center flex-shrink-0 w-[calc(100%-2rem)] sm:w-80"
+                        className="snap-center flex-shrink-0 w-[calc(100%-2rem)] sm:w-80 mb-4"
                       >
                         <ExerciseItem 
                           exercise={exercise}
@@ -384,23 +397,13 @@ function ExerciseLibrary() {
           />
         )}
 
-        {selectedExercise && (
-          <ExerciseModal
-            exercise={selectedExercise}
-            onClose={() => setSelectedExercise(null)}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onAddToPlan={handleAddToPlan}
-          />
-        )}
-
         {showWorkoutPlanSelector && (
           <WorkoutPlanSelector
-          onSelect={handleSelectPlan}
-          selectedPlan={selectedPlan}
-          isDragging={isDragging}
-          onRemoveExercise={handleRemoveFromPlan}
-        />
+            onSelect={handleSelectPlan}
+            selectedPlan={selectedPlan}
+            isDragging={isDragging}
+            onRemoveExercise={handleRemoveFromPlan}
+          />
         )}
       </div>
     </DragDropContext>
