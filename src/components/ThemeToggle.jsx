@@ -1,3 +1,5 @@
+// src/components/ThemeToggle.jsx
+
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -17,7 +19,7 @@ const ThemeToggle = () => {
       }}
     >
       <div 
-        className={`absolute top-0 left-0 w-1/2 h-full rounded-full transition-transform duration-300 ease-in-out flex items-center justify-center`}
+        className="absolute top-0 left-0 w-1/2 h-full rounded-full transition-transform duration-300 ease-in-out flex items-center justify-center"
         style={{
           backgroundColor: '#45FFCA',
           transform: darkMode ? 'translateX(100%)' : 'translateX(0)',
