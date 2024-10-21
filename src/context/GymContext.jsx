@@ -790,6 +790,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
   }, [user, showToast, logout, hostName, axiosInstance]);
 
   const loadProgress = useCallback(async () => {
+    console.log('LOAD PROGRESS EXECUTED::::');
     if (!user) return null;
   
     try {
@@ -797,6 +798,7 @@ const getExerciseById = useCallback(async (exerciseOrId) => {
         `${API_URL}/workouts/progress`,
         getAuthConfig()
       );
+      console.log("😤",response);
       if (response.data) {
         let progressData = response.data;
         

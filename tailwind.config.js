@@ -16,6 +16,7 @@ export default {
         'background': {
           light: '#f8fafc',
           dark: '#1a202c',
+          buttonBackground: '#202d39',
         },
         'btn-close': '#1F2937',
         'btn-hover': '#4a5568',

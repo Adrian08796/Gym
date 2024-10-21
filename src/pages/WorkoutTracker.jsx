@@ -180,6 +180,7 @@ function WorkoutTracker() {
 
   useEffect(() => {
     const loadWorkout = async () => {
+      console.log("LOADING WORKOUT::::");
       setIsLoading(true);
       try {
         const progress = await loadProgress();
