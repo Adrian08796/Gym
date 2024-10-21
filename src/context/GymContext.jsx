@@ -966,13 +966,13 @@ export function GymProvider({ children }) {
           exercise._id === exerciseId 
             ? { 
                 ...exercise, 
-                userRecommendation: response.data.userRecommendation
+                userRecommendation: response.data.userRecommendation,
+                target: recommendation.target // Update the target as well
               }
             : exercise
         )
       );
   
-      // showToast('success', 'Success', 'Exercise recommendation updated');
       return response.data;
     } catch (error) {
       console.error('Error updating user recommendation:', error);

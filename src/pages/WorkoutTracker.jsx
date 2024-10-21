@@ -547,7 +547,8 @@ function WorkoutTracker() {
         await updateUserRecommendation(currentExercise._id, {
           weight: Number(weight),
           reps: Number(reps),
-          sets: requiredSets[currentExercise._id] || 1
+          sets: requiredSets[currentExercise._id] || 1,
+          target: currentExercise.target // Include the target muscle group
         });
       } catch (error) {
         console.error('Failed to update user-specific recommendation:', error);
@@ -569,12 +570,12 @@ function WorkoutTracker() {
   
       // Update the user-specific recommendation for cardio exercises
       try {
-        console.log("🔥🔥🔥", "SAVING RECOMMENDATIONS::::");
         await updateUserRecommendation(currentExercise._id, {
           duration: Number(duration),
           distance: distance ? Number(distance) : undefined,
           intensity: intensity ? Number(intensity) : undefined,
-          incline: incline ? Number(incline) : undefined
+          incline: incline ? Number(incline) : undefined,
+          target: currentExercise.target
         });
       } catch (error) {
         console.error('Failed to update user-specific recommendation for cardio:', error);
