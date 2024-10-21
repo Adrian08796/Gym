@@ -1,6 +1,6 @@
 // src/components/Header.jsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -17,12 +17,20 @@ function Header() {
   const { darkMode } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const menuButtonRef = useRef(null);
 
   const handleLogout = () => {
-    console.log('Logging out user');
     logout();
     setIsMenuOpen(false);
   };
+
+  const openMenu = useCallback(() => {
+    setIsMenuOpen(true);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setIsMenuOpen(false);
+  }, []);
 
   useEffect(() => {
     AOS.refresh();
@@ -30,8 +38,9 @@ function Header() {
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsMenuOpen(false);
+      if (menuRef.current && !menuRef.current.contains(event.target) &&
+          menuButtonRef.current && !menuButtonRef.current.contains(event.target)) {
+        closeMenu();
       }
     }
 
@@ -39,7 +48,7 @@ function Header() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [closeMenu]);
 
   const menuItems = [
     { to: "/guide", text: t("App Guide") },
@@ -56,7 +65,7 @@ function Header() {
       to={to} 
       className="nav-btn block w-full text-left hover:bg-gray-700 transition duration-300"
       onClick={() => {
-        setIsMenuOpen(false);
+        closeMenu();
         onClick && onClick();
       }}
     >
@@ -68,11 +77,22 @@ function Header() {
     <Link 
       to={to} 
       className="nav-btn"
-      onClick={() => setIsMenuOpen(false)}
+      onClick={() => {
+        closeMenu();
+      }}
     >
       {text}
     </Link>
   );
+
+  const handleMenuButtonClick = (e) => {
+    e.stopPropagation();
+    if (isMenuOpen) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  };
 
   return (
     <header className={`bg-gray-800 text-white ${darkMode ? 'dark' : ''}`}>
@@ -115,8 +135,9 @@ function Header() {
             <ThemeToggle />
             <LanguageSwitcher />
             <button 
+              ref={menuButtonRef}
               className="text-white focus:outline-none"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={handleMenuButtonClick}
             >
               {isMenuOpen ? (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
