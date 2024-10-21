@@ -84,6 +84,7 @@ function WorkoutTracker() {
   const API_URL = import.meta.env.VITE_BACKEND_HOST;
 
   const loadExerciseRecommendations = useCallback(async (exerciseId) => {
+    console.log("🔥🔥🔥");
     const exercise = await getExerciseById(exerciseId);
     if (exercise && exercise.recommendations && exercise.recommendations[userExperienceLevel]) {
       const rec = exercise.recommendations[userExperienceLevel];
@@ -546,7 +547,7 @@ function WorkoutTracker() {
         await updateUserRecommendation(currentExercise._id, {
           weight: Number(weight),
           reps: Number(reps),
-          sets: requiredSets[currentExercise._id] || 3
+          sets: requiredSets[currentExercise._id] || 1
         });
       } catch (error) {
         console.error('Failed to update user-specific recommendation:', error);
@@ -568,6 +569,7 @@ function WorkoutTracker() {
   
       // Update the user-specific recommendation for cardio exercises
       try {
+        console.log("🔥🔥🔥", "SAVING RECOMMENDATIONS::::");
         await updateUserRecommendation(currentExercise._id, {
           duration: Number(duration),
           distance: distance ? Number(distance) : undefined,
@@ -613,6 +615,7 @@ function WorkoutTracker() {
         requiredSets: requiredSets[exercise._id] || 3,
       }));
   
+      console.log("🔥🔥🔥", "SAVING PROGRESS::::");
       await saveProgress({
         plan: currentPlan._id,
         exercises: exercisesProgress,
@@ -831,20 +834,17 @@ function WorkoutTracker() {
     });
   };
 
-  const handleExerciseChange = async newIndex => {
+  const handleExerciseChange = useCallback(async (newIndex) => {
     try {
-      const exercisesProgress = currentPlan.exercises.map(
-        (exercise, index) => ({
+      // Save progress for the current exercise
+      await saveProgress({
+        plan: currentPlan._id,
+        exercises: currentPlan.exercises.map((exercise, index) => ({
           exercise: exercise._id,
           sets: sets[index] || [],
           notes: notes[index] || "",
-        })
-      );
-  
-      await saveProgress({
-        plan: currentPlan._id,
-        exercises: exercisesProgress,
-        currentExerciseIndex,
+        })),
+        currentExerciseIndex: newIndex,
         lastSetValues,
         startTime: startTime.toISOString(),
         completedSets,
@@ -852,31 +852,39 @@ function WorkoutTracker() {
         totalPauseTime,
         skippedPauses,
       });
-  
+
       setCurrentExerciseIndex(newIndex);
-  
+
+      // Fetch fresh data for the new exercise
       const newExercise = currentPlan.exercises[newIndex];
-      const lastValues = lastSetValues[newExercise._id];
-      
-      if (lastValues) {
-        if (newExercise.category === "Strength") {
-          setWeight(lastValues.weight?.toString() || "");
-          setReps(lastValues.reps?.toString() || "");
-        } else if (newExercise.category === "Cardio") {
-          setDuration(lastValues.duration?.toString() || "");
-          setDistance(lastValues.distance?.toString() || "");
-          setIntensity(lastValues.intensity?.toString() || "");
-          setIncline(lastValues.incline?.toString() || "");
+      if (newExercise) {
+        const updatedExercise = await getExerciseById(newExercise._id);
+        
+        // Update the exercise in the current plan with fresh data
+        setCurrentPlan(prevPlan => ({
+          ...prevPlan,
+          exercises: prevPlan.exercises.map((ex, idx) => 
+            idx === newIndex ? updatedExercise : ex
+          )
+        }));
+
+        // Update input fields with the latest recommendation
+        const latestRecommendation = updatedExercise.recommendations?.[user.experienceLevel] || {};
+        if (updatedExercise.category === "Strength") {
+          setWeight(latestRecommendation.weight?.toString() || "");
+          setReps(latestRecommendation.reps?.toString() || "");
+        } else if (updatedExercise.category === "Cardio") {
+          setDuration(latestRecommendation.duration?.toString() || "");
+          setDistance(latestRecommendation.distance?.toString() || "");
+          setIntensity(latestRecommendation.intensity?.toString() || "");
+          setIncline(latestRecommendation.incline?.toString() || "");
         }
-      } else {
-        // If there are no last values, load from recommendations
-        await loadExerciseRecommendations(newExercise._id);
       }
     } catch (error) {
-      console.error("Error saving progress before switching exercise:", error);
-      showToast("error", "Error", t("Failed to save progress."));
+      console.error("Error switching exercise:", error);
+      showToast("error", "Error", "Failed to switch exercise. Please try again.");
     }
-  };
+  }, [currentPlan, sets, notes, lastSetValues, startTime, completedSets, totalSets, totalPauseTime, skippedPauses, saveProgress, getExerciseById, user.experienceLevel, showToast]);
 
   const handleTouchStart = e => {
     setTouchEnd(null);

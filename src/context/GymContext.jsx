@@ -66,58 +66,46 @@ export function GymProvider({ children }) {
 
   const exerciseCache = new Map();
 
-const getExerciseById = useCallback(async (exerciseOrId) => {
-  if (typeof exerciseOrId === 'object' && exerciseOrId !== null) {
-    return exerciseOrId; // It's already a full exercise object
-  }
-
-  if (!exerciseOrId || typeof exerciseOrId !== 'string') {
-    console.error('Invalid exerciseId provided to getExerciseById:', exerciseOrId);
-    return null;
-  }
-
-  // Check if the exercise is in the cache
-  if (exerciseCache.has(exerciseOrId)) {
-    return exerciseCache.get(exerciseOrId);
-  }
-
-  try {
-    console.log(`Fetching exercise details for exerciseId: ${exerciseOrId}`);
-    const response = await axiosInstance.get(
-      `${API_URL}/exercises/${exerciseOrId}`,
-      getAuthConfig()
-    );
-    console.log('Exercise details response:', response.data);
-
-    // Ensure the exercise object has a recommendations property
-    const exercise = response.data;
-    if (!exercise.recommendations) {
-      exercise.recommendations = {
-        beginner: { weight: 0, reps: 10, sets: 3 },
-        intermediate: { weight: 0, reps: 10, sets: 3 },
-        advanced: { weight: 0, reps: 10, sets: 3 }
-      };
+  const getExerciseById = useCallback(async (exerciseId) => {
+    if (!exerciseId || typeof exerciseId !== 'string') {
+      console.error('Invalid exerciseId provided to getExerciseById:', exerciseId);
+      return null;
     }
-
-    // Cache the exercise
-    exerciseCache.set(exerciseOrId, exercise);
-
-    return exercise;
-  } catch (error) {
-    console.error('Error fetching exercise details:', error);
-    if (error.response) {
-      console.error('Error response:', error.response.data);
-      if (error.response.status === 404) {
-        showToast('error', 'Error', t("Exercise not found"));
-      } else {
-        showToast('error', 'Error', t("Failed to fetch exercise details"));
+  
+    try {
+      console.log(`Fetching exercise details for exerciseId: ${exerciseId}`);
+      const response = await axiosInstance.get(
+        `${API_URL}/exercises/${exerciseId}`,
+        getAuthConfig()
+      );
+      console.log('Exercise details response:', response.data);
+  
+      // Ensure the exercise object has a recommendations property
+      const exercise = response.data;
+      if (!exercise.recommendations) {
+        exercise.recommendations = {
+          beginner: { weight: 0, reps: 10, sets: 3 },
+          intermediate: { weight: 0, reps: 10, sets: 3 },
+          advanced: { weight: 0, reps: 10, sets: 3 }
+        };
       }
-    } else {
-      showToast('error', 'Error', t("Network error while fetching exercise details"));
+  
+      return exercise;
+    } catch (error) {
+      console.error('Error fetching exercise details:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        if (error.response.status === 404) {
+          showToast('error', 'Error', "Exercise not found");
+        } else {
+          showToast('error', 'Error', "Failed to fetch exercise details");
+        }
+      } else {
+        showToast('error', 'Error', "Network error while fetching exercise details");
+      }
+      return null;
     }
-    return null;
-  }
-}, [API_URL, getAuthConfig, showToast]);
+  }, [API_URL, getAuthConfig, showToast]);
 
   const getExerciseHistory = useCallback(async (exerciseId) => {
     if (!exerciseId || exerciseId === 'undefined') {

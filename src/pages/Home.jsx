@@ -80,7 +80,7 @@ function Home() {
           </div>
           <Link 
             to="/tracker" 
-            className="mt-4 inline-block w-full text-center bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 font-bold py-2 px-4 rounded transition-colors duration-300"
+            className="nav-btn mt-4 inline-block w-full text-center  font-bold py-2 px-4 rounded transition-colors duration-300"
           >
             {t("Resume Workout")}
           </Link>
