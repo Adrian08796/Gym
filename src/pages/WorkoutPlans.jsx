@@ -200,7 +200,7 @@ function WorkoutPlans() {
               {t("Resume Workout")}
             </button>
           </div>
-        )}
+        )} 
 
         <div ref={formRef} className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
           <button
