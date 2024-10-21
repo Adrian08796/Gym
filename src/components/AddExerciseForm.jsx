@@ -109,7 +109,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
       measurementType,
       isDefault
     };
-
+  
     if (actingAsAdmin) {
       exerciseData.recommendations = recommendations;
     } else {
@@ -119,7 +119,7 @@ function AddExerciseForm({ onSave, initialExercise, onCancel }) {
     }
   
     console.log('Submitting exercise:', exerciseData);
-
+  
     try {
       let savedExercise;
       if (initialExercise) {

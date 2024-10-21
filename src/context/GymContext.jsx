@@ -353,21 +353,35 @@ export function GymProvider({ children }) {
 
   const addExercise = async exercise => {
     try {
+      console.log('Adding exercise, received data:', exercise);
+
       const exerciseWithTitleCase = {
         ...exercise,
         name: toTitleCase(exercise.name),
         description: toTitleCase(exercise.description),
-        target: toTitleCase(exercise.target),
+        target: Array.isArray(exercise.target)
+          ? exercise.target.map(toTitleCase)
+          : [toTitleCase(exercise.target)],
       };
+
+      console.log('Processed exercise data to be sent:', exerciseWithTitleCase);
+
       const response = await axiosInstance.post(
         `${API_URL}/exercises`,
         exerciseWithTitleCase,
         getAuthConfig()
       );
+
+      console.log('Response from adding exercise:', response.data);
+
       setExercises(prevExercises => [...prevExercises, response.data]);
+      showToast("success", "Success", t("Exercise added successfully"));
       return response.data;
     } catch (error) {
       console.error("Error adding exercise:", error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
       showToast("error", "Error", t("Failed to add exercise"));
       throw error;
     }
@@ -375,21 +389,27 @@ export function GymProvider({ children }) {
 
   const updateExercise = async (id, updatedExercise) => {
     try {
+      console.log('Updating exercise, received data:', updatedExercise);
+
       const exerciseWithTitleCase = {
         ...updatedExercise,
         name: toTitleCase(updatedExercise.name),
         description: toTitleCase(updatedExercise.description),
         target: Array.isArray(updatedExercise.target)
           ? updatedExercise.target.map(toTitleCase)
-          : toTitleCase(updatedExercise.target),
+          : [toTitleCase(updatedExercise.target)],
       };
-  
+
+      console.log('Processed exercise data to be sent:', exerciseWithTitleCase);
+
       const response = await axiosInstance.put(
         `${API_URL}/exercises/${id}`,
         exerciseWithTitleCase,
         getAuthConfig()
       );
-  
+
+      console.log('Response from updating exercise:', response.data);
+
       setExercises(prevExercises =>
         prevExercises.map(exercise => {
           if (exercise._id === id) {
@@ -405,11 +425,14 @@ export function GymProvider({ children }) {
           return exercise;
         })
       );
-  
+
       showToast("success", "Success", t("Exercise updated successfully"));
       return response.data;
     } catch (error) {
       console.error("Error updating exercise:", error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
       showToast("error", "Error", t("Failed to update exercise"));
       throw error;
     }
@@ -496,61 +519,69 @@ export function GymProvider({ children }) {
 
   const addWorkoutPlan = async plan => {
     try {
+      console.log('Adding workout plan, received plan:', JSON.stringify(plan, null, 2));
+
       const planToSend = {
         ...plan,
-        exercises: plan.exercises.map(exercise => 
-          typeof exercise === 'string' ? exercise : exercise._id
-        ).filter(id => typeof id === 'string')
+        exercises: plan.exercises ? plan.exercises.map(exercise => {
+          if (typeof exercise === 'string') return exercise;
+          if (exercise && exercise._id) return exercise._id;
+          console.error('Invalid exercise object:', exercise);
+          return null;
+        }).filter(id => id !== null) : []
       };
-  
+
+      console.log('Plan to send to backend:', JSON.stringify(planToSend, null, 2));
+
       const response = await axiosInstance.post(
         `${API_URL}/workoutplans`,
         planToSend,
         getAuthConfig()
       );
-  
-      const fullPlan = {
-        ...response.data,
-        exercises: await Promise.all(
-          response.data.exercises.map(async exerciseId => {
-            return await getExerciseById(exerciseId);
-          })
-        ).then(exercises => exercises.filter(Boolean))
-      };
-  
+
+      console.log('Raw backend response:', response);
+      console.log('Backend response data:', JSON.stringify(response.data, null, 2));
+
+      const fullPlan = response.data;
+
+      console.log('Full plan with exercise details:', JSON.stringify(fullPlan, null, 2));
+
       setWorkoutPlans(prevPlans => {
-        // Check if the plan already exists to prevent duplicates
         const existingPlanIndex = prevPlans.findIndex(p => p._id === fullPlan._id);
         if (existingPlanIndex === -1) {
           return [...prevPlans, fullPlan];
         } else {
-          // If the plan exists, replace it
           return prevPlans.map((p, index) => index === existingPlanIndex ? fullPlan : p);
         }
       });
-  
-      // showToast("success", "Success", "Workout plan added successfully");
+
+      showToast("success", "Success", t("Workout plan added successfully"));
       return fullPlan;
     } catch (error) {
       console.error("Error adding workout plan:", error);
-      if (error.response && error.response.data && error.response.data.message) {
-        showToast('warn', 'Warning', error.response.data.message);
-      } else {
-        showToast("error", "Error", t("Failed to add workout plan"));
+      if (error.response) {
+        console.error('Error response from server:', JSON.stringify(error.response.data, null, 2));
       }
+      showToast("error", "Error", t("Failed to add workout plan: ") + error.message);
       throw error;
     }
   };
-  
 
   const updateWorkoutPlan = async (id, updatedPlan) => {
     try {
+      console.log('Updating workout plan:', id, JSON.stringify(updatedPlan, null, 2));
+
       const planToSend = {
         ...updatedPlan,
-        exercises: updatedPlan.exercises.map(exercise => 
-          typeof exercise === 'string' ? exercise : exercise._id
-        ).filter(id => typeof id === 'string')
+        exercises: updatedPlan.exercises ? updatedPlan.exercises.map(exercise => {
+          if (typeof exercise === 'string') return exercise;
+          if (exercise && exercise._id) return exercise._id;
+          console.error('Invalid exercise object:', exercise);
+          return null;
+        }).filter(id => id !== null) : []
       };
+
+      console.log('Plan to send to backend:', JSON.stringify(planToSend, null, 2));
 
       const response = await axiosInstance.put(
         `${API_URL}/workoutplans/${id}`,
@@ -558,23 +589,25 @@ export function GymProvider({ children }) {
         getAuthConfig()
       );
 
-      const fullPlan = {
-        ...response.data,
-        exercises: await Promise.all(
-          response.data.exercises.map(async exerciseId => {
-            return await getExerciseById(exerciseId);
-          })
-        ).then(exercises => exercises.filter(Boolean))
-      };
+      console.log('Raw backend response:', response);
+      console.log('Backend response data:', JSON.stringify(response.data, null, 2));
+
+      const updatedPlanWithExercises = response.data;
+
+      console.log('Updated plan with exercise details:', JSON.stringify(updatedPlanWithExercises, null, 2));
 
       setWorkoutPlans(prevPlans =>
-        prevPlans.map(plan => (plan._id === id ? fullPlan : plan))
+        prevPlans.map(plan => plan._id === id ? updatedPlanWithExercises : plan)
       );
-      // showToast("success", "Success", "Workout plan updated successfully");
-      return fullPlan;
+
+      showToast("success", "Success", t("Workout plan updated successfully"));
+      return updatedPlanWithExercises;
     } catch (error) {
       console.error("Error updating workout plan:", error);
-      showToast("error", "Error", t("Failed to update workout plan"));
+      if (error.response) {
+        console.error('Error response from server:', JSON.stringify(error.response.data, null, 2));
+      }
+      showToast("error", "Error", t("Failed to update workout plan: ") + error.message);
       throw error;
     }
   };

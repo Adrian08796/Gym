@@ -136,7 +136,13 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
         <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 flex-grow line-clamp-3">{displayDescription}</p>
         <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">
           <FiTarget className="mr-1" />
-          <span>{Array.isArray(displayTarget) ? displayTarget.join(', ') : displayTarget}</span>
+          <span>
+            {Array.isArray(displayTarget) 
+              ? displayTarget.join(', ') 
+              : typeof displayTarget === 'string' 
+                ? displayTarget 
+                : t('No target specified')}
+          </span>
         </div>
         {renderRecommendation()}
         {isImported && (

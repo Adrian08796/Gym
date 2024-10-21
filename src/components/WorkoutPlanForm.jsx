@@ -46,27 +46,61 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       showToast('error', 'Error', t("You don't have permission to edit this plan."));
       return;
     }
+    if (!planName.trim()) {
+      showToast('error', 'Error', t("Workout plan name is required"));
+      return;
+    }
+
+    console.log('Selected exercises before submission:', JSON.stringify(selectedExercises, null, 2));
+
     const workoutPlan = {
       name: planName,
-      exercises: selectedExercises.map(exercise => exercise._id),
+      exercises: selectedExercises.map(exercise => {
+        if (typeof exercise === 'string') return exercise;
+        if (exercise && exercise._id) return exercise._id;
+        console.error('Invalid exercise object:', exercise);
+        return null;
+      }).filter(id => id !== null),
       type: workoutType,
       scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : null,
     };
+
+    console.log('Workout plan to be submitted:', JSON.stringify(workoutPlan, null, 2));
     
     try {
       let savedPlan;
       if (initialPlan) {
+        console.log('Updating existing plan:', initialPlan._id);
         savedPlan = await updateWorkoutPlan(initialPlan._id, workoutPlan);
       } else if (isDefault && user.isAdmin) {
+        console.log('Adding default workout plan');
         savedPlan = await addDefaultWorkoutPlan(workoutPlan);
       } else {
+        console.log('Adding new workout plan');
         savedPlan = await addWorkoutPlan(workoutPlan);
       }
+      
+      console.log('Raw server response:', savedPlan);
+      console.log('Saved plan response:', JSON.stringify(savedPlan, null, 2));
+
+      if (!savedPlan) {
+        throw new Error("No plan returned from the server");
+      }
+
+      if (!savedPlan.exercises) {
+        savedPlan.exercises = []; // Ensure exercises is at least an empty array
+      }
+
+      console.log('Plan saved successfully with exercises:', JSON.stringify(savedPlan.exercises, null, 2));
+      
       onSubmit(savedPlan);
       onCancel();
     } catch (error) {
-      console.error('Error saving workout plan:', error);
-      showToast('error', 'Error', error.response?.data?.message || 'Failed to save workout plan');
+      console.error('Detailed error when saving workout plan:', error);
+      if (error.response) {
+        console.error('Error response from server:', JSON.stringify(error.response.data, null, 2));
+      }
+      showToast('error', 'Error', error.message || t('Failed to save workout plan'));
     }
   };
 
@@ -80,11 +114,14 @@ function WorkoutPlanForm({ onSubmit, initialPlan, onCancel }) {
       showToast('error', 'Error', t("You don't have permission to modify this plan."));
       return;
     }
-    setSelectedExercises(prev => 
-      prev.some(e => e._id === exercise._id)
-        ? prev.filter(e => e._id !== exercise._id)
-        : [...prev, exercise]
-    );
+    setSelectedExercises(prev => {
+      const isExerciseSelected = prev.some(e => e._id === exercise._id);
+      if (isExerciseSelected) {
+        return prev.filter(e => e._id !== exercise._id);
+      } else {
+        return [...prev, exercise];
+      }
+    });
   };
 
   const onDragEnd = (result) => {
