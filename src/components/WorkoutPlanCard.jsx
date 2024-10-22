@@ -92,7 +92,7 @@ function WorkoutPlanCard({ plan, onStart, onEdit, onDelete }) {
         <div className="flex justify-center space-x-2">
           <button onClick={confirmDelete} className={`${buttonStyles.base} ${buttonStyles.delete}`}>
             {plan.isDefault && !user.isAdmin ? <FiEyeOff className="mr-1" /> : <FiTrash2 className="mr-1" />}
-            {t(plan.isDefault && !user.isAdmin ? "Yes, Remove" : "Yes, Delete")}
+            {t(plan.isDefault && !user.isAdmin ? "Yes" : "Yes")}
           </button>
           <button onClick={cancelDelete} className={`${buttonStyles.base} bg-gray-300 text-gray-800 hover:bg-gray-400`}>
             {t("Cancel")}

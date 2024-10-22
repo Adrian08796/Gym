@@ -17,6 +17,7 @@
     "aos": "^2.3.4",
     "axios": "^1.7.3",
     "date-fns": "^3.6.0",
+    "formik": "^2.4.6",
     "fuse.js": "^7.0.0",
     "i18next": "^23.16.0",
     "i18next-browser-languagedetector": "^8.0.0",
@@ -34,7 +35,8 @@
     "react-transition-group": "^4.4.5",
     "recharts": "^2.13.0-alpha.4",
     "serve": "^14.2.3",
-    "slick-carousel": "^1.8.1"
+    "slick-carousel": "^1.8.1",
+    "yup": "^1.4.0"
   },
   "devDependencies": {
     "@babel/plugin-syntax-import-meta": "^7.10.4",

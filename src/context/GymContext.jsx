@@ -555,7 +555,7 @@ export function GymProvider({ children }) {
         }
       });
 
-      showToast("success", "Success", t("Workout plan added successfully"));
+      // showToast("success", "Success", t("Workout plan added successfully"));
       return fullPlan;
     } catch (error) {
       console.error("Error adding workout plan:", error);
@@ -600,7 +600,7 @@ export function GymProvider({ children }) {
         prevPlans.map(plan => plan._id === id ? updatedPlanWithExercises : plan)
       );
 
-      showToast("success", "Success", t("Workout plan updated successfully"));
+      // showToast("success", "Success", t("Workout plan updated successfully"));
       return updatedPlanWithExercises;
     } catch (error) {
       console.error("Error updating workout plan:", error);

@@ -79,7 +79,7 @@ const toggleDefaultPlans = async () => {
     if (response.data?.showDefaultPlans !== undefined) {
       setShowDefaultPlans(response.data.showDefaultPlans);
       await fetchWorkoutPlans();
-      showToast('success', 'Success', t('Preference updated successfully'));
+      // showToast('success', 'Success', t('Preference updated successfully'));
     }
   } catch (error) {
     console.error('Error updating preference:', error);
@@ -173,7 +173,7 @@ if (isLoading) {
       await updateWorkoutPlan(plan._id, updatedPlan);
       handleCancelForm();
       await fetchWorkoutPlans();
-      // showToast('success', 'Success', t("Workout plan updated successfully"));
+      showToast('success', 'Success', t("Workout plan updated successfully"));
     } catch (error) {
       console.error('Error updating workout plan:', error);
       showToast('error', 'Error', t("Failed to update workout plan"));
