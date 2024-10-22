@@ -1,5 +1,3 @@
-// src/pages/WorkoutPlans.jsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGymContext } from '../context/GymContext';
@@ -8,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import WorkoutPlanForm from '../components/WorkoutPlanForm';
 import WorkoutPlanCard from '../components/WorkoutPlanCard';
 import WorkoutPlanModal from '../components/WorkoutPlanModal';
+import axiosInstance from '../utils/axiosConfig';
 import { useTranslation } from 'react-i18next';
 
 function WorkoutPlans() {
@@ -20,10 +19,8 @@ function WorkoutPlans() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [importLink, setImportLink] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  const [showDefaultPlans, setShowDefaultPlans] = useState(() => {
-    const savedPreference = localStorage.getItem('showDefaultPlans');
-    return savedPreference !== null ? JSON.parse(savedPreference) : true;
-  });
+  const [showDefaultPlans, setShowDefaultPlans] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { user } = useAuth();
@@ -40,16 +37,75 @@ function WorkoutPlans() {
     showToast,
   } = useGymContext();
 
-  useEffect(() => {
-    const storedPlan = localStorage.getItem('currentPlan');
-    if (storedPlan) {
-      setOngoingWorkout(JSON.parse(storedPlan));
-    }
-  }, []);
+ // Single useEffect for initialization
+ useEffect(() => {
+  const initializeData = async () => {
+    if (!user) return;
 
-  useEffect(() => {
-    fetchWorkoutPlans();
-  }, [fetchWorkoutPlans]);
+    try {
+      setIsLoading(true);
+      
+      // Fetch user preferences and workout plans
+      const response = await axiosInstance.get('/api/workoutplans');
+      if (response.data?.preferences?.showDefaultPlans !== undefined) {
+        setShowDefaultPlans(response.data.preferences.showDefaultPlans);
+      }
+
+      // Check for ongoing workout
+      const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
+      if (storedPlan) {
+        setOngoingWorkout(JSON.parse(storedPlan));
+      }
+
+      await fetchWorkoutPlans();
+    } catch (error) {
+      console.error('Error initializing data:', error);
+      showToast('error', 'Error', t('Failed to load data'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  initializeData();
+}, [user, fetchWorkoutPlans, showToast, t]);
+
+const toggleDefaultPlans = async () => {
+  try {
+    const response = await axiosInstance.put(
+      '/api/workoutplans/preferences/default-plans',
+      { showDefaultPlans: !showDefaultPlans }
+    );
+
+    if (response.data?.showDefaultPlans !== undefined) {
+      setShowDefaultPlans(response.data.showDefaultPlans);
+      await fetchWorkoutPlans();
+      showToast('success', 'Success', t('Preference updated successfully'));
+    }
+  } catch (error) {
+    console.error('Error updating preference:', error);
+    showToast('error', 'Error', t('Failed to update preference'));
+  }
+};
+
+const filteredPlans = workoutPlans.filter(plan => {
+  const matchesSearch = plan.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesType = 
+    filterType === 'all' || 
+    (filterType === 'imported' && plan.importedFrom && plan.importedFrom.user && plan.importedFrom.user !== user.id) ||
+    (filterType !== 'imported' && plan.type === filterType);
+  const isVisible = showDefaultPlans === null ? true : (!plan.isDefault || showDefaultPlans);
+  return matchesSearch && matchesType && isVisible;
+});
+
+if (isLoading) {
+  return (
+    <div className="flex justify-center items-center min-h-screen">
+      <div className="text-center">
+        <p className="text-lg">{t("Loading...")}</p>
+      </div>
+    </div>
+  );
+}
 
   const handleStartWorkout = (plan) => {
     const planToSave = {
@@ -117,7 +173,7 @@ function WorkoutPlans() {
       await updateWorkoutPlan(plan._id, updatedPlan);
       handleCancelForm();
       await fetchWorkoutPlans();
-      showToast('success', 'Success', t("Workout plan updated successfully"));
+      // showToast('success', 'Success', t("Workout plan updated successfully"));
     } catch (error) {
       console.error('Error updating workout plan:', error);
       showToast('error', 'Error', t("Failed to update workout plan"));
@@ -167,22 +223,6 @@ function WorkoutPlans() {
     }
   };
 
-  const toggleDefaultPlans = () => {
-    const newValue = !showDefaultPlans;
-    setShowDefaultPlans(newValue);
-    localStorage.setItem('showDefaultPlans', JSON.stringify(newValue));
-  };
-
-  const filteredPlans = workoutPlans.filter(plan => {
-    const matchesSearch = plan.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = 
-      filterType === 'all' || 
-      (filterType === 'imported' && plan.importedFrom && plan.importedFrom.user && plan.importedFrom.user !== user.id) ||
-      (filterType !== 'imported' && plan.type === filterType);
-    const isVisible = showDefaultPlans || !plan.isDefault;
-    return matchesSearch && matchesType && isVisible;
-  });
-
   return (
     <>
       <h1 data-aos="fade-up" className="header text-3xl text-gray-800 dark:text-white font-bold mb-4 text-center">
@@ -200,7 +240,7 @@ function WorkoutPlans() {
               {t("Resume Workout")}
             </button>
           </div>
-        )} 
+        )}
 
         <div ref={formRef} className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
           <button
@@ -235,6 +275,7 @@ function WorkoutPlans() {
               <button
                 onClick={toggleDefaultPlans}
                 className="nav-btn"
+                disabled={showDefaultPlans === null}
               >
                 {showDefaultPlans ? t("Hide Default Plans") : t("Show Default Plans")}
               </button>
