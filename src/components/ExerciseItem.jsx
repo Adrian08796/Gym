@@ -108,9 +108,9 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
         <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
           <p>{t("Your Recommendation")}:</p>
           <p>{t("Duration")}: {recommendation?.duration || 0} {t("minutes")}</p>
-          {recommendation?.distance && <p>{t("Distance")}: {recommendation.distance} km</p>}
-          {recommendation?.intensity && <p>{t("Intensity")}: {recommendation.intensity}</p>}
-          {recommendation?.incline && <p>{t("Incline")}: {recommendation.incline}%</p>}
+          <p>{t("Distance")}: {recommendation?.distance || 0} km</p>
+          <p>{t("Intensity")}: {recommendation?.intensity}</p>
+          <p>{t("Incline")}: {recommendation?.incline}%</p>
         </div>
       );
     }
@@ -131,7 +131,7 @@ function ExerciseItem({ exercise, onEdit, onDelete, onAddToPlan, onView, isDragg
           {categoryIcons[exercise.category]}
         </div>
       </div>
-      <div className="p-4 flex-grow flex flex-col">
+      <div className="p-6 flex-grow flex flex-col">
         <h3 className="font-heading text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{displayName}</h3>
         <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 flex-grow line-clamp-3">{displayDescription}</p>
         <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mb-2">

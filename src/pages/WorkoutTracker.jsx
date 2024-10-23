@@ -188,6 +188,8 @@ function WorkoutTracker() {
         if (progress && progress.plan && progress.plan.exercises && progress.plan.exercises.length > 0) {
           const fullPlan = await loadFullPlanDetails(progress.plan);
           setCurrentPlan(fullPlan);
+          
+          // Initialize sets from progress
           setSets(progress.exercises.map(exercise => exercise.sets || []));
           setCurrentExerciseIndex(progress.currentExerciseIndex || 0);
           setStartTime(progress.startTime ? new Date(progress.startTime) : new Date());
@@ -196,17 +198,33 @@ function WorkoutTracker() {
           setTotalPauseTime(progress.totalPauseTime || 0);
           setSkippedPauses(progress.skippedPauses || 0);
           
-          // Set requiredSets
+          // Important: Load required sets from progress if available, otherwise use defaults
           const newRequiredSets = {};
           fullPlan.exercises.forEach((exercise, index) => {
-            newRequiredSets[exercise._id] = progress.exercises[index]?.requiredSets || 3;
+            // First try to get from progress
+            if (progress.exercises[index]?.requiredSets) {
+              newRequiredSets[exercise._id] = progress.exercises[index].requiredSets;
+            } else {
+              // If not in progress, try to get from exercise recommendations
+              const recommendation = exercise.recommendations?.[user.experienceLevel];
+              newRequiredSets[exercise._id] = recommendation?.sets || 3;
+            }
           });
           setRequiredSets(newRequiredSets);
+
+          // Calculate total sets correctly
+          const totalRequiredSets = fullPlan.exercises.reduce((total, exercise) => {
+            return total + (newRequiredSets[exercise._id] || 3);
+          }, 0);
+          setTotalSets(progress.totalSets || totalRequiredSets);
           
-          setCompletedSets(progress.completedSets || 0);
-          setTotalSets(progress.totalSets || fullPlan.exercises.reduce((total, exercise) => total + (newRequiredSets[exercise._id] || 3), 0));
-          
-          // Restore input fields for the current exercise
+          // Calculate completed sets correctly
+          const completedSetsCount = progress.exercises.reduce((total, exercise) => {
+            return total + (exercise.sets?.length || 0);
+          }, 0);
+          setCompletedSets(progress.completedSets || completedSetsCount);
+
+          // Restore input fields for current exercise
           const currentExercise = fullPlan.exercises[progress.currentExerciseIndex || 0];
           if (currentExercise) {
             const lastValues = progress.lastSetValues[currentExercise._id];
@@ -223,27 +241,19 @@ function WorkoutTracker() {
             }
           }
         } else {
-          // No valid progress found, try to load from localStorage
           const storedPlan = localStorage.getItem(`currentPlan_${user.id}`);
           if (storedPlan) {
-            try {
-              const plan = JSON.parse(storedPlan);
-              if (plan && plan.exercises && plan.exercises.length > 0) {
-                const fullPlan = await loadFullPlanDetails(plan);
-                setCurrentPlan(fullPlan);
-                loadStoredData(fullPlan);
-              } else {
-                throw new Error("Invalid plan data in localStorage");
-              }
-            } catch (error) {
-              console.error("Error loading workout plan from localStorage:", error);
-              navigate("/plans");
-              showToast("error", "Error", t("Error loading workout plan. Please select a new plan."));
+            const plan = JSON.parse(storedPlan);
+            if (plan && plan.exercises && plan.exercises.length > 0) {
+              const fullPlan = await loadFullPlanDetails(plan);
+              setCurrentPlan(fullPlan);
+              loadStoredData(fullPlan);
+            } else {
+              throw new Error("Invalid plan data in localStorage");
             }
           } else {
-            console.log("No workout plan found in progress or localStorage");
-            showToast("info", "Info", t("No workout plan selected. Please choose a plan."));
             navigate("/plans");
+            showToast("info", "Info", t("No workout plan selected. Please choose a plan."));
           }
         }
       } catch (error) {
@@ -254,7 +264,7 @@ function WorkoutTracker() {
         setIsLoading(false);
       }
     };
-  
+
     loadWorkout();
   }, [navigate, showToast, loadProgress, user.id]);
 
@@ -537,7 +547,7 @@ function WorkoutTracker() {
   const handleSetComplete = async () => {
     const currentExercise = currentPlan.exercises[currentExerciseIndex];
     let newSet;
-  
+
     if (currentExercise.category === "Strength") {
       if (!weight || !reps) {
         showToast("error", "Error", t("Please enter both weight and reps"));
@@ -549,19 +559,6 @@ function WorkoutTracker() {
         completedAt: new Date().toISOString(),
         skippedRest: isResting,
       };
-  
-      // Update the user-specific recommendation for strength exercises
-      try {
-        await updateUserRecommendation(currentExercise._id, {
-          weight: Number(weight),
-          reps: Number(reps),
-          sets: requiredSets[currentExercise._id] || 3,
-          target: currentExercise.target // Include the target muscle group
-        });
-      } catch (error) {
-        console.error('Failed to update user-specific recommendation:', error);
-        showToast('error', 'Error', t("Failed to update exercise recommendation"));
-      }
     } else if (currentExercise.category === "Cardio") {
       if (!duration) {
         showToast("error", "Error", t("Please enter at least the duration"));
@@ -575,22 +572,9 @@ function WorkoutTracker() {
         completedAt: new Date().toISOString(),
         skippedRest: isResting,
       };
-  
-      // Update the user-specific recommendation for cardio exercises
-      try {
-        await updateUserRecommendation(currentExercise._id, {
-          duration: Number(duration),
-          distance: distance ? Number(distance) : undefined,
-          intensity: intensity ? Number(intensity) : undefined,
-          incline: incline ? Number(incline) : undefined,
-          target: currentExercise.target
-        });
-      } catch (error) {
-        console.error('Failed to update user-specific recommendation for cardio:', error);
-        showToast('error', 'Error', t("Failed to update exercise recommendation"));
-      }
     }
-  
+
+    // Update sets
     setSets(prevSets => {
       const newSets = [...prevSets];
       if (currentExercise.category === "Cardio") {
@@ -603,28 +587,23 @@ function WorkoutTracker() {
       }
       return newSets;
     });
-  
+
     setCompletedSets(prevCompletedSets => prevCompletedSets + 1);
-  
+    
     setLastSetValues(prev => ({
       ...prev,
       [currentExercise._id]: newSet,
     }));
-  
-    // Update progress
-    const newProgress = calculateProgress();
-    setProgression(newProgress);
-  
-    // Save progress to database
+
+    // Save progress to database with explicit required sets
     try {
       const exercisesProgress = currentPlan.exercises.map((exercise, index) => ({
         exercise: exercise._id,
         sets: sets[index] || [],
         notes: notes[index] || "",
-        requiredSets: requiredSets[exercise._id] || 3,
+        requiredSets: requiredSets[exercise._id] || 3, // Explicitly include required sets
       }));
-  
-      console.log("🔥🔥🔥", "SAVING PROGRESS::::");
+
       await saveProgress({
         plan: currentPlan._id,
         exercises: exercisesProgress,
@@ -638,20 +617,43 @@ function WorkoutTracker() {
         totalSets,
         totalPauseTime,
         skippedPauses,
+        requiredSets, // Include the entire requiredSets object
       });
-  
+
+      // Update user recommendations if needed
+      try {
+        if (currentExercise.category === "Strength") {
+          await updateUserRecommendation(currentExercise._id, {
+            weight: Number(weight),
+            reps: Number(reps),
+            sets: requiredSets[currentExercise._id] || 3,
+            target: currentExercise.target
+          });
+        } else if (currentExercise.category === "Cardio") {
+          await updateUserRecommendation(currentExercise._id, {
+            duration: Number(duration),
+            distance: distance ? Number(distance) : undefined,
+            intensity: intensity ? Number(intensity) : undefined,
+            incline: incline ? Number(incline) : undefined,
+            target: currentExercise.target
+          });
+        }
+      } catch (error) {
+        console.error('Failed to update user recommendation:', error);
+      }
+
       showToast("success", "Success", `${currentExercise.category === "Cardio" ? "Exercise" : "Set"} completed and progress saved!`);
     } catch (error) {
       console.error("Error saving progress:", error);
       showToast("error", "Error", t("Failed to save progress"));
     }
-  
-    // For cardio exercises, we don't start the rest timer
-    if (currentExercise.category !== "Cardio") {
+
+    // Start rest timer for strength exercises
+    if (currentExercise.category === "Strength") {
       startRestTimer();
     }
-  
-    // Check if exercise is complete and move to the next one if it is
+
+    // Check if exercise is complete
     if (isExerciseComplete(currentExercise._id, sets[currentExerciseIndex] || [])) {
       if (currentExerciseIndex < currentPlan.exercises.length - 1) {
         handleExerciseChange(currentExerciseIndex + 1);

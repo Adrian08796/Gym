@@ -390,7 +390,7 @@ export function GymProvider({ children }) {
   const updateExercise = async (id, updatedExercise) => {
     try {
       console.log('Updating exercise, received data:', updatedExercise);
-
+  
       const exerciseWithTitleCase = {
         ...updatedExercise,
         name: toTitleCase(updatedExercise.name),
@@ -398,21 +398,33 @@ export function GymProvider({ children }) {
         target: Array.isArray(updatedExercise.target)
           ? updatedExercise.target.map(toTitleCase)
           : [toTitleCase(updatedExercise.target)],
+        recommendations: updatedExercise.recommendations || {},
+        isDefault: updatedExercise.isDefault || false
       };
-
+  
       console.log('Processed exercise data to be sent:', exerciseWithTitleCase);
-
+  
       const response = await axiosInstance.put(
         `${API_URL}/exercises/${id}`,
         exerciseWithTitleCase,
         getAuthConfig()
       );
-
+  
       console.log('Response from updating exercise:', response.data);
-
+  
+      // Update the exercises state immediately
       setExercises(prevExercises =>
         prevExercises.map(exercise => {
           if (exercise._id === id) {
+            // For default exercises edited by admin, update all fields
+            if (exercise.isDefault && user.isAdmin) {
+              return {
+                ...exercise,
+                ...response.data,
+                recommendations: response.data.recommendations || exercise.recommendations
+              };
+            }
+            // For user exercises, only update user-specific data
             return {
               ...exercise,
               ...response.data,
@@ -425,7 +437,10 @@ export function GymProvider({ children }) {
           return exercise;
         })
       );
-
+  
+      // Trigger a refresh to ensure consistency
+      await fetchExercises();
+      
       showToast("success", "Success", t("Exercise updated successfully"));
       return response.data;
     } catch (error) {
