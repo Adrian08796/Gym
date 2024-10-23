@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import EmailVerification from './components/EmailVerification';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import Home from './pages/Home';
@@ -89,6 +90,7 @@ function AppContent() {
           <Routes>
             <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
             <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+            <Route path="/verify-email/:token" element={<EmailVerification />} />
             <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/tracker" element={<PrivateRoute><WorkoutTracker /></PrivateRoute>} />
