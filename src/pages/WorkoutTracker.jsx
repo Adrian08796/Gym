@@ -481,8 +481,8 @@ function WorkoutTracker() {
             <div className="relative w-full mr-2">
               <input
                 type="number"
-                value={weight}
-                onChange={e => setWeight(e.target.value)}
+                value={weight.toString()}
+                onChange={e => setWeight(Math.max(0, e.target.value))}
                 className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
               <span className="placeholder-text">{t("Weight")} (kg)</span>
@@ -490,8 +490,8 @@ function WorkoutTracker() {
             <div className="relative w-full">
               <input
                 type="number"
-                value={reps}
-                onChange={e => setReps(e.target.value)}
+                value={reps.toString()}
+                onChange={e => setReps(Math.max(0, e.target.value))}
                 className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
               <span className="placeholder-text">{t("Reps")}</span>
@@ -505,8 +505,8 @@ function WorkoutTracker() {
             <div className="relative w-full mr-2">
               <input
                 type="number"
-                value={duration}
-                onChange={e => setDuration(e.target.value)}
+                value={duration.toString()}
+                onChange={e => setDuration(Math.max(0, e.target.value))}
                 className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
               <span className="placeholder-text">{t("Duration (min)")}</span>
@@ -514,8 +514,8 @@ function WorkoutTracker() {
             <div className="relative w-full mr-2">
               <input
                 type="number"
-                value={distance}
-                onChange={e => setDistance(e.target.value)}
+                value={distance.toString()}
+                onChange={e => setDistance(Math.max(0, e.target.value))}
                 className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
               <span className="placeholder-text">{t("Distance (km)")}</span>
@@ -523,8 +523,8 @@ function WorkoutTracker() {
             <div className="relative w-full mr-2">
               <input
                 type="number"
-                value={intensity}
-                onChange={e => setIntensity(e.target.value)}
+                value={intensity.toString()}
+                onChange={e => setIntensity(Math.max(0, e.target.value))}
                 className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
               <span className="placeholder-text">{t("Intensity (1-10)")}</span>
@@ -532,8 +532,8 @@ function WorkoutTracker() {
             <div className="relative w-full mr-2">
               <input
                 type="number"
-                value={incline}
-                onChange={e => setIncline(e.target.value)}
+                value={incline.toString()}
+                onChange={e => setIncline(Math.max(0, e.target.value))}
                 className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
               <span className="placeholder-text">{t("Incline (%)")}</span>
