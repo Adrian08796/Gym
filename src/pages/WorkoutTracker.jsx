@@ -492,35 +492,43 @@ function WorkoutTracker() {
     } else if (currentExercise.category === "Cardio") {
       return (
         <div className="mb-4 grid grid-cols-2 gap-2">
-          <input
-            type="number"
-            placeholder="Duration (minutes)"
-            value={duration}
-            onChange={e => setDuration(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-          <input
-            type="number"
-            placeholder="Distance (km)"
-            value={distance}
-            onChange={e => setDistance(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-          <input
-            type="number"
-            placeholder="Intensity (1-10)"
-            value={intensity}
-            onChange={e => setIntensity(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-          <input
-            type="number"
-            placeholder="Incline (%)"
-            value={incline}
-            onChange={e => setIncline(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-        </div>
+            <div className="relative w-full mr-2">
+              <input
+                type="number"
+                value={duration}
+                onChange={e => setDuration(e.target.value)}
+                className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+              <span className="placeholder-text">{t("Duration (min)")}</span>
+            </div>
+            <div className="relative w-full mr-2">
+              <input
+                type="number"
+                value={distance}
+                onChange={e => setDistance(e.target.value)}
+                className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+              <span className="placeholder-text">{t("Distance (km)")}</span>
+            </div>
+            <div className="relative w-full mr-2">
+              <input
+                type="number"
+                value={intensity}
+                onChange={e => setIntensity(e.target.value)}
+                className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+              <span className="placeholder-text">{t("Intensity (1-10)")}</span>
+            </div>
+            <div className="relative w-full mr-2">
+              <input
+                type="number"
+                value={incline}
+                onChange={e => setIncline(e.target.value)}
+                className="input-with-placeholder shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              />
+              <span className="placeholder-text">{t("Incline (%)")}</span>
+            </div>
+          </div>
       );
     }
     // You can add an else clause here for Flexibility exercises if needed
@@ -547,7 +555,7 @@ function WorkoutTracker() {
         await updateUserRecommendation(currentExercise._id, {
           weight: Number(weight),
           reps: Number(reps),
-          sets: requiredSets[currentExercise._id] || 1,
+          sets: requiredSets[currentExercise._id] || 3,
           target: currentExercise.target // Include the target muscle group
         });
       } catch (error) {
