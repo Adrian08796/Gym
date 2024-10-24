@@ -102,6 +102,7 @@ function AppContent() {
             <Route path="/profile" element={<PrivateRoute><UserProfile /></PrivateRoute>} />
             <Route path="/import/:shareId" element={<PrivateRoute><ImportWorkoutPlan /></PrivateRoute>} />
             <Route path="/guide" element={<AppGuide />} />
+            <Route path="/reset-password/:token" element={<PasswordReset />} />
           </Routes>
         </div>
       </main>
