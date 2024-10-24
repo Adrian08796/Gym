@@ -9,6 +9,8 @@ import { FiEye, FiEyeOff, FiUser, FiLock, FiMail } from 'react-icons/fi';
 import axiosInstance from '../utils/axiosConfig';
 import '../components/Header.css';
 import { useTranslation } from 'react-i18next';
+const [showForgotPassword, setShowForgotPassword] = useState(false);
+const [resetEmail, setResetEmail] = useState('');
 
 function Login() {
   const { t } = useTranslation();
@@ -95,6 +97,18 @@ function Login() {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    try {
+      await axiosInstance.post('/auth/forgot-password', { email: resetEmail });
+      showToast('success', 'Success', t('Password reset email sent'));
+      setShowForgotPassword(false);
+      setResetEmail('');
+    } catch (error) {
+      showToast('error', 'Error', t('Failed to send reset email'));
+    }
+  };
+
   return (
     <div className={`flex items-center justify-center min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
       <div className="px-4 py-6 mx-4 mt-4 text-left bg-white dark:bg-gray-800 shadow-lg rounded-lg sm:w-full sm:max-w-md">
@@ -148,6 +162,50 @@ function Login() {
             </div>
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
           </div>
+
+          <div className="mt-4 text-right">
+          <button
+            type="button"
+            onClick={() => setShowForgotPassword(true)}
+            className="text-sm text-emerald-500 hover:text-emerald-600"
+          >
+            {t("Forgot Password?")}
+          </button>
+        </div>
+
+        {showForgotPassword && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-4">{t("Reset Password")}</h3>
+              <p className="mb-4">{t("Enter your email to receive a password reset link.")}</p>
+              <form onSubmit={handleForgotPassword}>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder={t("Enter your email")}
+                  className="w-full p-2 border rounded mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  required
+                />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(false)}
+                    className="nav-btn"
+                  >
+                    {t("Cancel")}
+                  </button>
+                  <button
+                    type="submit"
+                    className="nav-btn"
+                  >
+                    {t("Send Reset Link")}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
           <div className="flex items-center justify-between mt-6">
             <button type="submit" className="nav-btn w-full">
